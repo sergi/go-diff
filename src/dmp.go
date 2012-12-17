@@ -10,6 +10,8 @@ import (
     "strconv"
     "strings"
     "time"
+    //"unicode/utf8"
+    "fmt"
 )
 
 type DiffMatchPatch struct {
@@ -58,6 +60,53 @@ func splice(slice []change, index int, amount int, elements ...change) []change 
 
 func splice_patch(slice []Patch, index int, amount int, elements ...Patch) []Patch {
     return append(slice[:index], append(elements, slice[index+amount:]...)...)
+}
+
+func indexOf(str string, pattern string, i int) int {
+    if i > len(str)-1 {
+        return -1
+    }
+
+    if i == 0 {
+        return strings.Index(str, pattern)
+    }
+
+    str1 := str[0:i]
+    str2 := str[i:]
+
+    ind := strings.Index(str2, pattern)
+    if ind == -1 {
+        return -1
+    }
+
+    return ind + len(str1)
+
+}
+
+func indexOfRune(str string, pattern rune, i int) int {
+    if len(str) == 0 {
+        return -1
+    }
+
+    if i > len(str)-1 {
+        return -1
+    }
+
+    if i == 0 {
+        return strings.IndexRune(str, pattern)
+    }
+
+    str1 := str[0:i]
+    str2 := str[i:]
+
+    //fmt.Println("###", str1, "----", str2,)
+
+    ind := strings.IndexRune(str2, pattern)
+    if ind == -1 {
+        return -1
+    }
+
+    return ind + len(str1)
 }
 
 type Patch struct {
@@ -109,6 +158,35 @@ func (patch *Patch) String() string {
     }
 
     return unescapeForEncodeUriCompatability(text.String())
+}
+
+func createDMP() DiffMatchPatch {
+    dmp := DiffMatchPatch{}
+    // Defaults.
+    // Set these on your diff_match_patch instance to override the defaults.
+
+    // Number of seconds to map a diff before giving up (0 for infinity).
+    dmp.DiffTimeout = 1.0
+    // Cost of an empty edit operation in terms of edit characters.
+    dmp.DiffEditCost = 4
+    // At what point is no match declared (0.0 = perfection, 1.0 = very loose).
+    dmp.MatchThreshold = 0.5
+    // How far to search for a match (0 = exact location, 1000+ = broad match).
+    // A match this many characters away from the expected location will add
+    // 1.0 to the score (0.0 is a perfect match).
+    dmp.MatchDistance = 1000
+    // When deleting a large block of text (over ~64 characters), how close
+    // do the contents have to be to match the expected contents. (0.0 =
+    // perfection, 1.0 = very loose).  Note that Match_Threshold controls
+    // how closely the end points of a delete need to match.
+    dmp.PatchDeleteThreshold = 0.5
+    // Chunk size for context length.
+    dmp.PatchMargin = 4
+
+    // The number of bits in an int.
+    dmp.MatchMaxBits = 32
+
+    return dmp
 }
 
 func (dmp *DiffMatchPatch) diff_main(text1 string, text2 string, opt ...interface{}) []change {
@@ -215,7 +293,7 @@ func (dmp *DiffMatchPatch) diff_compute_(text1 string, text2 string, checklines 
     }
 
     // Check to see if the problem can be split in two.
-    hm := dmp.diff_halfMatch_(text1, text2)
+    hm := dmp.diff_halfMatch(text1, text2)
     if hm != nil {
         // A half-match was found, sort out the return data.
         text1_a := hm[0]
@@ -251,7 +329,7 @@ func (dmp *DiffMatchPatch) diff_compute_(text1 string, text2 string, checklines 
  */
 func (dmp *DiffMatchPatch) diff_lineMode_(text1 string, text2 string, deadline int32) []change {
     // Scan the text on a line-by-line basis first.
-    text1, text2, linearray := dmp.diff_linesToChars_(text1, text2)
+    text1, text2, linearray := dmp.diff_linesToChars(text1, text2)
 
     diffs := dmp.diff_main(text1, text2, false, deadline)
 
@@ -444,56 +522,56 @@ func (dmp *DiffMatchPatch) diff_bisectSplit_(text1 string, text2 string, x int, 
     return concat(diffs, diffsb)
 }
 
-func (dmp *DiffMatchPatch) diff_linesToChars_(text1 string, text2 string) (string, string, []string) {
+func (dmp *DiffMatchPatch) diff_linesToChars(text1 string, text2 string) (string, string, []string) {
     // '\x00' is a valid character, but various debuggers don't like it.
     // So we'll insert a junk entry to avoid generating a null character.
     lineArray := []string{""}    // e.g. lineArray[4] == 'Hello\n'
     lineHash := map[string]int{} // e.g. lineHash['Hello\n'] == 4
 
-    /**
-     * Split a text into an array of strings.  Reduce the texts to a string of
-     * hashes where each Unicode character represents one line.
-     * Modifies linearray and linehash through being a closure.
-     * @param {string} text String to encode.
-     * @return {string} Encoded string.
-     * @private
-     */
-    var diff_linesToCharsMunge_ = func(text string) string {
-        var chars bytes.Buffer
-        // Walk the text, pulling out a substring for each line.
-        // text.split('\n') would would temporarily double our memory footprint.
-        // Modifying text would create many large strings to garbage collect.
-        lineStart := 0
-        lineEnd := -1
-
-        for lineEnd < len(text)-1 {
-            lineEnd = strings.Index(text, "\n")
-            if lineEnd == -1 {
-                lineEnd = len(text) - 1
-            }
-            line := text[lineStart : lineEnd+1]
-            lineStart = lineEnd + 1
-
-            var ok bool
-            lineValue, ok := lineHash[line]
-
-            if ok {
-                chars.WriteString(string(lineValue))
-            } else {
-                lineArray = append(lineArray, line)
-                lineHash[line] = len(lineArray) - 1
-                chars.WriteString(strconv.FormatInt(int64(len(lineArray)-1), 10))
-                //lineArrayLength += 1
-                //lineArray[lineArrayLength] = line
-            }
-        }
-        return chars.String()
-    }
-
-    chars1 := diff_linesToCharsMunge_(text1)
-    chars2 := diff_linesToCharsMunge_(text2)
+    chars1 := dmp.diff_linesToCharsMunge(text1, &lineArray, lineHash)
+    chars2 := dmp.diff_linesToCharsMunge(text2, &lineArray, lineHash)
 
     return chars1, chars2, lineArray
+}
+
+/**
+ * Split a text into an array of strings.  Reduce the texts to a string of
+ * hashes where each Unicode character represents one line.
+ * Modifies linearray and linehash through being a closure.
+ * @param {string} text String to encode.
+ * @return {string} Encoded string.
+ * @private
+ */
+func (dmp *DiffMatchPatch) diff_linesToCharsMunge(text string, lineArray *[]string, lineHash map[string]int) string {
+    var chars bytes.Buffer
+    // Walk the text, pulling out a substring for each line.
+    // text.split('\n') would would temporarily double our memory footprint.
+    // Modifying text would create many large strings to garbage collect.
+    lineStart := 0
+    lineEnd := -1
+
+    runes := []rune(text)
+    for lineEnd < len(runes)-1 {
+        lineEnd = indexOfRune(text, '\n', lineStart)
+
+        if lineEnd == -1 {
+            lineEnd = len(runes) - 1
+        }
+        fmt.Println(len(runes), lineStart, lineEnd+1)
+        line := string(runes[lineStart : lineEnd+1])
+        lineStart = lineEnd + 1
+
+        lineValue_, ok := lineHash[line]
+
+        if ok {
+            chars.WriteString(string(rune(lineValue_)))
+        } else {
+            *lineArray = append(*lineArray, line)
+            lineHash[line] = len(*lineArray) - 1
+            chars.WriteString(string(rune(len(*lineArray) - 1)))
+        }
+    }
+    return chars.String()
 }
 
 /*
@@ -602,7 +680,7 @@ func (dmp *DiffMatchPatch) diff_commonSuffix(text1 string, text2 string) int {
  *     string and the start of the second string.
  * @private
  */
-func (dmp *DiffMatchPatch) diff_commonOverlap_(text1 string, text2 string) int {
+func (dmp *DiffMatchPatch) diff_commonOverlap(text1 string, text2 string) int {
     // Cache the text lengths to prevent multiple calls.
     text1_length := len(text1)
     text2_length := len(text2)
@@ -616,7 +694,7 @@ func (dmp *DiffMatchPatch) diff_commonOverlap_(text1 string, text2 string) int {
     } else if text1_length < text2_length {
         text2 = text2[0:text1_length]
     }
-    var text_length = int(math.Min(float64(text1_length), float64(text2_length)))
+    text_length := int(math.Min(float64(text1_length), float64(text2_length)))
     // Quick check for the worst case.
     if text1 == text2 {
         return text_length
@@ -653,10 +731,10 @@ func (dmp *DiffMatchPatch) diff_commonOverlap_(text1 string, text2 string) int {
  *     text2 and the common middle.  Or null if there was no match.
  * @private
  */
-func (dmp *DiffMatchPatch) diff_halfMatch_(text1, text2 string) []string {
+func (dmp *DiffMatchPatch) diff_halfMatch(text1, text2 string) []string {
     if dmp.DiffTimeout <= 0 {
         // Don't risk returning a non-optimal diff if we have unlimited time.
-        return []string{}
+        return nil
     }
 
     var longtext, shorttext string
@@ -670,71 +748,14 @@ func (dmp *DiffMatchPatch) diff_halfMatch_(text1, text2 string) []string {
 
     //TODO
     if len(longtext) < 4 || len(shorttext)*2 < len(longtext) {
-        return []string{} // Pointless.
-    }
-
-    /**
-     * Does a substring of shorttext exist within longtext such that the substring
-     * is at least half the length of longtext?
-     * Closure, but does not reference any external variables.
-     * @param {string} longtext Longer string.
-     * @param {string} shorttext Shorter string.
-     * @param {number} i Start index of quarter length substring within longtext.
-     * @return {Array.<string>} Five element Array, containing the prefix of
-     *     longtext, the suffix of longtext, the prefix of shorttext, the suffix
-     *     of shorttext and the common middle.  Or null if there was no match.
-     * @private
-     */
-    var diff_halfMatchI_ = func(l string, s string, i int) []string {
-        // Start with a 1/4 length substring at position i as a seed.
-        seed := l[i : i+int(math.Floor(float64(len(l)/4)))]
-        j := -1
-        best_common := ""
-        best_longtext_a := ""
-        best_longtext_b := ""
-        best_shorttext_a := ""
-        best_shorttext_b := ""
-
-        if j < len(s) {
-            j = strings.Index(s, seed)
-            for {
-                j := strings.Index(s, string(j+1))
-                if j == -1 {
-                    break
-                }
-
-                prefixLength := dmp.diff_commonPrefix(l[i:], s[j:])
-                suffixLength := dmp.diff_commonSuffix(l[0:i], s[0:j])
-
-                if len(best_common) < suffixLength+prefixLength {
-                    best_common = s[j-suffixLength:j] + s[j:j+prefixLength]
-                    best_longtext_a = l[0 : i-suffixLength]
-                    best_longtext_b = l[i+prefixLength:]
-                    best_shorttext_a = s[0 : j-suffixLength]
-                    best_shorttext_b = s[j+prefixLength:]
-                }
-            }
-        }
-
-        if len(best_common)*2 >= len(l) {
-            return []string{
-                best_longtext_a,
-                best_longtext_b,
-                best_shorttext_a,
-                best_shorttext_b,
-                best_common,
-            }
-        }
-        return []string{}
+        return nil // Pointless.
     }
 
     // First check if the second quarter is the seed for a half-match.
-    hm1 := diff_halfMatchI_(longtext, shorttext,
-        int(math.Ceil(float64(len(longtext)/4))))
+    hm1 := dmp.diff_halfMatchI(longtext, shorttext, int(math.Ceil(float64(len(longtext)/4))))
 
     // Check again based on the third quarter.
-    hm2 := diff_halfMatchI_(longtext, shorttext,
-        int(math.Ceil(float64(len(longtext)/2))))
+    hm2 := dmp.diff_halfMatchI(longtext, shorttext, int(math.Ceil(float64(len(longtext)/2))))
 
     hm := []string{}
 
@@ -760,7 +781,65 @@ func (dmp *DiffMatchPatch) diff_halfMatch_(text1, text2 string) []string {
         return []string{hm[2], hm[3], hm[0], hm[1], hm[4]}
     }
 
-    return []string{}
+    return nil
+}
+
+/**
+ * Does a substring of shorttext exist within longtext such that the substring
+ * is at least half the length of longtext?
+ * Closure, but does not reference any external variables.
+ * @param {string} longtext Longer string.
+ * @param {string} shorttext Shorter string.
+ * @param {number} i Start index of quarter length substring within longtext.
+ * @return {Array.<string>} Five element Array, containing the prefix of
+ *     longtext, the suffix of longtext, the prefix of shorttext, the suffix
+ *     of shorttext and the common middle.  Or null if there was no match.
+ * @private
+ */
+func (dmp *DiffMatchPatch) diff_halfMatchI(l string, s string, i int) []string {
+    // Start with a 1/4 length substring at position i as a seed.
+
+    seed := l[i : i+int(math.Floor(float64(len(l)/4)))]
+    j := -1
+    best_common := ""
+    best_longtext_a := ""
+    best_longtext_b := ""
+    best_shorttext_a := ""
+    best_shorttext_b := ""
+
+    if j < len(s) {
+        j = indexOf(s, seed, j+1)
+        for {
+
+            if j == -1 {
+                break
+            }
+
+            prefixLength := dmp.diff_commonPrefix(l[i:], s[j:])
+            suffixLength := dmp.diff_commonSuffix(l[0:i], s[0:j])
+
+            if len(best_common) < suffixLength+prefixLength {
+                best_common = s[j-suffixLength:j] + s[j:j+prefixLength]
+                best_longtext_a = l[0 : i-suffixLength]
+                best_longtext_b = l[i+prefixLength:]
+                best_shorttext_a = s[0 : j-suffixLength]
+                best_shorttext_b = s[j+prefixLength:]
+            }
+
+            j = indexOf(s, seed, j+1)
+        }
+    }
+
+    if len(best_common)*2 >= len(l) {
+        return []string{
+            best_longtext_a,
+            best_longtext_b,
+            best_shorttext_a,
+            best_shorttext_b,
+            best_common,
+        }
+    }
+    return nil
 }
 
 /**
@@ -853,8 +932,8 @@ func (dmp *DiffMatchPatch) diff_cleanupSemantic(diffs []change) {
 
             deletion := diffs[pointer-1].Text
             insertion := diffs[pointer].Text
-            overlap_length1 := dmp.diff_commonOverlap_(deletion, insertion)
-            overlap_length2 := dmp.diff_commonOverlap_(insertion, deletion)
+            overlap_length1 := dmp.diff_commonOverlap(deletion, insertion)
+            overlap_length2 := dmp.diff_commonOverlap(insertion, deletion)
             if overlap_length1 >= overlap_length2 {
                 if overlap_length1 >= len(deletion)/2 ||
                     overlap_length1 >= len(insertion)/2 {
@@ -1459,7 +1538,7 @@ func (dmp *DiffMatchPatch) diff_fromDelta(text1, delta string) []change {
         case '=':
             var n int64
 
-            n, err := strconv.ParseInt(param, 10, 32)
+            n, err := strconv.ParseInt(param, 10, 0)
             if err != nil {
                 log.Fatal(err)
                 panic(err)
@@ -2143,8 +2222,7 @@ func (dmp *DiffMatchPatch) patch_fromText(textline string) []Patch {
         patches = append(patches, patch)
 
         m := patchHeader.FindStringSubmatch(text[textPointer])
-        tmp, _ := strconv.ParseInt(m[1], 10, 64)
-        patch.start1 = int(tmp)
+        patch.start1, _ = strconv.Atoi(m[1])
         if len(m[2]) == 0 {
             patch.start1--
             patch.length1 = 1
@@ -2152,12 +2230,10 @@ func (dmp *DiffMatchPatch) patch_fromText(textline string) []Patch {
             patch.length1 = 0
         } else {
             patch.start1--
-            tmp_1, _ := strconv.ParseInt(m[2], 10, 64)
-            patch.length1 = int(tmp_1)
+            patch.length1, _ = strconv.Atoi(m[2])
         }
 
-        tmp_2, _ := strconv.ParseInt(m[3], 10, 64)
-        patch.start2 = int(tmp_2)
+        patch.start2, _ = strconv.Atoi(m[3])
 
         if len(m[4]) == 0 {
             patch.start2--
@@ -2166,8 +2242,7 @@ func (dmp *DiffMatchPatch) patch_fromText(textline string) []Patch {
             patch.length2 = 0
         } else {
             patch.start2--
-            tmp_3, _ := strconv.ParseInt(m[4], 10, 64)
-            patch.length2 = int(tmp_3)
+            patch.length2, _ = strconv.Atoi(m[4])
         }
         textPointer++
 
@@ -2243,4 +2318,3 @@ func unescapeForEncodeUriCompatability(str string) string {
 
     return str
 }
-

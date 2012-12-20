@@ -11,7 +11,6 @@ import (
     "strings"
     "time"
     //"unicode/utf8"
-    "fmt"
 )
 
 type DiffMatchPatch struct {
@@ -81,32 +80,6 @@ func indexOf(str string, pattern string, i int) int {
 
     return ind + len(str1)
 
-}
-
-func indexOfRune(str string, pattern rune, i int) int {
-    if len(str) == 0 {
-        return -1
-    }
-
-    if i > len(str)-1 {
-        return -1
-    }
-
-    if i == 0 {
-        return strings.IndexRune(str, pattern)
-    }
-
-    str1 := str[0:i]
-    str2 := str[i:]
-
-    //fmt.Println("###", str1, "----", str2,)
-
-    ind := strings.IndexRune(str2, pattern)
-    if ind == -1 {
-        return -1
-    }
-
-    return ind + len(str1)
 }
 
 type Patch struct {
@@ -238,7 +211,7 @@ func (dmp *DiffMatchPatch) diff_main(text1 string, text2 string, opt ...interfac
         diffs = append(diffs, change{DIFF_EQUAL, commonsuffix})
     }
 
-    dmp.diff_cleanupMerge(diffs)
+    dmp.diff_cleanupMerge(&diffs)
     return diffs
 }
 
@@ -334,7 +307,7 @@ func (dmp *DiffMatchPatch) diff_lineMode_(text1 string, text2 string, deadline i
     diffs := dmp.diff_main(text1, text2, false, deadline)
 
     // Convert the diff back to original text.
-    dmp.diff_charsToLines_(diffs, linearray)
+    dmp.diff_charsToLines(diffs, linearray)
     // Eliminate freak matches (e.g. blank lines)
     dmp.diff_cleanupSemantic(diffs)
 
@@ -543,35 +516,34 @@ func (dmp *DiffMatchPatch) diff_linesToChars(text1 string, text2 string) (string
  * @private
  */
 func (dmp *DiffMatchPatch) diff_linesToCharsMunge(text string, lineArray *[]string, lineHash map[string]int) string {
-    var chars bytes.Buffer
     // Walk the text, pulling out a substring for each line.
     // text.split('\n') would would temporarily double our memory footprint.
     // Modifying text would create many large strings to garbage collect.
     lineStart := 0
     lineEnd := -1
+    runes := []rune{}
 
-    runes := []rune(text)
-    for lineEnd < len(runes)-1 {
-        lineEnd = indexOfRune(text, '\n', lineStart)
+    for lineEnd < len(text)-1 {
+        lineEnd = indexOf(text, "\n", lineStart)
 
         if lineEnd == -1 {
-            lineEnd = len(runes) - 1
+            lineEnd = len(text) - 1
         }
-        fmt.Println(len(runes), lineStart, lineEnd+1)
-        line := string(runes[lineStart : lineEnd+1])
-        lineStart = lineEnd + 1
 
+        line := text[lineStart : lineEnd+1]
+        lineStart = lineEnd + 1
         lineValue_, ok := lineHash[line]
 
         if ok {
-            chars.WriteString(string(rune(lineValue_)))
+            runes = append(runes, rune(lineValue_))
         } else {
             *lineArray = append(*lineArray, line)
             lineHash[line] = len(*lineArray) - 1
-            chars.WriteString(string(rune(len(*lineArray) - 1)))
+            runes = append(runes, rune(len(*lineArray)-1))
         }
     }
-    return chars.String()
+
+    return string(runes)
 }
 
 /*
@@ -581,14 +553,16 @@ func (dmp *DiffMatchPatch) diff_linesToCharsMunge(text string, lineArray *[]stri
  * @param {!Array.<string>} lineArray Array of unique strings.
  * @private
  */
-func (dmp *DiffMatchPatch) diff_charsToLines_(diffs []change, lineArray []string) {
+func (dmp *DiffMatchPatch) diff_charsToLines(diffs []change, lineArray []string) {
     for x := 0; x < len(diffs); x++ {
-        var chars = diffs[x].Text
-        var text = []string{}
+        chars := diffs[x].Text
+        text := make([]string, len(chars))
+
         for y := 0; y < len(chars); y++ {
             unicodeCodePoints := []byte(chars)
             text[y] = lineArray[unicodeCodePoints[y]]
         }
+
         diffs[x].Text = strings.Join(text, "")
     }
 }
@@ -758,7 +732,6 @@ func (dmp *DiffMatchPatch) diff_halfMatch(text1, text2 string) []string {
     hm2 := dmp.diff_halfMatchI(longtext, shorttext, int(math.Ceil(float64(len(longtext)/2))))
 
     hm := []string{}
-
     if hm1 == nil && hm2 == nil {
         return nil
     } else if hm2 == nil {
@@ -798,8 +771,7 @@ func (dmp *DiffMatchPatch) diff_halfMatch(text1, text2 string) []string {
  */
 func (dmp *DiffMatchPatch) diff_halfMatchI(l string, s string, i int) []string {
     // Start with a 1/4 length substring at position i as a seed.
-
-    seed := l[i : i+int(math.Floor(float64(len(l)/4)))]
+    seed := l[i : i+len(l)/4]
     j := -1
     best_common := ""
     best_longtext_a := ""
@@ -810,7 +782,6 @@ func (dmp *DiffMatchPatch) diff_halfMatchI(l string, s string, i int) []string {
     if j < len(s) {
         j = indexOf(s, seed, j+1)
         for {
-
             if j == -1 {
                 break
             }
@@ -915,7 +886,7 @@ func (dmp *DiffMatchPatch) diff_cleanupSemantic(diffs []change) {
 
     // Normalize the diff.
     if changes {
-        dmp.diff_cleanupMerge(diffs)
+        dmp.diff_cleanupMerge(&diffs)
     }
     dmp.diff_cleanupSemanticLossless(diffs)
 
@@ -1196,7 +1167,7 @@ func (dmp *DiffMatchPatch) diff_cleanupEfficiency(diffs []change) {
     }
 
     if changes {
-        dmp.diff_cleanupMerge(diffs)
+        dmp.diff_cleanupMerge(&diffs)
     }
 }
 
@@ -1205,15 +1176,16 @@ func (dmp *DiffMatchPatch) diff_cleanupEfficiency(diffs []change) {
  * Any edit section can move as long as it doesn't cross an equality.
  * @param diffs List of Diff objects.
  */
-func (dmp *DiffMatchPatch) diff_cleanupMerge(diffs []change) {
+func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
     // Add a dummy entry at the end.
-    diffs = append(diffs, change{DIFF_EQUAL, ""})
+    diffs := append(*_diffs, change{DIFF_EQUAL, ""})
     pointer := 0
     count_delete := 0
     count_insert := 0
     text_delete := ""
     text_insert := ""
-    var commonlength int
+    commonlength := 0
+
     for pointer < len(diffs) {
         switch diffs[pointer].Type {
         case DIFF_INSERT:
@@ -1228,17 +1200,16 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(diffs []change) {
             break
         case DIFF_EQUAL:
             // Upon reaching an equality, check for prior redundancies.
-            if count_delete+count_insert > 1 {
+            if count_delete + count_insert > 1 {
                 if count_delete != 0 && count_insert != 0 {
                     // Factor out any common prefixies.
                     commonlength = dmp.diff_commonPrefix(text_insert, text_delete)
                     if commonlength != 0 {
-                        if (pointer-count_delete-count_insert) > 0 &&
+                        if (pointer - count_delete - count_insert) > 0 &&
                             diffs[pointer-count_delete-count_insert-1].Type == DIFF_EQUAL {
                             diffs[pointer-count_delete-count_insert-1].Text += text_insert[0:commonlength]
                         } else {
-                            diffs = append([]change{change{DIFF_EQUAL, text_insert[0:commonlength]}}, diffs...)
-                            //diffs.Insert(0, new Diff())
+                            diffs = append([]change{ change{ DIFF_EQUAL, text_insert[0:commonlength] } }, diffs...)
                             pointer++
                         }
                         text_insert = text_insert[commonlength:]
@@ -1259,8 +1230,8 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(diffs []change) {
                         change{DIFF_INSERT, text_insert})
                 } else if count_insert == 0 {
                     diffs = splice(diffs, pointer-count_delete,
-                        count_delete+count_insert, change{DIFF_DELETE, text_delete})
-                    //change{DIFF_DELETE, text_delete})
+                        count_delete+count_insert,
+                        change{DIFF_DELETE, text_delete})
                 } else {
                     diffs = splice(diffs, pointer-count_delete-count_insert,
                         count_delete+count_insert,
@@ -1291,7 +1262,7 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(diffs []change) {
     }
 
     if len(diffs[len(diffs)-1].Text) == 0 {
-        diffs = append(diffs[:len(diffs)-1], diffs[len(diffs)-1:]...) // Remove the dummy entry at the end.
+        diffs = diffs[0 : len(diffs) - 1] // Remove the dummy entry at the end.
     }
 
     // Second pass: look for single edits surrounded on both sides by
@@ -1316,15 +1287,18 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(diffs []change) {
                 diffs[pointer-1].Text += diffs[pointer+1].Text
                 diffs[pointer].Text =
                     diffs[pointer].Text[len(diffs[pointer+1].Text):] + diffs[pointer+1].Text
-                splice(diffs, pointer+1, 1)
+                splice(diffs, pointer + 1, 1)
                 changes = true
             }
         }
         pointer++
     }
+
+    *_diffs = diffs
+
     // If shifts were made, the diff needs reordering and another shift sweep.
     if changes {
-        dmp.diff_cleanupMerge(diffs)
+        dmp.diff_cleanupMerge(_diffs)
     }
 }
 

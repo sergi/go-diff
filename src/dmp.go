@@ -14,7 +14,7 @@ import (
 )
 
 type DiffMatchPatch struct {
-    DiffTimeout          int
+    DiffTimeout          float64
     DiffEditCost         int
     MatchDistance        int
     PatchDeleteThreshold float64
@@ -175,7 +175,7 @@ func (dmp *DiffMatchPatch) diff_main(text1 string, text2 string, opt ...interfac
             if dmp.DiffTimeout <= 0 {
                 deadline = max32
             } else {
-                deadline = int32(int(time.Now().Unix()) + dmp.DiffTimeout*1000)
+                deadline = int32(int(time.Now().Unix()) + int(dmp.DiffTimeout*1000))
             }
         }
     }
@@ -287,7 +287,7 @@ func (dmp *DiffMatchPatch) diff_compute_(text1 string, text2 string, checklines 
         return dmp.diff_lineMode_(text1, text2, deadline)
     }
 
-    return dmp.diff_bisect_(text1, text2, deadline)
+    return dmp.diff_bisect(text1, text2, deadline)
 }
 
 /**
@@ -360,7 +360,7 @@ func (dmp *DiffMatchPatch) diff_lineMode_(text1 string, text2 string, deadline i
     return diffs[:len(diffs)-1] // Remove the dummy entry at the end.
 }
 
-func (dmp *DiffMatchPatch) diff_bisect_(text1 string, text2 string, deadline int32) []change {
+func (dmp *DiffMatchPatch) diff_bisect(text1 string, text2 string, deadline int32) []change {
     // Cache the text lengths to prevent multiple calls.
     text1_length := len(text1)
     text2_length := len(text2)
@@ -970,22 +970,25 @@ func (dmp *DiffMatchPatch) diff_cleanupSemanticLossless(diffs []change) {
             return 6
         }
 
+        _one := []rune(one)
+        _two := []rune(two)
+
         // Each port of this function behaves slightly differently due to
         // subtle differences in each language's definition of things like
         // 'whitespace'.  Since this function's purpose is largely cosmetic,
         // the choice has been made to use each language's native features
         // rather than force total conformity.
-        char1 := string(one[len(one)-1])
-        char2 := string(two[0])
+        char1 := string(_one[len(one)-1])
+        char2 := string(_two[0])
 
-        var nonAlphaNumeric1 = nonAlphaNumericRegex_.MatchString(char1)
-        var nonAlphaNumeric2 = nonAlphaNumericRegex_.MatchString(char2)
-        var whitespace1 = nonAlphaNumeric1 && whitespaceRegex_.MatchString(char1)
-        var whitespace2 = nonAlphaNumeric2 && whitespaceRegex_.MatchString(char2)
-        var lineBreak1 = whitespace1 && linebreakRegex_.MatchString(char1)
-        var lineBreak2 = whitespace2 && linebreakRegex_.MatchString(char2)
-        var blankLine1 = lineBreak1 && blanklineEndRegex_.MatchString(one)
-        var blankLine2 = lineBreak2 && blanklineEndRegex_.MatchString(two)
+        nonAlphaNumeric1 := nonAlphaNumericRegex_.MatchString(char1)
+        nonAlphaNumeric2 := nonAlphaNumericRegex_.MatchString(char2)
+        whitespace1 := nonAlphaNumeric1 && whitespaceRegex_.MatchString(char1)
+        whitespace2 := nonAlphaNumeric2 && whitespaceRegex_.MatchString(char2)
+        lineBreak1 := whitespace1 && linebreakRegex_.MatchString(char1)
+        lineBreak2 := whitespace2 && linebreakRegex_.MatchString(char2)
+        blankLine1 := lineBreak1 && blanklineEndRegex_.MatchString(one)
+        blankLine2 := lineBreak2 && blanklineEndRegex_.MatchString(two)
 
         if blankLine1 || blankLine2 {
             // Five points for blank lines.
@@ -1012,12 +1015,12 @@ func (dmp *DiffMatchPatch) diff_cleanupSemanticLossless(diffs []change) {
         if diffs[pointer-1].Type == DIFF_EQUAL &&
             diffs[pointer+1].Type == DIFF_EQUAL {
             // This is a single edit surrounded by equalities.
-            var equality1 string = diffs[pointer-1].Text
-            var edit string = diffs[pointer].Text
-            var equality2 string = diffs[pointer+1].Text
+            equality1 := diffs[pointer-1].Text
+            edit := diffs[pointer].Text
+            equality2 := diffs[pointer+1].Text
 
             // First, shift the edit as far left as possible.
-            var commonOffset = dmp.diff_commonSuffix(equality1, edit)
+            commonOffset := dmp.diff_commonSuffix(equality1, edit)
             if commonOffset > 0 {
                 commonString := edit[len(edit)-commonOffset:]
                 equality1 = equality1[0 : len(equality1)-commonOffset]
@@ -1032,13 +1035,14 @@ func (dmp *DiffMatchPatch) diff_cleanupSemanticLossless(diffs []change) {
             bestScore := diff_cleanupSemanticScore_(equality1, edit) +
                 diff_cleanupSemanticScore_(edit, equality2)
 
-            for edit[0] == equality2[0] {
+            for len(edit) != 0 && len(equality2) != 0 && edit[0] == equality2[0] {
                 equality1 += string(edit[0])
                 edit = edit[1:] + string(equality2[0])
                 equality2 = equality2[1:]
                 score := diff_cleanupSemanticScore_(equality1, edit) +
                     diff_cleanupSemanticScore_(edit, equality2)
-                // The >= encourages trailing rather than leading whitespace on edits.
+                // The >= encourages trailing rather than leading whitespace on
+                // edits.
                 if score >= bestScore {
                     bestScore = score
                     bestEquality1 = equality1
@@ -1057,7 +1061,7 @@ func (dmp *DiffMatchPatch) diff_cleanupSemanticLossless(diffs []change) {
                 }
 
                 diffs[pointer].Text = bestEdit
-                if len(bestEquality2) > 0 {
+                if len(bestEquality2) != 0 {
                     diffs[pointer+1].Text = bestEquality2
                 } else {
                     //splice(diffs, pointer+1, 1)
@@ -1200,16 +1204,16 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
             break
         case DIFF_EQUAL:
             // Upon reaching an equality, check for prior redundancies.
-            if count_delete + count_insert > 1 {
+            if count_delete+count_insert > 1 {
                 if count_delete != 0 && count_insert != 0 {
                     // Factor out any common prefixies.
                     commonlength = dmp.diff_commonPrefix(text_insert, text_delete)
                     if commonlength != 0 {
-                        if (pointer - count_delete - count_insert) > 0 &&
+                        if (pointer-count_delete-count_insert) > 0 &&
                             diffs[pointer-count_delete-count_insert-1].Type == DIFF_EQUAL {
                             diffs[pointer-count_delete-count_insert-1].Text += text_insert[0:commonlength]
                         } else {
-                            diffs = append([]change{ change{ DIFF_EQUAL, text_insert[0:commonlength] } }, diffs...)
+                            diffs = append([]change{change{DIFF_EQUAL, text_insert[0:commonlength]}}, diffs...)
                             pointer++
                         }
                         text_insert = text_insert[commonlength:]
@@ -1262,7 +1266,7 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
     }
 
     if len(diffs[len(diffs)-1].Text) == 0 {
-        diffs = diffs[0 : len(diffs) - 1] // Remove the dummy entry at the end.
+        diffs = diffs[0 : len(diffs)-1] // Remove the dummy entry at the end.
     }
 
     // Second pass: look for single edits surrounded on both sides by
@@ -1287,7 +1291,7 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
                 diffs[pointer-1].Text += diffs[pointer+1].Text
                 diffs[pointer].Text =
                     diffs[pointer].Text[len(diffs[pointer+1].Text):] + diffs[pointer+1].Text
-                splice(diffs, pointer + 1, 1)
+                splice(diffs, pointer+1, 1)
                 changes = true
             }
         }

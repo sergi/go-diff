@@ -1,3 +1,17 @@
+/**
+ * dmp.go
+ *
+ * Go language implementation of Google Diff, Match, and Patch library
+ *
+ * Original library is Copyright (c) 2006 Google Inc.
+ * http://code.google.com/p/google-diff-match-patch/
+ *
+ * Copyright (c) 2012 Sergi Mansilla <sergi.mansilla@gmail.com>
+ * https://github.com/sergi/go-diff
+ *
+ * See included LICENSE file for license details.
+ */
+
 package godiff
 
 import (
@@ -365,20 +379,11 @@ func (dmp *DiffMatchPatch) diff_bisect(text1 string, text2 string, deadline int3
     text1_length := len(text1)
     text2_length := len(text2)
 
-    max_d := math.Ceil(float64((text1_length + text2_length) / 2))
-    v_offset := int(max_d)
-    v_length := int(2 * max_d)
+    max_d := int(math.Ceil(float64((text1_length + text2_length/2))))
+    v_offset := max_d
+    v_length := 2 * max_d
     v1 := make([]int, v_length)
     v2 := make([]int, v_length)
-    //var v1 = new Array(v_length)
-    //var v2 = new Array(v_length)
-
-    // Setting all elements to -1 is faster in Chrome & Firefox than mixing
-    // integers and undefined.
-    for x := 0; x < v_length; x++ {
-        v1[x] = -1
-        v2[x] = -1
-    }
 
     v1[v_offset+1] = 0
     v2[v_offset+1] = 0
@@ -393,7 +398,7 @@ func (dmp *DiffMatchPatch) diff_bisect(text1 string, text2 string, deadline int3
     k1end := 0
     k2start := 0
     k2end := 0
-    for d := 0; d < int(max_d); d++ {
+    for d := 0; d < max_d; d++ {
         // Bail out if deadline is reached.
         if int32(time.Now().Unix()) > deadline {
             break
@@ -1193,14 +1198,14 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
     for pointer < len(diffs) {
         switch diffs[pointer].Type {
         case DIFF_INSERT:
-            count_insert++
+            count_insert += 1
             text_insert += diffs[pointer].Text
-            pointer++
+            pointer += 1
             break
         case DIFF_DELETE:
-            count_delete++
+            count_delete += 1
             text_delete += diffs[pointer].Text
-            pointer++
+            pointer += 1
             break
         case DIFF_EQUAL:
             // Upon reaching an equality, check for prior redundancies.
@@ -1209,12 +1214,12 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
                     // Factor out any common prefixies.
                     commonlength = dmp.diff_commonPrefix(text_insert, text_delete)
                     if commonlength != 0 {
-                        if (pointer-count_delete-count_insert) > 0 &&
-                            diffs[pointer-count_delete-count_insert-1].Type == DIFF_EQUAL {
-                            diffs[pointer-count_delete-count_insert-1].Text += text_insert[0:commonlength]
+                        x := pointer - count_delete - count_insert
+                        if x > 0 && diffs[x-1].Type == DIFF_EQUAL {
+                            diffs[x-1].Text += text_insert[:commonlength]
                         } else {
-                            diffs = append([]change{change{DIFF_EQUAL, text_insert[0:commonlength]}}, diffs...)
-                            pointer++
+                            diffs = append([]change{change{DIFF_EQUAL, text_insert[:commonlength]}}, diffs...)
+                            pointer += 1
                         }
                         text_insert = text_insert[commonlength:]
                         text_delete = text_delete[commonlength:]
@@ -1222,9 +1227,11 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
                     // Factor out any common suffixies.
                     commonlength = dmp.diff_commonSuffix(text_insert, text_delete)
                     if commonlength != 0 {
-                        diffs[pointer].Text = text_insert[len(text_insert)-commonlength:] + diffs[pointer].Text
-                        text_insert = text_insert[0 : len(text_insert)-commonlength]
-                        text_delete = text_delete[0 : len(text_delete)-commonlength]
+                        insert_index := len(text_insert) - commonlength
+                        delete_index := len(text_delete) - commonlength
+                        diffs[pointer].Text = text_insert[insert_index:] + diffs[pointer].Text
+                        text_insert = text_insert[:insert_index]
+                        text_delete = text_delete[:delete_index]
                     }
                 }
                 // Delete the offending records and add the merged ones.
@@ -1245,10 +1252,10 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
 
                 pointer = pointer - count_delete - count_insert + 1
                 if count_delete != 0 {
-                    pointer = pointer + 1
+                    pointer += 1
                 }
                 if count_insert != 0 {
-                    pointer = pointer + 1
+                    pointer += 1
                 }
             } else if pointer != 0 && diffs[pointer-1].Type == DIFF_EQUAL {
                 // Merge this equality with the previous one.
@@ -1276,8 +1283,7 @@ func (dmp *DiffMatchPatch) diff_cleanupMerge(_diffs *[]change) {
     pointer = 1
     // Intentionally ignore the first and last element (don't need checking).
     for pointer < (len(diffs) - 1) {
-        if diffs[pointer-1].Type == DIFF_EQUAL &&
-            diffs[pointer+1].Type == DIFF_EQUAL {
+        if diffs[pointer-1].Type == DIFF_EQUAL && diffs[pointer+1].Type == DIFF_EQUAL {
             // This is a single edit surrounded by equalities.
             if strings.HasSuffix(diffs[pointer].Text, diffs[pointer-1].Text) {
                 // Shift the edit over the previous equality.
@@ -1888,8 +1894,10 @@ func (dmp *DiffMatchPatch) patch_deepCopy(patches []Patch) []Patch {
     for _, aPatch := range patches {
         patchCopy := Patch{}
         for _, aDiff := range aPatch.diffs {
-            diffCopy := change{aDiff.Type, aDiff.Text}
-            patchCopy.diffs = append(patchCopy.diffs, diffCopy)
+            patchCopy.diffs = append(patchCopy.diffs, change{
+                aDiff.Type,
+                aDiff.Text,
+            })
         }
         patchCopy.start1 = aPatch.start1
         patchCopy.start2 = aPatch.start2

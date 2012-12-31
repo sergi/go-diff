@@ -24,11 +24,11 @@ Diff, Match and Patch Library
   Copyright (c) 2006 Google Inc.
   <http://code.google.com/p/google-diff-match-patch/>
 
-This C version of Diff, Match and Patch Library is licensed under
+This Go version of Diff, Match and Patch Library is licensed under
 the [MIT License](http://www.opensource.org/licenses/MIT) (a.k.a.
 the Expat License) which is included here in the `LICENSE` file.
 
-C version of Diff, Match and Patch Library
+Go version of Diff, Match and Patch Library
 
   Copyright (c) 2012 Sergi Mansilla <sergi.mansilla@gmail.com>
   <https://github.com/sergi/go-diff>

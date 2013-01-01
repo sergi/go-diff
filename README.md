@@ -10,6 +10,14 @@ Current state for this Go library
 
 All the code and its tests has been ported. Now there are still several tests failing due to bugs in the port, but since it is a pretty test-complete library, we have a good measure to tell when will it be in a stable state (100% of tests passing). If you feel like contributing to the library, please pick a failing unit test and make it pass, thanks!
 
+In order to run the tests:
+
+`cd diff && go test`
+
+## Installation
+
+    go get github.com/sergi/go-diff/diff
+
 Copyright and License
 ---------------------
 

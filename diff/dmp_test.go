@@ -231,66 +231,66 @@ func Test_diffCleanupMerge(t *testing.T) {
 	// Cleanup a messy diff.
 	// Null case.
 	diffs := []Diff{}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{}, diffs)
 
 	// No Diff case.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}, diffs)
 
 	// Merge equalities.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffEqual, "b"}, Diff{DiffEqual, "c"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffEqual, "abc"}}, diffs)
 
 	// Merge deletions.
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffDelete, "b"}, Diff{DiffDelete, "c"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffDelete, "abc"}}, diffs)
 
 	// Merge insertions.
 	diffs = []Diff{Diff{DiffInsert, "a"}, Diff{DiffInsert, "b"}, Diff{DiffInsert, "c"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffInsert, "abc"}}, diffs)
 
 	// Merge interweave.
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}, Diff{DiffDelete, "c"}, Diff{DiffInsert, "d"}, Diff{DiffEqual, "e"}, Diff{DiffEqual, "f"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffDelete, "ac"}, Diff{DiffInsert, "bd"}, Diff{DiffEqual, "ef"}}, diffs)
 
 	// Prefix and suffix detection.
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "c"}}, diffs)
 
 	// Prefix and suffix detection with equalities.
 	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}, Diff{DiffEqual, "y"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffEqual, "xa"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
 
 	// Slide edit left.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "ba"}, Diff{DiffEqual, "c"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	fmt.Println("*****", diffs)
 	assertSeqEqual([]Diff{Diff{DiffInsert, "ab"}, Diff{DiffEqual, "ac"}}, diffs)
 
 	// Slide edit right.
 	diffs = []Diff{Diff{DiffEqual, "c"}, Diff{DiffInsert, "ab"}, Diff{DiffEqual, "a"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 
 	fmt.Println("*****", diffs)
-	//assertSeqEqual([]Diff{Diff{DiffEqual, "ca"}, Diff{DiffInsert, "ba"}}, diffs)
+	assertSeqEqual([]Diff{Diff{DiffEqual, "ca"}, Diff{DiffInsert, "ba"}}, diffs)
 
 	// Slide edit left recursive.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "ac"}, Diff{DiffEqual, "x"}}
-	dmp.DiffCleanupMerge(&diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
 	assertSeqEqual([]Diff{Diff{DiffDelete, "abc"}, Diff{DiffEqual, "acx"}}, diffs)
 
 	// Slide edit right recursive.
 	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "ca"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "a"}}
-	dmp.DiffCleanupMerge(&diffs)
-	//assertSeqEqual([]Diff{Diff{DiffEqual, "xca"}, Diff{DiffDelete, "cba"}}, diffs)
+	diffs = dmp.DiffCleanupMerge(diffs)
+	assertSeqEqual([]Diff{Diff{DiffEqual, "xca"}, Diff{DiffDelete, "cba"}}, diffs)
 }
 
 func Test_diffCleanupSemanticLossless(t *testing.T) {

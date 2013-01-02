@@ -272,8 +272,7 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 		diffs = append(diffs, Diff{DiffEqual, commonsuffix})
 	}
 
-	dmp.DiffCleanupMerge(&diffs)
-	return diffs
+	return dmp.DiffCleanupMerge(diffs)
 }
 
 // diff_compute_ finds the differences between two texts.  Assumes that the texts do not
@@ -370,7 +369,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int
 	diffs := dmp.DiffMain(text1, text2, false, deadline)
 
 	// Convert the diff back to original text.
-	dmp.DiffCharsToLines(diffs, linearray)
+	diffs = dmp.DiffCharsToLines(diffs, linearray)
 	// Eliminate freak matches (e.g. blank lines)
 	dmp.DiffCleanupSemantic(diffs)
 
@@ -602,9 +601,9 @@ func (dmp *DiffMatchPatch) diffLinesToCharsMunge(text string, lineArray *[]strin
 
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of
 // text.
-func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) {
-	for x := 0; x < len(diffs); x++ {
-		chars := diffs[x].Text
+func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
+	for _, aDiff := range diffs {
+		chars := aDiff.Text
 		text := make([]string, len(chars))
 
 		for y := 0; y < len(chars); y++ {
@@ -612,8 +611,9 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) {
 			text[y] = lineArray[unicodeCodePoints[y]]
 		}
 
-		diffs[x].Text = strings.Join(text, "")
+		aDiff.Text = strings.Join(text, "")
 	}
+	return diffs
 }
 
 // DiffCommonPrefix determines the common prefix length of two strings.
@@ -833,7 +833,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l string, s string, i int) []string {
 
 // Diff_cleanupSemantic reduces the number of edits by eliminating 
 // semantically trivial equalities.
-func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) {
+func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	changes := false
 	equalities := new(Stack) // Stack of indices where equalities are found.
 
@@ -897,9 +897,9 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) {
 
 	// Normalize the diff.
 	if changes {
-		dmp.DiffCleanupMerge(&diffs)
+		diffs = dmp.DiffCleanupMerge(diffs)
 	}
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	// Find any overlaps between deletions and insertions.
 	// e.g: <del>abcxxx</del><ins>xxxdef</ins>
@@ -955,12 +955,14 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) {
 		}
 		pointer++
 	}
+
+	return diffs
 }
 
 // Diff_cleanupSemanticLossless looks for single edits surrounded on both sides by equalities
 // which can be shifted sideways to align the edit to a word boundary.
 // e.g: The c<ins>at c</ins>ame. -> The <ins>cat </ins>came.
-func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) {
+func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 
 	/**
 	 * Given two strings, compute a score representing whether the internal
@@ -1082,11 +1084,13 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) {
 		}
 		pointer++
 	}
+
+	return diffs
 }
 
 // Diff_cleanupEfficiency reduces the number of edits by eliminating 
 // operationally trivial equalities.
-func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) {
+func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 	changes := false
 	// Stack of indices where equalities are found.
 	equalities := new(Stack)
@@ -1179,15 +1183,17 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) {
 	}
 
 	if changes {
-		dmp.DiffCleanupMerge(&diffs)
+		diffs = dmp.DiffCleanupMerge(diffs)
 	}
+
+	return diffs
 }
 
 // Diff_cleanupMerge reorders and merges like edit sections.  Merge equalities.
 // Any edit section can move as long as it doesn't cross an equality.
-func (dmp *DiffMatchPatch) DiffCleanupMerge(_diffs *[]Diff) {
+func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	// Add a dummy entry at the end.
-	diffs := append(*_diffs, Diff{DiffEqual, ""})
+	diffs = append(diffs, Diff{DiffEqual, ""})
 	pointer := 0
 	count_delete := 0
 	count_insert := 0
@@ -1304,12 +1310,12 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(_diffs *[]Diff) {
 		pointer++
 	}
 
-	*_diffs = diffs
-
 	// If shifts were made, the diff needs reordering and another shift sweep.
 	if changes {
-		dmp.DiffCleanupMerge(_diffs)
+		diffs = dmp.DiffCleanupMerge(diffs)
 	}
+
+	return diffs
 }
 
 // Diff_xIndex. loc is a location in text1, comAdde and return the equivalent location in
@@ -1733,8 +1739,8 @@ func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
 		if kind == "string" {
 			diffs := dmp.DiffMain(text1, text2, true)
 			if len(diffs) > 2 {
-				dmp.DiffCleanupSemantic(diffs)
-				dmp.DiffCleanupEfficiency(diffs)
+				diffs = dmp.DiffCleanupSemantic(diffs)
+				diffs = dmp.DiffCleanupEfficiency(diffs)
 			}
 			return dmp.PatchMake(text1, diffs)
 		} else if kind == "Diff" {
@@ -1914,7 +1920,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 					// The end points match, but the content is unacceptably bad.
 					results[x] = false
 				} else {
-					dmp.DiffCleanupSemanticLossless(diffs)
+					diffs = dmp.DiffCleanupSemanticLossless(diffs)
 					index1 := 0
 					for _, aDiff := range aPatch.diffs {
 						if aDiff.Type != DiffEqual {

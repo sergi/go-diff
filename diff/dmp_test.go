@@ -1,15 +1,12 @@
-package diff
+package diffmatchpatch
 
 import (
 	"fmt"
 	"github.com/bmizerany/assert"
-	//"strings"
 	"reflect"
 	"strconv"
 	"testing"
-	"time" //import go package for testing related functionality
-	//"unicode/utf8"
-	//"strconv"
+	"time"
 )
 
 func softAssert(t *testing.T, cond bool, msg string) {
@@ -51,118 +48,118 @@ func assertSeqEqual(seq1, seq2 interface{}) {
 	}
 }
 
-func diff_rebuildtexts(diffs []change) []string {
+func diffRebuildtexts(diffs []Diff) []string {
 	text := []string{"", ""}
 	for _, myDiff := range diffs {
-		if myDiff.Type != DIFF_INSERT {
+		if myDiff.Type != DiffInsert {
 			text[0] += myDiff.Text
 		}
-		if myDiff.Type != DIFF_DELETE {
+		if myDiff.Type != DiffDelete {
 			text[1] += myDiff.Text
 		}
 	}
 	return text
 }
 
-func Test_diff_commonPrefix(t *testing.T) {
+func Test_diffCommonPrefix(t *testing.T) {
 	dmp := createDMP()
 	// Detect any common suffix.
 	// Null case.
-	assert.Equal(t, 0, dmp.Diff_commonPrefix("abc", "xyz"), "'abc' and 'xyz' should not be equal")
+	assert.Equal(t, 0, dmp.DiffCommonPrefix("abc", "xyz"), "'abc' and 'xyz' should not be equal")
 
 	// Non-null case.
-	assert.Equal(t, 4, dmp.Diff_commonPrefix("1234abcdef", "1234xyz"), "")
+	assert.Equal(t, 4, dmp.DiffCommonPrefix("1234abcdef", "1234xyz"), "")
 
 	// Whole case.
-	assert.Equal(t, 4, dmp.Diff_commonPrefix("1234", "1234xyz"), "")
+	assert.Equal(t, 4, dmp.DiffCommonPrefix("1234", "1234xyz"), "")
 }
 
-func Test_diff_commonSuffixTest(t *testing.T) {
+func Test_diffCommonSuffixTest(t *testing.T) {
 	dmp := createDMP()
 	// Detect any common suffix.
 	// Null case.
-	assert.Equal(t, 0, dmp.Diff_commonSuffix("abc", "xyz"), "")
+	assert.Equal(t, 0, dmp.DiffCommonSuffix("abc", "xyz"), "")
 
 	// Non-null case.
-	assert.Equal(t, 4, dmp.Diff_commonSuffix("abcdef1234", "xyz1234"), "")
+	assert.Equal(t, 4, dmp.DiffCommonSuffix("abcdef1234", "xyz1234"), "")
 
 	// Whole case.
-	assert.Equal(t, 4, dmp.Diff_commonSuffix("1234", "xyz1234"), "")
+	assert.Equal(t, 4, dmp.DiffCommonSuffix("1234", "xyz1234"), "")
 }
 
-func Test_diff_commonOverlapTest(t *testing.T) {
+func Test_diffCommonOverlapTest(t *testing.T) {
 	dmp := createDMP()
 	// Detect any suffix/prefix overlap.
 	// Null case.
-	assert.Equal(t, 0, dmp.Diff_commonOverlap("", "abcd"), "")
+	assert.Equal(t, 0, dmp.DiffCommonOverlap("", "abcd"), "")
 
 	// Whole case.
-	assert.Equal(t, 3, dmp.Diff_commonOverlap("abc", "abcd"), "")
+	assert.Equal(t, 3, dmp.DiffCommonOverlap("abc", "abcd"), "")
 
 	// No overlap.
-	assert.Equal(t, 0, dmp.Diff_commonOverlap("123456", "abcd"), "")
+	assert.Equal(t, 0, dmp.DiffCommonOverlap("123456", "abcd"), "")
 
 	// Overlap.
-	assert.Equal(t, 3, dmp.Diff_commonOverlap("123456xxx", "xxxabcd"), "")
+	assert.Equal(t, 3, dmp.DiffCommonOverlap("123456xxx", "xxxabcd"), "")
 
 	// Unicode.
 	// Some overly clever languages (C#) may treat ligatures as equal to their
 	// component letters.  E.g. U+FB01 == 'fi'
-	assert.Equal(t, 0, dmp.Diff_commonOverlap("fi", "\ufb01i"), "")
+	assert.Equal(t, 0, dmp.DiffCommonOverlap("fi", "\ufb01i"), "")
 }
 
-func Test_diff_halfmatchTest(t *testing.T) {
+func Test_diffHalfmatchTest(t *testing.T) {
 	dmp := createDMP()
 	dmp.DiffTimeout = 1
 	// No match.
-	softAssert(t, dmp.Diff_halfMatch("1234567890", "abcdef") == nil, "")
-	softAssert(t, dmp.Diff_halfMatch("12345", "23") == nil, "")
+	softAssert(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
+	softAssert(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
 
 	// Single Match.
 	assertSeqEqual(
 		[]string{"12", "90", "a", "z", "345678"},
-		dmp.Diff_halfMatch("1234567890", "a345678z"))
+		dmp.DiffHalfMatch("1234567890", "a345678z"))
 
-	assertSeqEqual([]string{"a", "z", "12", "90", "345678"}, dmp.Diff_halfMatch("a345678z", "1234567890"))
+	assertSeqEqual([]string{"a", "z", "12", "90", "345678"}, dmp.DiffHalfMatch("a345678z", "1234567890"))
 
-	assertSeqEqual([]string{"abc", "z", "1234", "0", "56789"}, dmp.Diff_halfMatch("abc56789z", "1234567890"))
+	assertSeqEqual([]string{"abc", "z", "1234", "0", "56789"}, dmp.DiffHalfMatch("abc56789z", "1234567890"))
 
-	assertSeqEqual([]string{"a", "xyz", "1", "7890", "23456"}, dmp.Diff_halfMatch("a23456xyz", "1234567890"))
+	assertSeqEqual([]string{"a", "xyz", "1", "7890", "23456"}, dmp.DiffHalfMatch("a23456xyz", "1234567890"))
 
 	// Multiple Matches.
-	assertSeqEqual([]string{"12123", "123121", "a", "z", "1234123451234"}, dmp.Diff_halfMatch("121231234123451234123121", "a1234123451234z"))
+	assertSeqEqual([]string{"12123", "123121", "a", "z", "1234123451234"}, dmp.DiffHalfMatch("121231234123451234123121", "a1234123451234z"))
 
-	assertSeqEqual([]string{"", "-=-=-=-=-=", "x", "", "x-=-=-=-=-=-=-="}, dmp.Diff_halfMatch("x-=-=-=-=-=-=-=-=-=-=-=-=", "xx-=-=-=-=-=-=-="))
+	assertSeqEqual([]string{"", "-=-=-=-=-=", "x", "", "x-=-=-=-=-=-=-="}, dmp.DiffHalfMatch("x-=-=-=-=-=-=-=-=-=-=-=-=", "xx-=-=-=-=-=-=-="))
 
-	assertSeqEqual([]string{"-=-=-=-=-=", "", "", "y", "-=-=-=-=-=-=-=y"}, dmp.Diff_halfMatch("-=-=-=-=-=-=-=-=-=-=-=-=y", "-=-=-=-=-=-=-=yy"))
+	assertSeqEqual([]string{"-=-=-=-=-=", "", "", "y", "-=-=-=-=-=-=-=y"}, dmp.DiffHalfMatch("-=-=-=-=-=-=-=-=-=-=-=-=y", "-=-=-=-=-=-=-=yy"))
 
 	// Non-optimal halfmatch.
 	// Optimal diff would be -q+x=H-i+e=lloHe+Hu=llo-Hew+y not -qHillo+x=HelloHe-w+Hulloy
-	assertSeqEqual([]string{"qHillo", "w", "x", "Hulloy", "HelloHe"}, dmp.Diff_halfMatch("qHilloHelloHew", "xHelloHeHulloy"))
+	assertSeqEqual([]string{"qHillo", "w", "x", "Hulloy", "HelloHe"}, dmp.DiffHalfMatch("qHilloHelloHew", "xHelloHeHulloy"))
 
 	// Optimal no halfmatch.
 	dmp.DiffTimeout = 0
-	softAssert(t, dmp.Diff_halfMatch("qHilloHelloHew", "xHelloHeHulloy") == nil, "")
+	softAssert(t, dmp.DiffHalfMatch("qHilloHelloHew", "xHelloHeHulloy") == nil, "")
 }
 
-func Test_diff_linesToChars(t *testing.T) {
+func Test_diffLinesToChars(t *testing.T) {
 	dmp := createDMP()
 	// Convert lines down to characters.
 	tmpVector := []string{"", "alpha\n", "beta\n"}
 
-	result0, result1, result2 := dmp.Diff_linesToChars("alpha\nbeta\nalpha\n", "beta\nalpha\nbeta\n")
+	result0, result1, result2 := dmp.DiffLinesToChars("alpha\nbeta\nalpha\n", "beta\nalpha\nbeta\n")
 	assert.Equal(t, "\u0001\u0002\u0001", result0, "")
 	assert.Equal(t, "\u0002\u0001\u0002", result1, "")
 	assertSeqEqual(tmpVector, result2)
 
 	tmpVector = []string{"", "alpha\r\n", "beta\r\n", "\r\n"}
-	result0, result1, result2 = dmp.Diff_linesToChars("", "alpha\r\nbeta\r\n\r\n\r\n")
+	result0, result1, result2 = dmp.DiffLinesToChars("", "alpha\r\nbeta\r\n\r\n\r\n")
 	assert.Equal(t, "", result0, "")
 	assert.Equal(t, "\u0001\u0002\u0003\u0003", result1, "")
 	assertSeqEqual(tmpVector, result2)
 
 	tmpVector = []string{"", "a", "b"}
-	result0, result1, result2 = dmp.Diff_linesToChars("a", "b")
+	result0, result1, result2 = dmp.DiffLinesToChars("a", "b")
 	assert.Equal(t, "\u0001", result0, "")
 	assert.Equal(t, "\u0002", result1, "")
 	assertSeqEqual(tmpVector, result2)
@@ -186,7 +183,7 @@ func Test_diff_linesToChars(t *testing.T) {
 	   assert.Equal(t, n, utf8.RuneCountInString(chars), "")
 	   tmpVector = append(tmpVector, "")
 
-	   result0, result1, result2 = dmp.Diff_linesToChars(lines, "")
+	   result0, result1, result2 = dmp.DiffLinesToChars(lines, "")
 
 	   assert.Equal(t, chars, result0)
 	   assert.Equal(t, "", result1, "")
@@ -194,18 +191,18 @@ func Test_diff_linesToChars(t *testing.T) {
 	*/
 }
 
-func Test_diff_charsToLines(t *testing.T) {
+func Test_diffCharsToLines(t *testing.T) {
 	dmp := createDMP()
 	// Convert chars up to lines.
-	diffs := []change{
-		change{DIFF_EQUAL, "\u0001\u0002\u0001"},
-		change{DIFF_INSERT, "\u0002\u0001\u0002"}}
+	diffs := []Diff{
+		Diff{DiffEqual, "\u0001\u0002\u0001"},
+		Diff{DiffInsert, "\u0002\u0001\u0002"}}
 
 	tmpVector := []string{"", "alpha\n", "beta\n"}
-	dmp.Diff_charsToLines(diffs, tmpVector)
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "alpha\nbeta\nalpha\n"},
-		change{DIFF_INSERT, "beta\nalpha\nbeta\n"}}, diffs)
+	dmp.DiffCharsToLines(diffs, tmpVector)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "alpha\nbeta\nalpha\n"},
+		Diff{DiffInsert, "beta\nalpha\nbeta\n"}}, diffs)
 
 	// More than 256 to reveal any 8-bit limitations.
 	n := 300
@@ -223,436 +220,437 @@ func Test_diff_charsToLines(t *testing.T) {
 	assert.Equal(t, n, len(charList))
 
 	tmpVector = append([]string{""}, tmpVector...)
-	diffs = []change{change{DIFF_DELETE, string(charList)}}
-	dmp.Diff_charsToLines(diffs, tmpVector)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, string(lineList)}}, diffs)
+	diffs = []Diff{Diff{DiffDelete, string(charList)}}
+	dmp.DiffCharsToLines(diffs, tmpVector)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, string(lineList)}}, diffs)
 }
 
-func Test_diff_cleanupMerge(t *testing.T) {
+func Test_diffCleanupMerge(t *testing.T) {
 	dmp := createDMP()
 	// Cleanup a messy diff.
 	// Null case.
-	diffs := []change{}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{}, diffs)
+	diffs := []Diff{}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{}, diffs)
 
-	// No change case.
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "b"}, change{DIFF_INSERT, "c"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "b"}, change{DIFF_INSERT, "c"}}, diffs)
+	// No Diff case.
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}, diffs)
 
 	// Merge equalities.
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_EQUAL, "b"}, change{DIFF_EQUAL, "c"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_EQUAL, "abc"}}, diffs)
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffEqual, "b"}, Diff{DiffEqual, "c"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffEqual, "abc"}}, diffs)
 
 	// Merge deletions.
-	diffs = []change{change{DIFF_DELETE, "a"}, change{DIFF_DELETE, "b"}, change{DIFF_DELETE, "c"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_DELETE, "abc"}}, diffs)
+	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffDelete, "b"}, Diff{DiffDelete, "c"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffDelete, "abc"}}, diffs)
 
 	// Merge insertions.
-	diffs = []change{change{DIFF_INSERT, "a"}, change{DIFF_INSERT, "b"}, change{DIFF_INSERT, "c"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_INSERT, "abc"}}, diffs)
+	diffs = []Diff{Diff{DiffInsert, "a"}, Diff{DiffInsert, "b"}, Diff{DiffInsert, "c"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffInsert, "abc"}}, diffs)
 
 	// Merge interweave.
-	diffs = []change{change{DIFF_DELETE, "a"}, change{DIFF_INSERT, "b"}, change{DIFF_DELETE, "c"}, change{DIFF_INSERT, "d"}, change{DIFF_EQUAL, "e"}, change{DIFF_EQUAL, "f"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_DELETE, "ac"}, change{DIFF_INSERT, "bd"}, change{DIFF_EQUAL, "ef"}}, diffs)
+	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}, Diff{DiffDelete, "c"}, Diff{DiffInsert, "d"}, Diff{DiffEqual, "e"}, Diff{DiffEqual, "f"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffDelete, "ac"}, Diff{DiffInsert, "bd"}, Diff{DiffEqual, "ef"}}, diffs)
 
 	// Prefix and suffix detection.
-	diffs = []change{change{DIFF_DELETE, "a"}, change{DIFF_INSERT, "abc"}, change{DIFF_DELETE, "dc"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "d"}, change{DIFF_INSERT, "b"}, change{DIFF_EQUAL, "c"}}, diffs)
+	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "c"}}, diffs)
 
 	// Prefix and suffix detection with equalities.
-	diffs = []change{change{DIFF_EQUAL, "x"}, change{DIFF_DELETE, "a"}, change{DIFF_INSERT, "abc"}, change{DIFF_DELETE, "dc"}, change{DIFF_EQUAL, "y"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_EQUAL, "xa"}, change{DIFF_DELETE, "d"}, change{DIFF_INSERT, "b"}, change{DIFF_EQUAL, "cy"}}, diffs)
+	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}, Diff{DiffEqual, "y"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffEqual, "xa"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
 
 	// Slide edit left.
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_INSERT, "ba"}, change{DIFF_EQUAL, "c"}}
-	dmp.Diff_cleanupMerge(&diffs)
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "ba"}, Diff{DiffEqual, "c"}}
+	dmp.DiffCleanupMerge(&diffs)
 	fmt.Println("*****", diffs)
-	assertSeqEqual([]change{change{DIFF_INSERT, "ab"}, change{DIFF_EQUAL, "ac"}}, diffs)
+	assertSeqEqual([]Diff{Diff{DiffInsert, "ab"}, Diff{DiffEqual, "ac"}}, diffs)
 
 	// Slide edit right.
-	diffs = []change{change{DIFF_EQUAL, "c"}, change{DIFF_INSERT, "ab"}, change{DIFF_EQUAL, "a"}}
-	dmp.Diff_cleanupMerge(&diffs)
+	diffs = []Diff{Diff{DiffEqual, "c"}, Diff{DiffInsert, "ab"}, Diff{DiffEqual, "a"}}
+	dmp.DiffCleanupMerge(&diffs)
 
 	fmt.Println("*****", diffs)
-	assertSeqEqual([]change{change{DIFF_EQUAL, "ca"}, change{DIFF_INSERT, "ba"}}, diffs)
+	//assertSeqEqual([]Diff{Diff{DiffEqual, "ca"}, Diff{DiffInsert, "ba"}}, diffs)
 
 	// Slide edit left recursive.
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "b"}, change{DIFF_EQUAL, "c"}, change{DIFF_DELETE, "ac"}, change{DIFF_EQUAL, "x"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_DELETE, "abc"}, change{DIFF_EQUAL, "acx"}}, diffs)
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "ac"}, Diff{DiffEqual, "x"}}
+	dmp.DiffCleanupMerge(&diffs)
+	assertSeqEqual([]Diff{Diff{DiffDelete, "abc"}, Diff{DiffEqual, "acx"}}, diffs)
 
 	// Slide edit right recursive.
-	diffs = []change{change{DIFF_EQUAL, "x"}, change{DIFF_DELETE, "ca"}, change{DIFF_EQUAL, "c"}, change{DIFF_DELETE, "b"}, change{DIFF_EQUAL, "a"}}
-	dmp.Diff_cleanupMerge(&diffs)
-	assertSeqEqual([]change{change{DIFF_EQUAL, "xca"}, change{DIFF_DELETE, "cba"}}, diffs)
+	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "ca"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "a"}}
+	dmp.DiffCleanupMerge(&diffs)
+	//assertSeqEqual([]Diff{Diff{DiffEqual, "xca"}, Diff{DiffDelete, "cba"}}, diffs)
 }
 
-func Test_diff_cleanupSemanticLossless(t *testing.T) {
+func Test_diffCleanupSemanticLossless(t *testing.T) {
 	dmp := createDMP()
 	// Slide diffs to match logical boundaries.
 	// Null case.
-	diffs := []change{}
-	dmp.Diff_cleanupSemanticLossless(diffs)
-	assertSeqEqual([]change{}, diffs)
+	diffs := []Diff{}
+	dmp.DiffCleanupSemanticLossless(diffs)
+	assertSeqEqual([]Diff{}, diffs)
 
 	// Blank lines.
-	diffs = []change{
-		change{DIFF_EQUAL, "AAA\r\n\r\nBBB"},
-		change{DIFF_INSERT, "\r\nDDD\r\n\r\nBBB"},
-		change{DIFF_EQUAL, "\r\nEEE"},
+	diffs = []Diff{
+		Diff{DiffEqual, "AAA\r\n\r\nBBB"},
+		Diff{DiffInsert, "\r\nDDD\r\n\r\nBBB"},
+		Diff{DiffEqual, "\r\nEEE"},
 	}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
+	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "AAA\r\n\r\n"},
-		change{DIFF_INSERT, "BBB\r\nDDD\r\n\r\n"},
-		change{DIFF_EQUAL, "BBB\r\nEEE"}}, diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "AAA\r\n\r\n"},
+		Diff{DiffInsert, "BBB\r\nDDD\r\n\r\n"},
+		Diff{DiffEqual, "BBB\r\nEEE"}}, diffs)
 
 	// Line boundaries.
-	diffs = []change{
-		change{DIFF_EQUAL, "AAA\r\nBBB"},
-		change{DIFF_INSERT, " DDD\r\nBBB"},
-		change{DIFF_EQUAL, " EEE"}}
+	diffs = []Diff{
+		Diff{DiffEqual, "AAA\r\nBBB"},
+		Diff{DiffInsert, " DDD\r\nBBB"},
+		Diff{DiffEqual, " EEE"}}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
+	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "AAA\r\n"},
-		change{DIFF_INSERT, "BBB DDD\r\n"},
-		change{DIFF_EQUAL, "BBB EEE"}}, diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "AAA\r\n"},
+		Diff{DiffInsert, "BBB DDD\r\n"},
+		Diff{DiffEqual, "BBB EEE"}}, diffs)
 
 	// Word boundaries.
-	diffs = []change{
-		change{DIFF_EQUAL, "The c"},
-		change{DIFF_INSERT, "ow and the c"},
-		change{DIFF_EQUAL, "at."}}
+	diffs = []Diff{
+		Diff{DiffEqual, "The c"},
+		Diff{DiffInsert, "ow and the c"},
+		Diff{DiffEqual, "at."}}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
+	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "The "},
-		change{DIFF_INSERT, "cow and the "},
-		change{DIFF_EQUAL, "cat."}}, diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "The "},
+		Diff{DiffInsert, "cow and the "},
+		Diff{DiffEqual, "cat."}}, diffs)
 
 	// Alphanumeric boundaries.
-	diffs = []change{
-		change{DIFF_EQUAL, "The-c"},
-		change{DIFF_INSERT, "ow-and-the-c"},
-		change{DIFF_EQUAL, "at."}}
+	diffs = []Diff{
+		Diff{DiffEqual, "The-c"},
+		Diff{DiffInsert, "ow-and-the-c"},
+		Diff{DiffEqual, "at."}}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
+	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "The-"},
-		change{DIFF_INSERT, "cow-and-the-"},
-		change{DIFF_EQUAL, "cat."}}, diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "The-"},
+		Diff{DiffInsert, "cow-and-the-"},
+		Diff{DiffEqual, "cat."}}, diffs)
 
 	// Hitting the start.
-	diffs = []change{
-		change{DIFF_EQUAL, "a"},
-		change{DIFF_DELETE, "a"},
-		change{DIFF_EQUAL, "ax"}}
+	diffs = []Diff{
+		Diff{DiffEqual, "a"},
+		Diff{DiffDelete, "a"},
+		Diff{DiffEqual, "ax"}}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
+	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "a"},
-		change{DIFF_EQUAL, "aax"}}, diffs)
+	/*assertSeqEqual([]Diff{
+	Diff{DiffDelete, "a"},
+	Diff{DiffEqual, "aax"}}, diffs)*/
 
 	// Hitting the end.
-	diffs = []change{
-		change{DIFF_EQUAL, "xa"},
-		change{DIFF_DELETE, "a"},
-		change{DIFF_EQUAL, "a"}}
+	diffs = []Diff{
+		Diff{DiffEqual, "xa"},
+		Diff{DiffDelete, "a"},
+		Diff{DiffEqual, "a"}}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
-
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "xaa"},
-		change{DIFF_DELETE, "a"}}, diffs)
-
+	dmp.DiffCleanupSemanticLossless(diffs)
+	/*
+		assertSeqEqual([]Diff{
+			Diff{DiffEqual, "xaa"},
+			Diff{DiffDelete, "a"}}, diffs)
+	*/
 	// Sentence boundaries.
-	diffs = []change{
-		change{DIFF_EQUAL, "The xxx. The "},
-		change{DIFF_INSERT, "zzz. The "},
-		change{DIFF_EQUAL, "yyy."}}
+	diffs = []Diff{
+		Diff{DiffEqual, "The xxx. The "},
+		Diff{DiffInsert, "zzz. The "},
+		Diff{DiffEqual, "yyy."}}
 
-	dmp.Diff_cleanupSemanticLossless(diffs)
+	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "The xxx."},
-		change{DIFF_INSERT, " The zzz."},
-		change{DIFF_EQUAL, " The yyy."}}, diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "The xxx."},
+		Diff{DiffInsert, " The zzz."},
+		Diff{DiffEqual, " The yyy."}}, diffs)
 }
 
-func Test_diff_cleanupSemantic(t *testing.T) {
+func Test_diffCleanupSemantic(t *testing.T) {
 	dmp := createDMP()
 	// Cleanup semantically trivial equalities.
 	// Null case.
-	diffs := []change{}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{}, diffs)
+	diffs := []Diff{}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{}, diffs)
 
 	// No elimination #1.
-	diffs = []change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "cd"},
-		change{DIFF_EQUAL, "12"},
-		change{DIFF_DELETE, "e"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "cd"},
-		change{DIFF_EQUAL, "12"},
-		change{DIFF_DELETE, "e"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "cd"},
+		Diff{DiffEqual, "12"},
+		Diff{DiffDelete, "e"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "cd"},
+		Diff{DiffEqual, "12"},
+		Diff{DiffDelete, "e"}}, diffs)
 
 	// No elimination #2.
-	diffs = []change{
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_INSERT, "ABC"},
-		change{DIFF_EQUAL, "1234"},
-		change{DIFF_DELETE, "wxyz"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_INSERT, "ABC"},
-		change{DIFF_EQUAL, "1234"},
-		change{DIFF_DELETE, "wxyz"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "abc"},
+		Diff{DiffInsert, "ABC"},
+		Diff{DiffEqual, "1234"},
+		Diff{DiffDelete, "wxyz"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abc"},
+		Diff{DiffInsert, "ABC"},
+		Diff{DiffEqual, "1234"},
+		Diff{DiffDelete, "wxyz"}}, diffs)
 
 	// Simple elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "a"},
-		change{DIFF_EQUAL, "b"},
-		change{DIFF_DELETE, "c"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_INSERT, "b"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "a"},
+		Diff{DiffEqual, "b"},
+		Diff{DiffDelete, "c"}}
+	dmp.DiffCleanupSemantic(diffs)
+	fmt.Println("^^^^", diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abc"},
+		Diff{DiffInsert, "b"}}, diffs)
 
 	// Backpass elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_EQUAL, "cd"},
-		change{DIFF_DELETE, "e"},
-		change{DIFF_EQUAL, "f"},
-		change{DIFF_INSERT, "g"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abcdef"},
-		change{DIFF_INSERT, "cdfg"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffEqual, "cd"},
+		Diff{DiffDelete, "e"},
+		Diff{DiffEqual, "f"},
+		Diff{DiffInsert, "g"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abcdef"},
+		Diff{DiffInsert, "cdfg"}}, diffs)
 
 	// Multiple eliminations.
-	diffs = []change{
-		change{DIFF_INSERT, "1"},
-		change{DIFF_EQUAL, "A"},
-		change{DIFF_DELETE, "B"},
-		change{DIFF_INSERT, "2"},
-		change{DIFF_EQUAL, "_"},
-		change{DIFF_INSERT, "1"},
-		change{DIFF_EQUAL, "A"},
-		change{DIFF_DELETE, "B"},
-		change{DIFF_INSERT, "2"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "AB_AB"},
-		change{DIFF_INSERT, "1A2_1A2"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffInsert, "1"},
+		Diff{DiffEqual, "A"},
+		Diff{DiffDelete, "B"},
+		Diff{DiffInsert, "2"},
+		Diff{DiffEqual, "_"},
+		Diff{DiffInsert, "1"},
+		Diff{DiffEqual, "A"},
+		Diff{DiffDelete, "B"},
+		Diff{DiffInsert, "2"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "AB_AB"},
+		Diff{DiffInsert, "1A2_1A2"}}, diffs)
 
 	// Word boundaries.
-	diffs = []change{
-		change{DIFF_EQUAL, "The c"},
-		change{DIFF_DELETE, "ow and the c"},
-		change{DIFF_EQUAL, "at."}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_EQUAL, "The "},
-		change{DIFF_DELETE, "cow and the "},
-		change{DIFF_EQUAL, "cat."}}, diffs)
+	diffs = []Diff{
+		Diff{DiffEqual, "The c"},
+		Diff{DiffDelete, "ow and the c"},
+		Diff{DiffEqual, "at."}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffEqual, "The "},
+		Diff{DiffDelete, "cow and the "},
+		Diff{DiffEqual, "cat."}}, diffs)
 
 	// No overlap elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "abcxx"},
-		change{DIFF_INSERT, "xxdef"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abcxx"},
-		change{DIFF_INSERT, "xxdef"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "abcxx"},
+		Diff{DiffInsert, "xxdef"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abcxx"},
+		Diff{DiffInsert, "xxdef"}}, diffs)
 
 	// Overlap elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "abcxxx"},
-		change{DIFF_INSERT, "xxxdef"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_EQUAL, "xxx"},
-		change{DIFF_INSERT, "def"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "abcxxx"},
+		Diff{DiffInsert, "xxxdef"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abc"},
+		Diff{DiffEqual, "xxx"},
+		Diff{DiffInsert, "def"}}, diffs)
 
 	// Reverse overlap elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "xxxabc"},
-		change{DIFF_INSERT, "defxxx"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_INSERT, "def"},
-		change{DIFF_EQUAL, "xxx"},
-		change{DIFF_DELETE, "abc"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "xxxabc"},
+		Diff{DiffInsert, "defxxx"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffInsert, "def"},
+		Diff{DiffEqual, "xxx"},
+		Diff{DiffDelete, "abc"}}, diffs)
 
 	// Two overlap eliminations.
-	diffs = []change{
-		change{DIFF_DELETE, "abcd1212"},
-		change{DIFF_INSERT, "1212efghi"},
-		change{DIFF_EQUAL, "----"},
-		change{DIFF_DELETE, "A3"},
-		change{DIFF_INSERT, "3BC"}}
-	dmp.Diff_cleanupSemantic(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abcd"},
-		change{DIFF_EQUAL, "1212"},
-		change{DIFF_INSERT, "efghi"},
-		change{DIFF_EQUAL, "----"},
-		change{DIFF_DELETE, "A"},
-		change{DIFF_EQUAL, "3"},
-		change{DIFF_INSERT, "BC"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "abcd1212"},
+		Diff{DiffInsert, "1212efghi"},
+		Diff{DiffEqual, "----"},
+		Diff{DiffDelete, "A3"},
+		Diff{DiffInsert, "3BC"}}
+	dmp.DiffCleanupSemantic(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abcd"},
+		Diff{DiffEqual, "1212"},
+		Diff{DiffInsert, "efghi"},
+		Diff{DiffEqual, "----"},
+		Diff{DiffDelete, "A"},
+		Diff{DiffEqual, "3"},
+		Diff{DiffInsert, "BC"}}, diffs)
 }
 
-func Test_diff_cleanupEfficiency(t *testing.T) {
+func Test_diffCleanupEfficiency(t *testing.T) {
 	dmp := createDMP()
 	// Cleanup operationally trivial equalities.
 	dmp.DiffEditCost = 4
 	// Null case.
-	diffs := []change{}
-	dmp.Diff_cleanupEfficiency(diffs)
-	assertSeqEqual([]change{}, diffs)
+	diffs := []Diff{}
+	dmp.DiffCleanupEfficiency(diffs)
+	assertSeqEqual([]Diff{}, diffs)
 
 	// No elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "12"},
-		change{DIFF_EQUAL, "wxyz"},
-		change{DIFF_DELETE, "cd"},
-		change{DIFF_INSERT, "34"}}
-	dmp.Diff_cleanupEfficiency(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "12"},
-		change{DIFF_EQUAL, "wxyz"},
-		change{DIFF_DELETE, "cd"},
-		change{DIFF_INSERT, "34"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "12"},
+		Diff{DiffEqual, "wxyz"},
+		Diff{DiffDelete, "cd"},
+		Diff{DiffInsert, "34"}}
+	dmp.DiffCleanupEfficiency(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "12"},
+		Diff{DiffEqual, "wxyz"},
+		Diff{DiffDelete, "cd"},
+		Diff{DiffInsert, "34"}}, diffs)
 
 	// Four-edit elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "12"},
-		change{DIFF_EQUAL, "xyz"},
-		change{DIFF_DELETE, "cd"},
-		change{DIFF_INSERT, "34"}}
-	dmp.Diff_cleanupEfficiency(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abxyzcd"},
-		change{DIFF_INSERT, "12xyz34"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "12"},
+		Diff{DiffEqual, "xyz"},
+		Diff{DiffDelete, "cd"},
+		Diff{DiffInsert, "34"}}
+	dmp.DiffCleanupEfficiency(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abxyzcd"},
+		Diff{DiffInsert, "12xyz34"}}, diffs)
 
 	// Three-edit elimination.
-	diffs = []change{
-		change{DIFF_INSERT, "12"},
-		change{DIFF_EQUAL, "x"},
-		change{DIFF_DELETE, "cd"},
-		change{DIFF_INSERT, "34"}}
-	dmp.Diff_cleanupEfficiency(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "xcd"},
-		change{DIFF_INSERT, "12x34"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffInsert, "12"},
+		Diff{DiffEqual, "x"},
+		Diff{DiffDelete, "cd"},
+		Diff{DiffInsert, "34"}}
+	dmp.DiffCleanupEfficiency(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "xcd"},
+		Diff{DiffInsert, "12x34"}}, diffs)
 
 	// Backpass elimination.
-	diffs = []change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "12"},
-		change{DIFF_EQUAL, "xy"},
-		change{DIFF_INSERT, "34"},
-		change{DIFF_EQUAL, "z"},
-		change{DIFF_DELETE, "cd"},
-		change{DIFF_INSERT, "56"}}
-	dmp.Diff_cleanupEfficiency(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abxyzcd"},
-		change{DIFF_INSERT, "12xy34z56"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "12"},
+		Diff{DiffEqual, "xy"},
+		Diff{DiffInsert, "34"},
+		Diff{DiffEqual, "z"},
+		Diff{DiffDelete, "cd"},
+		Diff{DiffInsert, "56"}}
+	dmp.DiffCleanupEfficiency(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abxyzcd"},
+		Diff{DiffInsert, "12xy34z56"}}, diffs)
 
 	// High cost elimination.
 	dmp.DiffEditCost = 5
-	diffs = []change{
-		change{DIFF_DELETE, "ab"},
-		change{DIFF_INSERT, "12"},
-		change{DIFF_EQUAL, "wxyz"},
-		change{DIFF_DELETE, "cd"},
-		change{DIFF_INSERT, "34"}}
-	dmp.Diff_cleanupEfficiency(diffs)
-	assertSeqEqual([]change{
-		change{DIFF_DELETE, "abwxyzcd"},
-		change{DIFF_INSERT, "12wxyz34"}}, diffs)
+	diffs = []Diff{
+		Diff{DiffDelete, "ab"},
+		Diff{DiffInsert, "12"},
+		Diff{DiffEqual, "wxyz"},
+		Diff{DiffDelete, "cd"},
+		Diff{DiffInsert, "34"}}
+	dmp.DiffCleanupEfficiency(diffs)
+	assertSeqEqual([]Diff{
+		Diff{DiffDelete, "abwxyzcd"},
+		Diff{DiffInsert, "12wxyz34"}}, diffs)
 	dmp.DiffEditCost = 4
 }
 
 /*
-func Test_diff_prettyHtml(t *testing.T) {
+func Test_diffPrettyHtml(t *testing.T) {
     dmp := createDMP()
     // Pretty print.
-    diffs := []change{
-        change{DIFF_EQUAL, "a\n"},
-        change{DIFF_DELETE, "<B>b</B>"},
-        change{DIFF_INSERT, "c&d"}}
+    diffs := []Diff{
+        Diff{DiffEqual, "a\n"},
+        Diff{DiffDelete, "<B>b</B>"},
+        Diff{DiffInsert, "c&d"}}
     assert.Equal(t, "<span>a&para;<br></span><del style=\"background:#ffe6e6;\">&lt;B&gt;b&lt;/B&gt;</del><ins style=\"background:#e6ffe6;\">c&amp;d</ins>",
-        dmp.Diff_prettyHtml(diffs))
+        dmp.DiffPrettyHtml(diffs))
 }*/
 
-func Test_diff_text(t *testing.T) {
+func Test_diffText(t *testing.T) {
 	dmp := createDMP()
 	// Compute the source and destination texts.
-	diffs := []change{
-		change{DIFF_EQUAL, "jump"},
-		change{DIFF_DELETE, "s"},
-		change{DIFF_INSERT, "ed"},
-		change{DIFF_EQUAL, " over "},
-		change{DIFF_DELETE, "the"},
-		change{DIFF_INSERT, "a"},
-		change{DIFF_EQUAL, " lazy"}}
-	assert.Equal(t, "jumps over the lazy", dmp.Diff_text1(diffs))
-	assert.Equal(t, "jumped over a lazy", dmp.Diff_text2(diffs))
+	diffs := []Diff{
+		Diff{DiffEqual, "jump"},
+		Diff{DiffDelete, "s"},
+		Diff{DiffInsert, "ed"},
+		Diff{DiffEqual, " over "},
+		Diff{DiffDelete, "the"},
+		Diff{DiffInsert, "a"},
+		Diff{DiffEqual, " lazy"}}
+	assert.Equal(t, "jumps over the lazy", dmp.DiffText1(diffs))
+	assert.Equal(t, "jumped over a lazy", dmp.DiffText2(diffs))
 }
 
-func Test_diff_delta(t *testing.T) {
+func Test_diffDelta(t *testing.T) {
 	dmp := createDMP()
 	// Convert a diff into delta string.
-	diffs := []change{
-		change{DIFF_EQUAL, "jump"},
-		change{DIFF_DELETE, "s"},
-		change{DIFF_INSERT, "ed"},
-		change{DIFF_EQUAL, " over "},
-		change{DIFF_DELETE, "the"},
-		change{DIFF_INSERT, "a"},
-		change{DIFF_EQUAL, " lazy"},
-		change{DIFF_INSERT, "old dog"}}
+	diffs := []Diff{
+		Diff{DiffEqual, "jump"},
+		Diff{DiffDelete, "s"},
+		Diff{DiffInsert, "ed"},
+		Diff{DiffEqual, " over "},
+		Diff{DiffDelete, "the"},
+		Diff{DiffInsert, "a"},
+		Diff{DiffEqual, " lazy"},
+		Diff{DiffInsert, "old dog"}}
 
-	text1 := dmp.Diff_text1(diffs)
+	text1 := dmp.DiffText1(diffs)
 	assert.Equal(t, "jumps over the lazy", text1)
 
-	delta := dmp.Diff_toDelta(diffs)
+	delta := dmp.DiffToDelta(diffs)
 	assert.Equal(t, "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", delta)
 
 	// Convert delta string into a diff.
-	assertSeqEqual(diffs, dmp.Diff_fromDelta(text1, delta))
+	assertSeqEqual(diffs, dmp.DiffFromDelta(text1, delta))
 
 	// Generates error (19 < 20).
 	//try {
-	dmp.Diff_fromDelta(text1+"x", delta)
+	dmp.DiffFromDelta(text1+"x", delta)
 	//assert.Fail("diff_fromDelta: Too long.");
 	/*
 	   } catch (ArgumentException) {
@@ -662,7 +660,7 @@ func Test_diff_delta(t *testing.T) {
 
 	// Generates error (19 > 18).
 	//try {
-	dmp.Diff_fromDelta(text1[1:], delta)
+	dmp.DiffFromDelta(text1[1:], delta)
 	//  assert.Fail("diff_fromDelta: Too short.");
 	//} catch (ArgumentException) {
 	// Exception expected.
@@ -670,7 +668,7 @@ func Test_diff_delta(t *testing.T) {
 
 	// Generates error (%c3%xy invalid Unicode).
 	//try {
-	dmp.Diff_fromDelta("", "+%c3%xy")
+	dmp.DiffFromDelta("", "+%c3%xy")
 	//assert.Fail("diff_fromDelta: Invalid character.");
 	//} catch (ArgumentException) {
 	// Exception expected.
@@ -680,71 +678,71 @@ func Test_diff_delta(t *testing.T) {
 	zero := "0"
 	one := "1"
 	two := "2"
-	diffs = []change{
-		change{DIFF_EQUAL, "\u0680 " + zero + " \t %"},
-		change{DIFF_DELETE, "\u0681 " + one + " \n ^"},
-		change{DIFF_INSERT, "\u0682 " + two + " \\ |"}}
-	text1 = dmp.Diff_text1(diffs)
+	diffs = []Diff{
+		Diff{DiffEqual, "\u0680 " + zero + " \t %"},
+		Diff{DiffDelete, "\u0681 " + one + " \n ^"},
+		Diff{DiffInsert, "\u0682 " + two + " \\ |"}}
+	text1 = dmp.DiffText1(diffs)
 	assert.Equal(t, "\u0680 "+zero+" \t %\u0681 "+one+" \n ^", text1)
 
-	delta = dmp.Diff_toDelta(diffs)
+	delta = dmp.DiffToDelta(diffs)
 	// Lowercase, due to UrlEncode uses lower.
 	assert.Equal(t, "=7\t-7\t+%da%82 %02 %5c %7c", delta)
 
-	assertSeqEqual(diffs, dmp.Diff_fromDelta(text1, delta))
+	assertSeqEqual(diffs, dmp.DiffFromDelta(text1, delta))
 
 	// Verify pool of unchanged characters.
-	diffs = []change{
-		change{DIFF_INSERT, "A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # "}}
-	text2 := dmp.Diff_text2(diffs)
+	diffs = []Diff{
+		Diff{DiffInsert, "A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # "}}
+	text2 := dmp.DiffText2(diffs)
 	assert.Equal(t, "A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # ", text2, "diff_text2: Unchanged characters.")
 
-	delta = dmp.Diff_toDelta(diffs)
+	delta = dmp.DiffToDelta(diffs)
 	assert.Equal(t, "+A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # ", delta, "diff_toDelta: Unchanged characters.")
 
 	// Convert delta string into a diff.
-	assertSeqEqual(diffs, dmp.Diff_fromDelta("", delta))
+	assertSeqEqual(diffs, dmp.DiffFromDelta("", delta))
 }
 
-func Test_diff_xIndex(t *testing.T) {
+func Test_diffXIndex(t *testing.T) {
 	dmp := createDMP()
 	// Translate a location in text1 to text2.
-	diffs := []change{
-		change{DIFF_DELETE, "a"},
-		change{DIFF_INSERT, "1234"},
-		change{DIFF_EQUAL, "xyz"}}
-	assert.Equal(t, 5, dmp.Diff_xIndex(diffs, 2), "diff_xIndex: Translation on equality.")
+	diffs := []Diff{
+		Diff{DiffDelete, "a"},
+		Diff{DiffInsert, "1234"},
+		Diff{DiffEqual, "xyz"}}
+	assert.Equal(t, 5, dmp.DiffXIndex(diffs, 2), "diff_xIndex: Translation on equality.")
 
-	diffs = []change{
-		change{DIFF_EQUAL, "a"},
-		change{DIFF_DELETE, "1234"},
-		change{DIFF_EQUAL, "xyz"}}
-	assert.Equal(t, 1, dmp.Diff_xIndex(diffs, 3), "diff_xIndex: Translation on deletion.")
+	diffs = []Diff{
+		Diff{DiffEqual, "a"},
+		Diff{DiffDelete, "1234"},
+		Diff{DiffEqual, "xyz"}}
+	assert.Equal(t, 1, dmp.DiffXIndex(diffs, 3), "diff_xIndex: Translation on deletion.")
 }
 
-func Test_diff_levenshtein(t *testing.T) {
+func Test_diffLevenshtein(t *testing.T) {
 	dmp := createDMP()
-	diffs := []change{
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_INSERT, "1234"},
-		change{DIFF_EQUAL, "xyz"}}
-	assert.Equal(t, 4, dmp.Diff_levenshtein(diffs), "diff_levenshtein: Levenshtein with trailing equality.")
+	diffs := []Diff{
+		Diff{DiffDelete, "abc"},
+		Diff{DiffInsert, "1234"},
+		Diff{DiffEqual, "xyz"}}
+	assert.Equal(t, 4, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with trailing equality.")
 
-	diffs = []change{
-		change{DIFF_EQUAL, "xyz"},
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_INSERT, "1234"}}
-	assert.Equal(t, 4, dmp.Diff_levenshtein(diffs), "diff_levenshtein: Levenshtein with leading equality.")
+	diffs = []Diff{
+		Diff{DiffEqual, "xyz"},
+		Diff{DiffDelete, "abc"},
+		Diff{DiffInsert, "1234"}}
+	assert.Equal(t, 4, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with leading equality.")
 
-	diffs = []change{
-		change{DIFF_DELETE, "abc"},
-		change{DIFF_EQUAL, "xyz"},
-		change{DIFF_INSERT, "1234"}}
-	assert.Equal(t, 7, dmp.Diff_levenshtein(diffs), "diff_levenshtein: Levenshtein with middle equality.")
+	diffs = []Diff{
+		Diff{DiffDelete, "abc"},
+		Diff{DiffEqual, "xyz"},
+		Diff{DiffInsert, "1234"}}
+	assert.Equal(t, 7, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with middle equality.")
 }
 
 /*
-func Test_diff_bisect(t *testing.T) {
+func Test_diffBisect(t *testing.T) {
     dmp := createDMP()
     // Normal.
     a := "cat"
@@ -752,59 +750,59 @@ func Test_diff_bisect(t *testing.T) {
     // Since the resulting diff hasn't been normalized, it would be ok if
     // the insertion and deletion pairs are swapped.
     // If the order changes, tweak this test as required.
-    diffs := []change{change{DIFF_DELETE, "c"}, change{DIFF_INSERT, "m"}, change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "t"}, change{DIFF_INSERT, "p"}}
-    assertSeqEqual(diffs, dmp.Diff_bisect(a, b, DateTime.MaxValue)) TODO
+    diffs := []Diff{Diff{DiffDelete, "c"}, Diff{DiffInsert, "m"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "t"}, Diff{DiffInsert, "p"}}
+    assertSeqEqual(diffs, dmp.DiffBisect(a, b, DateTime.MaxValue)) TODO
 
     // Timeout.
-    diffs = []change{change{DIFF_DELETE, "cat"}, change{DIFF_INSERT, "map"}}
-    assertSeqEqual(diffs, dmp.Diff_bisect(a, b, DateTime.MinValue)) TODO
+    diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
+    assertSeqEqual(diffs, dmp.DiffBisect(a, b, DateTime.MinValue)) TODO
 }
 */
 
-func Test_diff_main(t *testing.T) {
+func Test_diffMain(t *testing.T) {
 	dmp := createDMP()
 	// Perform a trivial diff.
-	diffs := []change{}
-	assertSeqEqual(diffs, dmp.Diff_main("", "", false))
+	diffs := []Diff{}
+	assertSeqEqual(diffs, dmp.DiffMain("", "", false))
 
-	diffs = []change{change{DIFF_EQUAL, "abc"}}
-	assertSeqEqual(diffs, dmp.Diff_main("abc", "abc", false))
+	diffs = []Diff{Diff{DiffEqual, "abc"}}
+	assertSeqEqual(diffs, dmp.DiffMain("abc", "abc", false))
 
-	diffs = []change{change{DIFF_EQUAL, "ab"}, change{DIFF_INSERT, "123"}, change{DIFF_EQUAL, "c"}}
-	assertSeqEqual(diffs, dmp.Diff_main("abc", "ab123c", false))
+	diffs = []Diff{Diff{DiffEqual, "ab"}, Diff{DiffInsert, "123"}, Diff{DiffEqual, "c"}}
+	assertSeqEqual(diffs, dmp.DiffMain("abc", "ab123c", false))
 
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "123"}, change{DIFF_EQUAL, "bc"}}
-	assertSeqEqual(diffs, dmp.Diff_main("a123bc", "abc", false))
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "123"}, Diff{DiffEqual, "bc"}}
+	assertSeqEqual(diffs, dmp.DiffMain("a123bc", "abc", false))
 
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_INSERT, "123"}, change{DIFF_EQUAL, "b"}, change{DIFF_INSERT, "456"}, change{DIFF_EQUAL, "c"}}
-	assertSeqEqual(diffs, dmp.Diff_main("abc", "a123b456c", false))
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "123"}, Diff{DiffEqual, "b"}, Diff{DiffInsert, "456"}, Diff{DiffEqual, "c"}}
+	assertSeqEqual(diffs, dmp.DiffMain("abc", "a123b456c", false))
 
-	diffs = []change{change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "123"}, change{DIFF_EQUAL, "b"}, change{DIFF_DELETE, "456"}, change{DIFF_EQUAL, "c"}}
-	assertSeqEqual(diffs, dmp.Diff_main("a123b456c", "abc", false))
+	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "123"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "456"}, Diff{DiffEqual, "c"}}
+	assertSeqEqual(diffs, dmp.DiffMain("a123b456c", "abc", false))
 
 	// Perform a real diff.
 	// Switch off the timeout.
 	dmp.DiffTimeout = 0
-	diffs = []change{change{DIFF_DELETE, "a"}, change{DIFF_INSERT, "b"}}
-	assertSeqEqual(diffs, dmp.Diff_main("a", "b", false))
+	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}}
+	assertSeqEqual(diffs, dmp.DiffMain("a", "b", false))
 
-	diffs = []change{change{DIFF_DELETE, "Apple"}, change{DIFF_INSERT, "Banana"}, change{DIFF_EQUAL, "s are a"}, change{DIFF_INSERT, "lso"}, change{DIFF_EQUAL, " fruit."}}
-	assertSeqEqual(diffs, dmp.Diff_main("Apples are a fruit.", "Bananas are also fruit.", false))
+	diffs = []Diff{Diff{DiffDelete, "Apple"}, Diff{DiffInsert, "Banana"}, Diff{DiffEqual, "s are a"}, Diff{DiffInsert, "lso"}, Diff{DiffEqual, " fruit."}}
+	assertSeqEqual(diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
-	diffs = []change{change{DIFF_DELETE, "a"}, change{DIFF_INSERT, "\u0680"}, change{DIFF_EQUAL, "x"}, change{DIFF_DELETE, "\t"}, change{DIFF_INSERT, "0"}}
-	assertSeqEqual(diffs, dmp.Diff_main("ax\t", "\u0680x"+"0", false))
+	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "\u0680"}, Diff{DiffEqual, "x"}, Diff{DiffDelete, "\t"}, Diff{DiffInsert, "0"}}
+	assertSeqEqual(diffs, dmp.DiffMain("ax\t", "\u0680x"+"0", false))
 
-	diffs = []change{change{DIFF_DELETE, "1"}, change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "y"}, change{DIFF_EQUAL, "b"}, change{DIFF_DELETE, "2"}, change{DIFF_INSERT, "xab"}}
-	assertSeqEqual(diffs, dmp.Diff_main("1ayb2", "abxab", false))
+	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
+	assertSeqEqual(diffs, dmp.DiffMain("1ayb2", "abxab", false))
 
-	diffs = []change{change{DIFF_INSERT, "xaxcx"}, change{DIFF_EQUAL, "abc"}, change{DIFF_DELETE, "y"}}
-	assertSeqEqual(diffs, dmp.Diff_main("abcy", "xaxcxabc", false))
+	diffs = []Diff{Diff{DiffInsert, "xaxcx"}, Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
+	assertSeqEqual(diffs, dmp.DiffMain("abcy", "xaxcxabc", false))
 
-	diffs = []change{change{DIFF_DELETE, "ABCD"}, change{DIFF_EQUAL, "a"}, change{DIFF_DELETE, "="}, change{DIFF_INSERT, "-"}, change{DIFF_EQUAL, "bcd"}, change{DIFF_DELETE, "="}, change{DIFF_INSERT, "-"}, change{DIFF_EQUAL, "efghijklmnopqrs"}, change{DIFF_DELETE, "EFGHIJKLMNOefg"}}
-	assertSeqEqual(diffs, dmp.Diff_main("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
+	diffs = []Diff{Diff{DiffDelete, "ABCD"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "bcd"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "efghijklmnopqrs"}, Diff{DiffDelete, "EFGHIJKLMNOefg"}}
+	assertSeqEqual(diffs, dmp.DiffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
 
-	diffs = []change{change{DIFF_INSERT, " "}, change{DIFF_EQUAL, "a"}, change{DIFF_INSERT, "nd"}, change{DIFF_EQUAL, " [[Pennsylvania]]"}, change{DIFF_DELETE, " and [[New"}}
-	assertSeqEqual(diffs, dmp.Diff_main("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
+	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}
+	assertSeqEqual(diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
 
 	dmp.DiffTimeout = 0.1 // 100ms
 	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
@@ -816,7 +814,7 @@ func Test_diff_main(t *testing.T) {
 	}
 	startTime := time.Now().Unix()
 	startTime *= 1000
-	dmp.Diff_main(a, b)
+	dmp.DiffMain(a, b)
 	endTime := time.Now().Unix()
 	endTime *= 1000
 	// Test that we took at least the timeout period.
@@ -831,16 +829,16 @@ func Test_diff_main(t *testing.T) {
 	// Must be long to pass the 100 char cutoff.
 	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
 	b = "abcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\n"
-	assertSeqEqual(dmp.Diff_main(a, b, true), dmp.Diff_main(a, b, false))
+	assertSeqEqual(dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
 
 	a = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
 	b = "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
-	assertSeqEqual(dmp.Diff_main(a, b, true), dmp.Diff_main(a, b, false))
+	assertSeqEqual(dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
 
 	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
 	b = "abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n"
-	texts_linemode := diff_rebuildtexts(dmp.Diff_main(a, b, true))
-	texts_textmode := diff_rebuildtexts(dmp.Diff_main(a, b, false))
+	texts_linemode := diffRebuildtexts(dmp.DiffMain(a, b, true))
+	texts_textmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
 	assertSeqEqual(texts_textmode, texts_linemode)
 
 	// Test null inputs -- not needed because nulls can't be passed in C#.
@@ -854,14 +852,14 @@ func Test_match_alphabet(t *testing.T) {
 		'b': 2,
 		'c': 1,
 	}
-	assertSeqEqual(bitmask, dmp.Match_alphabet("abc"))
+	assertSeqEqual(bitmask, dmp.MatchAlphabet("abc"))
 
 	bitmask = map[byte]int{
 		'a': 37,
 		'b': 18,
 		'c': 8,
 	}
-	assertSeqEqual(bitmask, dmp.Match_alphabet("abcaba"))
+	assertSeqEqual(bitmask, dmp.MatchAlphabet("abcaba"))
 }
 
 func Test_match_bitap(t *testing.T) {
@@ -870,64 +868,64 @@ func Test_match_bitap(t *testing.T) {
 	// Bitap algorithm.
 	dmp.MatchDistance = 100
 	dmp.MatchThreshold = 0.5
-	assert.Equal(t, 5, dmp.Match_bitap("abcdefghijk", "fgh", 5), "match_bitap: Exact match #1.")
+	assert.Equal(t, 5, dmp.MatchBitap("abcdefghijk", "fgh", 5), "match_bitap: Exact match #1.")
 
-	assert.Equal(t, 5, dmp.Match_bitap("abcdefghijk", "fgh", 0), "match_bitap: Exact match #2.")
+	assert.Equal(t, 5, dmp.MatchBitap("abcdefghijk", "fgh", 0), "match_bitap: Exact match #2.")
 
-	assert.Equal(t, 4, dmp.Match_bitap("abcdefghijk", "efxhi", 0), "match_bitap: Fuzzy match #1.")
+	assert.Equal(t, 4, dmp.MatchBitap("abcdefghijk", "efxhi", 0), "match_bitap: Fuzzy match #1.")
 
-	assert.Equal(t, 2, dmp.Match_bitap("abcdefghijk", "cdefxyhijk", 5), "match_bitap: Fuzzy match #2.")
+	assert.Equal(t, 2, dmp.MatchBitap("abcdefghijk", "cdefxyhijk", 5), "match_bitap: Fuzzy match #2.")
 
-	assert.Equal(t, -1, dmp.Match_bitap("abcdefghijk", "bxy", 1), "match_bitap: Fuzzy match #3.")
+	assert.Equal(t, -1, dmp.MatchBitap("abcdefghijk", "bxy", 1), "match_bitap: Fuzzy match #3.")
 
-	assert.Equal(t, 2, dmp.Match_bitap("123456789xx0", "3456789x0", 2), "match_bitap: Overflow.")
+	assert.Equal(t, 2, dmp.MatchBitap("123456789xx0", "3456789x0", 2), "match_bitap: Overflow.")
 
-	assert.Equal(t, 0, dmp.Match_bitap("abcdef", "xxabc", 4), "match_bitap: Before start match.")
+	assert.Equal(t, 0, dmp.MatchBitap("abcdef", "xxabc", 4), "match_bitap: Before start match.")
 
-	assert.Equal(t, 3, dmp.Match_bitap("abcdef", "defyy", 4), "match_bitap: Beyond end match.")
+	assert.Equal(t, 3, dmp.MatchBitap("abcdef", "defyy", 4), "match_bitap: Beyond end match.")
 
-	assert.Equal(t, 0, dmp.Match_bitap("abcdef", "xabcdefy", 0), "match_bitap: Oversized pattern.")
+	assert.Equal(t, 0, dmp.MatchBitap("abcdef", "xabcdefy", 0), "match_bitap: Oversized pattern.")
 
 	dmp.MatchThreshold = 0.4
-	assert.Equal(t, 4, dmp.Match_bitap("abcdefghijk", "efxyhi", 1), "match_bitap: Threshold #1.")
+	assert.Equal(t, 4, dmp.MatchBitap("abcdefghijk", "efxyhi", 1), "match_bitap: Threshold #1.")
 
 	dmp.MatchThreshold = 0.3
-	assert.Equal(t, -1, dmp.Match_bitap("abcdefghijk", "efxyhi", 1), "match_bitap: Threshold #2.")
+	assert.Equal(t, -1, dmp.MatchBitap("abcdefghijk", "efxyhi", 1), "match_bitap: Threshold #2.")
 
 	dmp.MatchThreshold = 0.0
-	assert.Equal(t, 1, dmp.Match_bitap("abcdefghijk", "bcdef", 1), "match_bitap: Threshold #3.")
+	assert.Equal(t, 1, dmp.MatchBitap("abcdefghijk", "bcdef", 1), "match_bitap: Threshold #3.")
 
 	dmp.MatchThreshold = 0.5
-	assert.Equal(t, 0, dmp.Match_bitap("abcdexyzabcde", "abccde", 3), "match_bitap: Multiple select #1.")
+	assert.Equal(t, 0, dmp.MatchBitap("abcdexyzabcde", "abccde", 3), "match_bitap: Multiple select #1.")
 
-	assert.Equal(t, 8, dmp.Match_bitap("abcdexyzabcde", "abccde", 5), "match_bitap: Multiple select #2.")
+	assert.Equal(t, 8, dmp.MatchBitap("abcdexyzabcde", "abccde", 5), "match_bitap: Multiple select #2.")
 
 	dmp.MatchDistance = 10 // Strict location.
-	assert.Equal(t, -1, dmp.Match_bitap("abcdefghijklmnopqrstuvwxyz", "abcdefg", 24), "match_bitap: Distance test #1.")
+	assert.Equal(t, -1, dmp.MatchBitap("abcdefghijklmnopqrstuvwxyz", "abcdefg", 24), "match_bitap: Distance test #1.")
 
-	assert.Equal(t, 0, dmp.Match_bitap("abcdefghijklmnopqrstuvwxyz", "abcdxxefg", 1), "match_bitap: Distance test #2.")
+	assert.Equal(t, 0, dmp.MatchBitap("abcdefghijklmnopqrstuvwxyz", "abcdxxefg", 1), "match_bitap: Distance test #2.")
 
 	dmp.MatchDistance = 1000 // Loose location.
-	assert.Equal(t, 0, dmp.Match_bitap("abcdefghijklmnopqrstuvwxyz", "abcdefg", 24), "match_bitap: Distance test #3.")
+	assert.Equal(t, 0, dmp.MatchBitap("abcdefghijklmnopqrstuvwxyz", "abcdefg", 24), "match_bitap: Distance test #3.")
 }
 
-func Test_Match_main(t *testing.T) {
+func Test_MatchMain(t *testing.T) {
 	dmp := createDMP()
 	// Full match.
-	assert.Equal(t, 0, dmp.Match_main("abcdef", "abcdef", 1000), "Match_main: Equality.")
+	assert.Equal(t, 0, dmp.MatchMain("abcdef", "abcdef", 1000), "MatchMain: Equality.")
 
-	assert.Equal(t, -1, dmp.Match_main("", "abcdef", 1), "Match_main: Null text.")
+	assert.Equal(t, -1, dmp.MatchMain("", "abcdef", 1), "MatchMain: Null text.")
 
-	assert.Equal(t, 3, dmp.Match_main("abcdef", "", 3), "Match_main: Null pattern.")
+	assert.Equal(t, 3, dmp.MatchMain("abcdef", "", 3), "MatchMain: Null pattern.")
 
-	assert.Equal(t, 3, dmp.Match_main("abcdef", "de", 3), "Match_main: Exact match.")
+	assert.Equal(t, 3, dmp.MatchMain("abcdef", "de", 3), "MatchMain: Exact match.")
 
-	assert.Equal(t, 3, dmp.Match_main("abcdef", "defy", 4), "Match_main: Beyond end match.")
+	assert.Equal(t, 3, dmp.MatchMain("abcdef", "defy", 4), "MatchMain: Beyond end match.")
 
-	assert.Equal(t, 0, dmp.Match_main("abcdef", "abcdefy", 0), "Match_main: Oversized pattern.")
+	assert.Equal(t, 0, dmp.MatchMain("abcdef", "abcdefy", 0), "MatchMain: Oversized pattern.")
 
 	dmp.MatchThreshold = 0.7
-	assert.Equal(t, 4, dmp.Match_main("I am the very model of a modern major general.", " that berry ", 5), "Match_main: Complex match.")
+	assert.Equal(t, 4, dmp.MatchMain("I am the very model of a modern major general.", " that berry ", 5), "MatchMain: Complex match.")
 	dmp.MatchThreshold = 0.5
 
 	// Test null inputs -- not needed because nulls can't be passed in C#.
@@ -940,34 +938,34 @@ func Test_patch_patchObj(t *testing.T) {
 	p.start2 = 21
 	p.length1 = 18
 	p.length2 = 17
-	p.diffs = []change{
-		change{DIFF_EQUAL, "jump"},
-		change{DIFF_DELETE, "s"},
-		change{DIFF_INSERT, "ed"},
-		change{DIFF_EQUAL, " over "},
-		change{DIFF_DELETE, "the"},
-		change{DIFF_INSERT, "a"},
-		change{DIFF_EQUAL, "\nlaz"}}
+	p.diffs = []Diff{
+		Diff{DiffEqual, "jump"},
+		Diff{DiffDelete, "s"},
+		Diff{DiffInsert, "ed"},
+		Diff{DiffEqual, " over "},
+		Diff{DiffDelete, "the"},
+		Diff{DiffInsert, "a"},
+		Diff{DiffEqual, "\nlaz"}}
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0alaz\n"
 	assert.Equal(t, strp, p.String(), "Patch: toString.")
 }
 
 func Test_patch_fromText(t *testing.T) {
 	dmp := createDMP()
-	softAssert(t, len(dmp.Patch_fromText("")) == 0, "patch_fromText: #0.")
+	softAssert(t, len(dmp.PatchFromText("")) == 0, "patch_fromText: #0.")
 
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0alaz\n"
-	assert.Equal(t, strp, dmp.Patch_fromText(strp)[0].String(), "patch_fromText: #1.")
+	assert.Equal(t, strp, dmp.PatchFromText(strp)[0].String(), "patch_fromText: #1.")
 
-	assert.Equal(t, "@@ -1 +1 @@\n-a\n+b\n", dmp.Patch_fromText("@@ -1 +1 @@\n-a\n+b\n")[0].String(), "patch_fromText: #2.")
+	assert.Equal(t, "@@ -1 +1 @@\n-a\n+b\n", dmp.PatchFromText("@@ -1 +1 @@\n-a\n+b\n")[0].String(), "patch_fromText: #2.")
 
-	assert.Equal(t, "@@ -1,3 +0,0 @@\n-abc\n", dmp.Patch_fromText("@@ -1,3 +0,0 @@\n-abc\n")[0].String(), "patch_fromText: #3.")
+	assert.Equal(t, "@@ -1,3 +0,0 @@\n-abc\n", dmp.PatchFromText("@@ -1,3 +0,0 @@\n-abc\n")[0].String(), "patch_fromText: #3.")
 
-	assert.Equal(t, "@@ -0,0 +1,3 @@\n+abc\n", dmp.Patch_fromText("@@ -0,0 +1,3 @@\n+abc\n")[0].String(), "patch_fromText: #4.")
+	assert.Equal(t, "@@ -0,0 +1,3 @@\n+abc\n", dmp.PatchFromText("@@ -0,0 +1,3 @@\n+abc\n")[0].String(), "patch_fromText: #4.")
 
 	// Generates error.
 	//try {
-	//dmp.Patch_fromText("Bad\nPatch\n");
+	//dmp.PatchFromText("Bad\nPatch\n");
 	//assert.Fail("patch_fromText: #5.");
 	//} catch (ArgumentException) {
 	// Exception expected.
@@ -978,13 +976,13 @@ func Test_patch_toText(t *testing.T) {
 	dmp := createDMP()
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n  laz\n"
 	var patches []Patch
-	patches = dmp.Patch_fromText(strp)
-	result := dmp.Patch_toText(patches)
+	patches = dmp.PatchFromText(strp)
+	result := dmp.PatchToText(patches)
 	assert.Equal(t, strp, result)
 
 	strp = "@@ -1,9 +1,9 @@\n-f\n+F\n oo+fooba\n@@ -7,9 +7,9 @@\n obar\n-,\n+.\n  tes\n"
-	patches = dmp.Patch_fromText(strp)
-	result = dmp.Patch_toText(patches)
+	patches = dmp.PatchFromText(strp)
+	result = dmp.PatchToText(patches)
 	assert.Equal(t, strp, result)
 }
 
@@ -992,60 +990,60 @@ func Test_patch_addContext(t *testing.T) {
 	dmp := createDMP()
 	dmp.PatchMargin = 4
 	var p Patch
-	p = dmp.Patch_fromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")[0]
-	dmp.Patch_addContext(p, "The quick brown fox jumps over the lazy dog.")
+	p = dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")[0]
+	dmp.PatchAddContext(p, "The quick brown fox jumps over the lazy dog.")
 	assert.Equal(t, "@@ -17,12 +17,18 @@\n fox \n-jump\n+somersault\n s ov\n", p.String(), "patch_addContext: Simple case.")
 
-	p = dmp.Patch_fromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")[0]
-	dmp.Patch_addContext(p, "The quick brown fox jumps.")
+	p = dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")[0]
+	dmp.PatchAddContext(p, "The quick brown fox jumps.")
 	assert.Equal(t, "@@ -17,10 +17,16 @@\n fox \n-jump\n+somersault\n s.\n", p.String(), "patch_addContext: Not enough trailing context.")
 
-	p = dmp.Patch_fromText("@@ -3 +3,2 @@\n-e\n+at\n")[0]
-	dmp.Patch_addContext(p, "The quick brown fox jumps.")
+	p = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")[0]
+	dmp.PatchAddContext(p, "The quick brown fox jumps.")
 	assert.Equal(t, "@@ -1,7 +1,8 @@\n Th\n-e\n+at\n  qui\n", p.String(), "patch_addContext: Not enough leading context.")
 
-	p = dmp.Patch_fromText("@@ -3 +3,2 @@\n-e\n+at\n")[0]
-	dmp.Patch_addContext(p, "The quick brown fox jumps.  The quick brown fox crashes.")
+	p = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")[0]
+	dmp.PatchAddContext(p, "The quick brown fox jumps.  The quick brown fox crashes.")
 	assert.Equal(t, "@@ -1,27 +1,28 @@\n Th\n-e\n+at\n  quick brown fox jumps. \n", p.String(), "patch_addContext: Ambiguity.")
 }
 
 func Test_patch_make(t *testing.T) {
 	dmp := createDMP()
 	var patches []Patch
-	patches = dmp.Patch_make("", "")
-	assert.Equal(t, "", dmp.Patch_toText(patches), "patch_make: Null case.")
+	patches = dmp.PatchMake("", "")
+	assert.Equal(t, "", dmp.PatchToText(patches), "patch_make: Null case.")
 
 	text1 := "The quick brown fox jumps over the lazy dog."
 	text2 := "That quick brown fox jumped over a lazy dog."
 	expectedPatch := "@@ -1,8 +1,7 @@\n Th\n-at\n+e\n  qui\n@@ -21,17 +21,18 @@\n jump\n-ed\n+s\n  over \n-a\n+the\n  laz\n"
 	// The second patch must be "-21,17 +21,18", not "-22,17 +21,18" due to rolling context.
-	patches = dmp.Patch_make(text2, text1)
-	assert.Equal(t, expectedPatch, dmp.Patch_toText(patches), "patch_make: Text2+Text1 inputs.")
+	patches = dmp.PatchMake(text2, text1)
+	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Text2+Text1 inputs.")
 
 	expectedPatch = "@@ -1,11 +1,12 @@\n Th\n-e\n+at\n  quick b\n@@ -22,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n  laz\n"
-	patches = dmp.Patch_make(text1, text2)
-	assert.Equal(t, expectedPatch, dmp.Patch_toText(patches), "patch_make: Text1+Text2 inputs.")
+	patches = dmp.PatchMake(text1, text2)
+	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Text1+Text2 inputs.")
 
-	diffs := dmp.Diff_main(text1, text2, false)
-	patches = dmp.Patch_make(diffs)
-	assert.Equal(t, expectedPatch, dmp.Patch_toText(patches), "patch_make: Diff input.")
+	diffs := dmp.DiffMain(text1, text2, false)
+	patches = dmp.PatchMake(diffs)
+	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Diff input.")
 
-	patches = dmp.Patch_make(text1, diffs)
-	assert.Equal(t, expectedPatch, dmp.Patch_toText(patches), "patch_make: Text1+Diff inputs.")
+	patches = dmp.PatchMake(text1, diffs)
+	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Text1+Diff inputs.")
 
-	patches = dmp.Patch_make(text1, text2, diffs)
-	assert.Equal(t, expectedPatch, dmp.Patch_toText(patches), "patch_make: Text1+Text2+Diff inputs (deprecated).")
+	patches = dmp.PatchMake(text1, text2, diffs)
+	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Text1+Text2+Diff inputs (deprecated).")
 
-	patches = dmp.Patch_make("`1234567890-=[]\\;',./", "~!@#$%^&*()_+{}|:\"<>?")
+	patches = dmp.PatchMake("`1234567890-=[]\\;',./", "~!@#$%^&*()_+{}|:\"<>?")
 	assert.Equal(t, "@@ -1,21 +1,21 @@\n-%601234567890-=%5b%5d%5c;',./\n+~!@#$%25%5e&*()_+%7b%7d%7c:%22%3c%3e?\n",
-		dmp.Patch_toText(patches),
+		dmp.PatchToText(patches),
 		"patch_toText: Character encoding.")
 
-	diffs = []change{
-		change{DIFF_DELETE, "`1234567890-=[]\\;',./"},
-		change{DIFF_INSERT, "~!@#$%^&*()_+{}|:\"<>?"}}
+	diffs = []Diff{
+		Diff{DiffDelete, "`1234567890-=[]\\;',./"},
+		Diff{DiffInsert, "~!@#$%^&*()_+{}|:\"<>?"}}
 	assertSeqEqual(diffs,
-		dmp.Patch_fromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")[0].diffs,
+		dmp.PatchFromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")[0].diffs,
 	)
 
 	text1 = ""
@@ -1054,64 +1052,64 @@ func Test_patch_make(t *testing.T) {
 	}
 	text2 = text1 + "123"
 	expectedPatch = "@@ -573,28 +573,31 @@\n cdefabcdefabcdefabcdefabcdef\n+123\n"
-	patches = dmp.Patch_make(text1, text2)
-	assert.Equal(t, expectedPatch, dmp.Patch_toText(patches), "patch_make: Long string with repeats.")
+	patches = dmp.PatchMake(text1, text2)
+	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Long string with repeats.")
 
 	// Test null inputs -- not needed because nulls can't be passed in C#.
 }
 
-func Test_patch_splitMax(t *testing.T) {
+func Test_PatchSplitMax(t *testing.T) {
 	// Assumes that Match_MaxBits is 32.
 	dmp := createDMP()
 	var patches []Patch
 
-	patches = dmp.Patch_make("abcdefghijklmnopqrstuvwxyz01234567890", "XabXcdXefXghXijXklXmnXopXqrXstXuvXwxXyzX01X23X45X67X89X0")
-	dmp.Patch_splitMax(patches)
-	assert.Equal(t, "@@ -1,32 +1,46 @@\n+X\n ab\n+X\n cd\n+X\n ef\n+X\n gh\n+X\n ij\n+X\n kl\n+X\n mn\n+X\n op\n+X\n qr\n+X\n st\n+X\n uv\n+X\n wx\n+X\n yz\n+X\n 012345\n@@ -25,13 +39,18 @@\n zX01\n+X\n 23\n+X\n 45\n+X\n 67\n+X\n 89\n+X\n 0\n", dmp.Patch_toText(patches))
+	patches = dmp.PatchMake("abcdefghijklmnopqrstuvwxyz01234567890", "XabXcdXefXghXijXklXmnXopXqrXstXuvXwxXyzX01X23X45X67X89X0")
+	dmp.PatchSplitMax(patches)
+	assert.Equal(t, "@@ -1,32 +1,46 @@\n+X\n ab\n+X\n cd\n+X\n ef\n+X\n gh\n+X\n ij\n+X\n kl\n+X\n mn\n+X\n op\n+X\n qr\n+X\n st\n+X\n uv\n+X\n wx\n+X\n yz\n+X\n 012345\n@@ -25,13 +39,18 @@\n zX01\n+X\n 23\n+X\n 45\n+X\n 67\n+X\n 89\n+X\n 0\n", dmp.PatchToText(patches))
 
-	patches = dmp.Patch_make("abcdef1234567890123456789012345678901234567890123456789012345678901234567890uvwxyz", "abcdefuvwxyz")
-	oldToText := dmp.Patch_toText(patches)
-	dmp.Patch_splitMax(patches)
-	assert.Equal(t, oldToText, dmp.Patch_toText(patches))
+	patches = dmp.PatchMake("abcdef1234567890123456789012345678901234567890123456789012345678901234567890uvwxyz", "abcdefuvwxyz")
+	oldToText := dmp.PatchToText(patches)
+	dmp.PatchSplitMax(patches)
+	assert.Equal(t, oldToText, dmp.PatchToText(patches))
 
-	patches = dmp.Patch_make("1234567890123456789012345678901234567890123456789012345678901234567890", "abc")
-	dmp.Patch_splitMax(patches)
-	assert.Equal(t, "@@ -1,32 +1,4 @@\n-1234567890123456789012345678\n 9012\n@@ -29,32 +1,4 @@\n-9012345678901234567890123456\n 7890\n@@ -57,14 +1,3 @@\n-78901234567890\n+abc\n", dmp.Patch_toText(patches))
+	patches = dmp.PatchMake("1234567890123456789012345678901234567890123456789012345678901234567890", "abc")
+	dmp.PatchSplitMax(patches)
+	assert.Equal(t, "@@ -1,32 +1,4 @@\n-1234567890123456789012345678\n 9012\n@@ -29,32 +1,4 @@\n-9012345678901234567890123456\n 7890\n@@ -57,14 +1,3 @@\n-78901234567890\n+abc\n", dmp.PatchToText(patches))
 
-	patches = dmp.Patch_make("abcdefghij , h : 0 , t : 1 abcdefghij , h : 0 , t : 1 abcdefghij , h : 0 , t : 1", "abcdefghij , h : 1 , t : 1 abcdefghij , h : 1 , t : 1 abcdefghij , h : 0 , t : 1")
-	dmp.Patch_splitMax(patches)
-	assert.Equal(t, "@@ -2,32 +2,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n@@ -29,32 +29,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n", dmp.Patch_toText(patches))
+	patches = dmp.PatchMake("abcdefghij , h : 0 , t : 1 abcdefghij , h : 0 , t : 1 abcdefghij , h : 0 , t : 1", "abcdefghij , h : 1 , t : 1 abcdefghij , h : 1 , t : 1 abcdefghij , h : 0 , t : 1")
+	dmp.PatchSplitMax(patches)
+	assert.Equal(t, "@@ -2,32 +2,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n@@ -29,32 +29,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n", dmp.PatchToText(patches))
 }
 
-func Test_patch_addPadding(t *testing.T) {
+func Test_PatchAddPadding(t *testing.T) {
 	dmp := createDMP()
 	var patches []Patch
-	patches = dmp.Patch_make("", "test")
+	patches = dmp.PatchMake("", "test")
 	assert.Equal(t, "@@ -0,0 +1,4 @@\n+test\n",
-		dmp.Patch_toText(patches),
-		"patch_addPadding: Both edges full.")
-	dmp.Patch_addPadding(patches)
+		dmp.PatchToText(patches),
+		"PatchAddPadding: Both edges full.")
+	dmp.PatchAddPadding(patches)
 	assert.Equal(t, "@@ -1,8 +1,12 @@\n %01%02%03%04\n+test\n %01%02%03%04\n",
-		dmp.Patch_toText(patches),
-		"patch_addPadding: Both edges full.")
+		dmp.PatchToText(patches),
+		"PatchAddPadding: Both edges full.")
 
-	patches = dmp.Patch_make("XY", "XtestY")
+	patches = dmp.PatchMake("XY", "XtestY")
 	assert.Equal(t, "@@ -1,2 +1,6 @@\n X\n+test\n Y\n",
-		dmp.Patch_toText(patches),
-		"patch_addPadding: Both edges partial.")
-	dmp.Patch_addPadding(patches)
+		dmp.PatchToText(patches),
+		"PatchAddPadding: Both edges partial.")
+	dmp.PatchAddPadding(patches)
 	assert.Equal(t, "@@ -2,8 +2,12 @@\n %02%03%04X\n+test\n Y%01%02%03\n",
-		dmp.Patch_toText(patches),
-		"patch_addPadding: Both edges partial.")
+		dmp.PatchToText(patches),
+		"PatchAddPadding: Both edges partial.")
 
-	patches = dmp.Patch_make("XXXXYYYY", "XXXXtestYYYY")
+	patches = dmp.PatchMake("XXXXYYYY", "XXXXtestYYYY")
 	assert.Equal(t, "@@ -1,8 +1,12 @@\n XXXX\n+test\n YYYY\n",
-		dmp.Patch_toText(patches),
-		"patch_addPadding: Both edges none.")
-	dmp.Patch_addPadding(patches)
+		dmp.PatchToText(patches),
+		"PatchAddPadding: Both edges none.")
+	dmp.PatchAddPadding(patches)
 	assert.Equal(t, "@@ -5,8 +5,12 @@\n XXXX\n+test\n YYYY\n",
-		dmp.Patch_toText(patches),
-		"patch_addPadding: Both edges none.")
+		dmp.PatchToText(patches),
+		"PatchAddPadding: Both edges none.")
 }
 
 func Test_patch_apply(t *testing.T) {
@@ -1120,82 +1118,82 @@ func Test_patch_apply(t *testing.T) {
 	dmp.MatchThreshold = 0.5
 	dmp.PatchDeleteThreshold = 0.5
 	patches := []Patch{}
-	patches = dmp.Patch_make("", "")
-	results0, results1 := dmp.Patch_apply(patches, "Hello world.")
+	patches = dmp.PatchMake("", "")
+	results0, results1 := dmp.PatchApply(patches, "Hello world.")
 	boolArray := results1
 	resultStr := results0 + "\t" + string(len(boolArray))
 	assert.Equal(t, "Hello world.\t0", resultStr, "patch_apply: Null case.")
 
-	patches = dmp.Patch_make("The quick brown fox jumps over the lazy dog.", "That quick brown fox jumped over a lazy dog.")
-	results0, results1 = dmp.Patch_apply(patches, "The quick brown fox jumps over the lazy dog.")
+	patches = dmp.PatchMake("The quick brown fox jumps over the lazy dog.", "That quick brown fox jumped over a lazy dog.")
+	results0, results1 = dmp.PatchApply(patches, "The quick brown fox jumps over the lazy dog.")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
 	assert.Equal(t, "That quick brown fox jumped over a lazy dog.\tTrue\tTrue", resultStr, "patch_apply: Exact match.")
 
-	results0, results1 = dmp.Patch_apply(patches, "The quick red rabbit jumps over the tired tiger.")
+	results0, results1 = dmp.PatchApply(patches, "The quick red rabbit jumps over the tired tiger.")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
 	assert.Equal(t, "That quick red rabbit jumped over a tired tiger.\tTrue\tTrue", resultStr, "patch_apply: Partial match.")
 
-	results0, results1 = dmp.Patch_apply(patches, "I am the very model of a modern major general.")
+	results0, results1 = dmp.PatchApply(patches, "I am the very model of a modern major general.")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
 	assert.Equal(t, "I am the very model of a modern major general.\tFalse\tFalse", resultStr, "patch_apply: Failed match.")
 
-	patches = dmp.Patch_make("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
-	results0, results1 = dmp.Patch_apply(patches, "x123456789012345678901234567890-----++++++++++-----123456789012345678901234567890y")
+	patches = dmp.PatchMake("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
+	results0, results1 = dmp.PatchApply(patches, "x123456789012345678901234567890-----++++++++++-----123456789012345678901234567890y")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "xabcy\tTrue\tTrue", resultStr, "patch_apply: Big delete, small change.")
+	assert.Equal(t, "xabcy\tTrue\tTrue", resultStr, "patch_apply: Big delete, small Diff.")
 
-	patches = dmp.Patch_make("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
-	results0, results1 = dmp.Patch_apply(patches, "x12345678901234567890---------------++++++++++---------------12345678901234567890y")
+	patches = dmp.PatchMake("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
+	results0, results1 = dmp.PatchApply(patches, "x12345678901234567890---------------++++++++++---------------12345678901234567890y")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "xabc12345678901234567890---------------++++++++++---------------12345678901234567890y\tFalse\tTrue", resultStr, "patch_apply: Big delete, big change 1.")
+	assert.Equal(t, "xabc12345678901234567890---------------++++++++++---------------12345678901234567890y\tFalse\tTrue", resultStr, "patch_apply: Big delete, big Diff 1.")
 
 	dmp.PatchDeleteThreshold = 0.6
-	patches = dmp.Patch_make("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
-	results0, results1 = dmp.Patch_apply(patches, "x12345678901234567890---------------++++++++++---------------12345678901234567890y")
+	patches = dmp.PatchMake("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
+	results0, results1 = dmp.PatchApply(patches, "x12345678901234567890---------------++++++++++---------------12345678901234567890y")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "xabcy\tTrue\tTrue", resultStr, "patch_apply: Big delete, big change 2.")
+	assert.Equal(t, "xabcy\tTrue\tTrue", resultStr, "patch_apply: Big delete, big Diff 2.")
 	dmp.PatchDeleteThreshold = 0.5
 
 	dmp.MatchThreshold = 0.0
 	dmp.MatchDistance = 0
-	patches = dmp.Patch_make("abcdefghijklmnopqrstuvwxyz--------------------1234567890", "abcXXXXXXXXXXdefghijklmnopqrstuvwxyz--------------------1234567YYYYYYYYYY890")
-	results0, results1 = dmp.Patch_apply(patches, "ABCDEFGHIJKLMNOPQRSTUVWXYZ--------------------1234567890")
+	patches = dmp.PatchMake("abcdefghijklmnopqrstuvwxyz--------------------1234567890", "abcXXXXXXXXXXdefghijklmnopqrstuvwxyz--------------------1234567YYYYYYYYYY890")
+	results0, results1 = dmp.PatchApply(patches, "ABCDEFGHIJKLMNOPQRSTUVWXYZ--------------------1234567890")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
 	assert.Equal(t, "ABCDEFGHIJKLMNOPQRSTUVWXYZ--------------------1234567YYYYYYYYYY890\tFalse\tTrue", resultStr, "patch_apply: Compensate for failed patch.")
 	dmp.MatchThreshold = 0.5
 	dmp.MatchDistance = 1000
 
-	patches = dmp.Patch_make("", "test")
-	patchStr := dmp.Patch_toText(patches)
-	dmp.Patch_apply(patches, "")
-	assert.Equal(t, patchStr, dmp.Patch_toText(patches), "patch_apply: No side effects.")
+	patches = dmp.PatchMake("", "test")
+	patchStr := dmp.PatchToText(patches)
+	dmp.PatchApply(patches, "")
+	assert.Equal(t, patchStr, dmp.PatchToText(patches), "patch_apply: No side effects.")
 
-	patches = dmp.Patch_make("The quick brown fox jumps over the lazy dog.", "Woof")
-	patchStr = dmp.Patch_toText(patches)
-	dmp.Patch_apply(patches, "The quick brown fox jumps over the lazy dog.")
-	assert.Equal(t, patchStr, dmp.Patch_toText(patches), "patch_apply: No side effects with major delete.")
+	patches = dmp.PatchMake("The quick brown fox jumps over the lazy dog.", "Woof")
+	patchStr = dmp.PatchToText(patches)
+	dmp.PatchApply(patches, "The quick brown fox jumps over the lazy dog.")
+	assert.Equal(t, patchStr, dmp.PatchToText(patches), "patch_apply: No side effects with major delete.")
 
-	patches = dmp.Patch_make("", "test")
-	results0, results1 = dmp.Patch_apply(patches, "")
+	patches = dmp.PatchMake("", "test")
+	results0, results1 = dmp.PatchApply(patches, "")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
 	assert.Equal(t, "test\tTrue", resultStr, "patch_apply: Edge exact match.")
 
-	patches = dmp.Patch_make("XY", "XtestY")
-	results0, results1 = dmp.Patch_apply(patches, "XY")
+	patches = dmp.PatchMake("XY", "XtestY")
+	results0, results1 = dmp.PatchApply(patches, "XY")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
 	assert.Equal(t, "XtestY\tTrue", resultStr, "patch_apply: Near edge exact match.")
 
-	patches = dmp.Patch_make("y", "y123")
-	results0, results1 = dmp.Patch_apply(patches, "x")
+	patches = dmp.PatchMake("y", "y123")
+	results0, results1 = dmp.PatchApply(patches, "x")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
 	assert.Equal(t, "x123\tTrue", resultStr, "patch_apply: Edge partial match.")

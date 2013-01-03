@@ -26,42 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	//"unicode/utf8"
 )
-
-type DiffMatchPatch struct {
-	// Number of seconds to map a diff before giving up (0 for infinity).
-	DiffTimeout float64
-	// Cost of an empty edit operation in terms of edit characters.
-	DiffEditCost int
-	// How far to search for a match (0 = exact location, 1000+ = broad match).
-	// A match this many characters away from the expected location will add
-	// 1.0 to the score (0.0 is a perfect match).
-	MatchDistance int
-	// When deleting a large block of text (over ~64 characters), how close do
-	// the contents have to be to match the expected contents. (0.0 = perfection,
-	// 1.0 = very loose).  Note that Match_Threshold controls how closely the
-	// end points of a delete need to match.
-	PatchDeleteThreshold float64
-	// Chunk size for context length.
-	PatchMargin int
-	// The number of bits in an int.
-	MatchMaxBits int
-	// At what point is no match declared (0.0 = perfection, 1.0 = very loose).
-	MatchThreshold float64
-}
-
-// Diff represents one diff operation
-type Diff struct {
-	Type int8
-	Text string
-}
-
-type LinesDiff struct {
-	chars1    string
-	chars2    string
-	lineArray []string
-}
 
 // The data structure representing a diff is an array of tuples:
 // [[DiffDelete, 'Hello'], [DiffInsert, 'Goodbye'], [DiffEqual, ' world.']]
@@ -138,6 +103,40 @@ func indexOf(str string, pattern string, i int) int {
 
 }
 
+type DiffMatchPatch struct {
+	// Number of seconds to map a diff before giving up (0 for infinity).
+	DiffTimeout float64
+	// Cost of an empty edit operation in terms of edit characters.
+	DiffEditCost int
+	// How far to search for a match (0 = exact location, 1000+ = broad match).
+	// A match this many characters away from the expected location will add
+	// 1.0 to the score (0.0 is a perfect match).
+	MatchDistance int
+	// When deleting a large block of text (over ~64 characters), how close do
+	// the contents have to be to match the expected contents. (0.0 = perfection,
+	// 1.0 = very loose).  Note that Match_Threshold controls how closely the
+	// end points of a delete need to match.
+	PatchDeleteThreshold float64
+	// Chunk size for context length.
+	PatchMargin int
+	// The number of bits in an int.
+	MatchMaxBits int
+	// At what point is no match declared (0.0 = perfection, 1.0 = very loose).
+	MatchThreshold float64
+}
+
+// Diff represents one diff operation
+type Diff struct {
+	Type int8
+	Text string
+}
+
+type LinesDiff struct {
+	chars1    string
+	chars2    string
+	lineArray []string
+}
+
 // Patch represents one patch operation.
 type Patch struct {
 	diffs   []Diff
@@ -152,21 +151,23 @@ type Patch struct {
 // Indicies are printed as 1-based, not 0-based.
 func (patch *Patch) String() string {
 	var coords1, coords2 string
+	start1 := int64(patch.start1)
+	start2 := int64(patch.start2)
 
 	if patch.length1 == 0 {
-		coords1 = strconv.FormatInt(int64(patch.start1), 10) + ",0"
+		coords1 = strconv.FormatInt(start1, 10) + ",0"
 	} else if patch.length1 == 1 {
-		coords1 = strconv.FormatInt(int64(patch.start1)+1, 10)
+		coords1 = strconv.FormatInt(start1+1, 10)
 	} else {
-		coords1 = strconv.FormatInt(int64(patch.start1)+1, 10) + "," + strconv.FormatInt(int64(patch.length1), 10)
+		coords1 = strconv.FormatInt(start1+1, 10) + "," + strconv.FormatInt(int64(patch.length1), 10)
 	}
 
 	if patch.length2 == 0 {
-		coords2 = strconv.FormatInt(int64(patch.start2), 10) + ",0"
+		coords2 = strconv.FormatInt(start2, 10) + ",0"
 	} else if patch.length2 == 1 {
-		coords2 = strconv.FormatInt(int64(patch.start2)+1, 10)
+		coords2 = strconv.FormatInt(start2+1, 10)
 	} else {
-		coords2 = strconv.FormatInt(int64(patch.start2)+1, 10) + "," + strconv.FormatInt(int64(patch.length2), 10)
+		coords2 = strconv.FormatInt(start2+1, 10) + "," + strconv.FormatInt(int64(patch.length2), 10)
 	}
 
 	var text bytes.Buffer
@@ -405,7 +406,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int
 				pointer = pointer - count_delete - count_insert
 				a := dmp.DiffMain(text_delete, text_insert, false, deadline)
 				for j := len(a) - 1; j >= 0; j-- {
-					splice(diffs, pointer, 0, a[j])
+					diffs = splice(diffs, pointer, 0, a[j])
 				}
 				pointer = pointer + len(a)
 			}
@@ -900,7 +901,6 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 		diffs = dmp.DiffCleanupMerge(diffs)
 	}
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
-
 	// Find any overlaps between deletions and insertions.
 	// e.g: <del>abcxxx</del><ins>xxxdef</ins>
 	//   -> <del>abc</del>xxx<ins>def</ins>
@@ -911,17 +911,15 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	for pointer < len(diffs) {
 		if diffs[pointer-1].Type == DiffDelete &&
 			diffs[pointer].Type == DiffInsert {
-
 			deletion := diffs[pointer-1].Text
 			insertion := diffs[pointer].Text
 			overlap_length1 := dmp.DiffCommonOverlap(deletion, insertion)
 			overlap_length2 := dmp.DiffCommonOverlap(insertion, deletion)
 			if overlap_length1 >= overlap_length2 {
-				if overlap_length1 >= len(deletion)/2 ||
-					overlap_length1 >= len(insertion)/2 {
+				if float64(overlap_length1) >= float64(len(deletion))/2 ||
+					float64(overlap_length1) >= float64(len(insertion))/2 {
 
 					// Overlap found.  Insert an equality and trim the surrounding edits.
-
 					diffs = append(
 						diffs[:pointer],
 						append([]Diff{Diff{DiffEqual, insertion[0:overlap_length1]}}, diffs[pointer:]...)...)
@@ -933,8 +931,8 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					pointer++
 				}
 			} else {
-				if overlap_length2 >= len(deletion)/2 ||
-					overlap_length2 >= len(insertion)/2 {
+				if float64(overlap_length2) >= float64(len(deletion))/2 ||
+					float64(overlap_length2) >= float64(len(insertion))/2 {
 					// Reverse overlap found.
 					// Insert an equality and swap and trim the surrounding edits.
 					diffs = append(
@@ -943,11 +941,9 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					// diffs.splice(pointer, 0,
 					//     [DiffEqual, deletion[0 : overlap_length2)]]
 					diffs[pointer-1].Type = DiffInsert
-					diffs[pointer-1].Text =
-						insertion[0 : len(insertion)-overlap_length2]
+					diffs[pointer-1].Text = insertion[0 : len(insertion)-overlap_length2]
 					diffs[pointer+1].Type = DiffDelete
-					diffs[pointer+1].Text =
-						deletion[overlap_length2:]
+					diffs[pointer+1].Text = deletion[overlap_length2:]
 					pointer++
 				}
 			}
@@ -1068,7 +1064,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 				if len(bestEquality1) != 0 {
 					diffs[pointer-1].Text = bestEquality1
 				} else {
-					splice(diffs, pointer-1, 1)
+					diffs = splice(diffs, pointer-1, 1)
 					pointer -= 1
 				}
 
@@ -1197,9 +1193,9 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	pointer := 0
 	count_delete := 0
 	count_insert := 0
+	commonlength := 0
 	text_delete := ""
 	text_insert := ""
-	commonlength := 0
 
 	for pointer < len(diffs) {
 		switch diffs[pointer].Type {
@@ -1289,21 +1285,22 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	pointer = 1
 	// Intentionally ignore the first and last element (don't need checking).
 	for pointer < (len(diffs) - 1) {
-		if diffs[pointer-1].Type == DiffEqual && diffs[pointer+1].Type == DiffEqual {
+		if diffs[pointer-1].Type == DiffEqual &&
+			diffs[pointer+1].Type == DiffEqual {
 			// This is a single edit surrounded by equalities.
 			if strings.HasSuffix(diffs[pointer].Text, diffs[pointer-1].Text) {
 				// Shift the edit over the previous equality.
 				diffs[pointer].Text = diffs[pointer-1].Text +
 					diffs[pointer].Text[0:len(diffs[pointer].Text)-len(diffs[pointer-1].Text)]
 				diffs[pointer+1].Text = diffs[pointer-1].Text + diffs[pointer+1].Text
-				splice(diffs, pointer-1, 1)
+				diffs = splice(diffs, pointer-1, 1)
 				changes = true
 			} else if strings.HasPrefix(diffs[pointer].Text, diffs[pointer+1].Text) {
 				// Shift the edit over the next equality.
 				diffs[pointer-1].Text += diffs[pointer+1].Text
 				diffs[pointer].Text =
 					diffs[pointer].Text[len(diffs[pointer+1].Text):] + diffs[pointer+1].Text
-				splice(diffs, pointer+1, 1)
+				diffs = splice(diffs, pointer+1, 1)
 				changes = true
 			}
 		}

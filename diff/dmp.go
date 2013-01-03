@@ -18,7 +18,8 @@ package diffmatchpatch
 
 import (
 	"bytes"
-	"log"
+	"errors"
+	"fmt"
 	"math"
 	"net/url"
 	"reflect"
@@ -48,14 +49,10 @@ const (
 // Example: "%3f" -> "?", "%24" -> "$", etc.
 var unescaper = strings.NewReplacer(
 	"%21", "!", "%7e", "~",
-	"%27", "'", "%28", "(",
-	"%29", ", -1)", "%3b", ";",
-	"%2f", "/", "%3f", "?",
-
-	"%3a", ":", "%40", "@",
-	"%26", "&", "%3d", "=",
-	"%2b", "+", "%24", "$",
-
+	"%27", "'", "%28", "(", "%29", ")",
+	"%3b", ";", "%2f", "/", "%3f", "?",
+	"%3a", ":", "%40", "@", "%26", "&",
+	"%3d", "=", "%2b", "+", "%24", "$",
 	"%2c", ",", "%23", "#")
 
 // Define some regex patterns for matching boundaries.
@@ -228,12 +225,10 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	checklines := true
 	var deadline int32
 
-	if opt != nil {
-		if opt[0] != nil {
-			checklines = opt[0].(bool)
-		}
+	if opt != nil && len(opt) > 0 {
+		checklines = opt[0].(bool)
 
-		if opt[1] == nil {
+		if len(opt) > 1 {
 			if dmp.DiffTimeout <= 0 {
 				deadline = max32
 			} else {
@@ -1387,7 +1382,6 @@ func (dmp *DiffMatchPatch) DiffText1(diffs []Diff) string {
 	for _, aDiff := range diffs {
 		if aDiff.Type != DiffInsert {
 			text.WriteString(aDiff.Text)
-			//text.Append(aDiff.text)
 		}
 	}
 	return text.String()
@@ -1445,23 +1439,22 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 		switch aDiff.Type {
 		case DiffInsert:
 			text.WriteString("+")
-			text.WriteString(url.QueryEscape(aDiff.Text))
+			text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
 			text.WriteString("\t")
 			break
 		case DiffDelete:
 			text.WriteString("-")
-			text.WriteString(string(len(aDiff.Text)))
+			text.WriteString(strconv.Itoa(len(aDiff.Text)))
 			text.WriteString("\t")
 			break
 		case DiffEqual:
 			text.WriteString("=")
-			text.WriteString(string(len(aDiff.Text)))
+			text.WriteString(strconv.Itoa(len(aDiff.Text)))
 			text.WriteString("\t")
 			break
 		}
 	}
 	delta := text.String()
-	delta = strings.Replace(delta, "+", " ", -1)
 	if len(delta) != 0 {
 		// Strip off trailing tab character.
 		delta = delta[0 : len(delta)-1]
@@ -1472,9 +1465,15 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 
 // Diff_fromDelta. Given the original text1, and an encoded string which describes the
 // operations required to transform text1 into text2, comAdde the full diff.
-func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) []Diff {
-	//List<Diff> diffs = new List<Diff>()
-	diffs := []Diff{}
+func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err error) {
+	diffs = []Diff{}
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = r.(error)
+		}
+	}()
+
 	pointer := 0 // Cursor in text1
 	var tokens []string = strings.Split(delta, "\t")
 
@@ -1501,16 +1500,14 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) []Diff {
 
 			n, err := strconv.ParseInt(param, 10, 0)
 			if err != nil {
-				log.Fatal(err)
-				panic(err)
+				return diffs, err
 			}
 
 			if n < 0 {
-				log.Fatal("Negative number in diff_fromDelta: " + param)
-				panic(err)
+				return diffs, errors.New("Negative number in DiffFromDelta: " + param)
 			}
-
-			text := text1[pointer:n]
+			fmt.Println(text1, pointer, n)
+			text := text1[pointer : pointer+int(n)]
 			pointer += int(n)
 
 			if token[0] == '=' {
@@ -1521,15 +1518,13 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) []Diff {
 			break
 		default:
 			// Anything else is an error.
-			log.Fatal("Invalid diff operation in diff_fromDelta: " + string(token[0]))
-			panic("Invalid diff operation in diff_fromDelta: " + string(token[0]))
+			return diffs, errors.New("Invalid diff operation in DiffFromDelta: " + string(token[0]))
 		}
 	}
 	if pointer != len(text1) {
-		log.Fatal("Delta length (" + string(pointer) + ") smaller than source text length (" + string(len(text1)) + ").")
-		panic("Delta length (" + string(pointer) + ") smaller than source text length (" + string(len(text1)) + ").")
+		return diffs, errors.New("Delta length (" + string(pointer) + ") smaller than source text length (" + string(len(text1)) + ").")
 	}
-	return diffs
+	return diffs, err
 }
 
 //  MATCH FUNCTIONS
@@ -2108,10 +2103,10 @@ func (dmp *DiffMatchPatch) PatchToText(patches []Patch) string {
 
 // PatchFromText parses a textual representation of patches and returns a List of Patch
 // objects.
-func (dmp *DiffMatchPatch) PatchFromText(textline string) []Patch {
+func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	patches := []Patch{}
 	if len(textline) == 0 {
-		return patches
+		return patches, nil
 	}
 	text := strings.Split(textline, "\n")
 	textPointer := 0
@@ -2121,8 +2116,7 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) []Patch {
 	var line string
 	for textPointer < len(text) {
 		if !patchHeader.MatchString(text[textPointer]) {
-			log.Fatal("Invalid patch string: " + text[textPointer])
-			panic("Invalid patch string: " + text[textPointer])
+			return patches, errors.New("Invalid patch string: " + text[textPointer])
 		}
 		patch = Patch{}
 		patches = append(patches, patch)
@@ -2153,13 +2147,13 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) []Patch {
 		textPointer++
 
 		for textPointer < len(text) {
-			//try {
-			sign = text[textPointer][0]
-			/*} catch (IndexOutOfRangeException) {
-			  // Blank line?  Whatever.
-			  textPointer++
-			  continue
-			}*/
+			if len(text[textPointer]) > 0 {
+				sign = text[textPointer][0]
+			} else {
+				textPointer++
+				continue
+			}
+
 			line = text[textPointer][1:]
 			line = strings.Replace(line, "+", "%2b", -1)
 			line, _ = url.QueryUnescape(line)
@@ -2177,11 +2171,10 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) []Patch {
 				break
 			} else {
 				// WTF?
-				log.Fatal("Invalid patch mode '" + string(sign) + "' in: " + string(line))
-				panic("Invalid patch mode '" + string(sign) + "' in: " + string(line))
+				return patches, errors.New("Invalid patch mode '" + string(sign) + "' in: " + string(line))
 			}
 			textPointer++
 		}
 	}
-	return patches
+	return patches, nil
 }

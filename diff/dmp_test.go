@@ -643,33 +643,30 @@ func Test_diffDelta(t *testing.T) {
 	assert.Equal(t, "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", delta)
 
 	// Convert delta string into a diff.
-	assertSeqEqual(diffs, dmp.DiffFromDelta(text1, delta))
+	fmt.Println("$$$")
+
+	_seq1, err := dmp.DiffFromDelta(text1, delta)
+	fmt.Println(diffs)
+	fmt.Println(_seq1)
+	assertSeqEqual(diffs, _seq1)
 
 	// Generates error (19 < 20).
-	//try {
-	dmp.DiffFromDelta(text1+"x", delta)
-	//assert.Fail("diff_fromDelta: Too long.");
-	/*
-	   } catch (ArgumentException) {
-	     // Exception expected.
-	   }
-	*/
+	_, err = dmp.DiffFromDelta(text1+"x", delta)
+	if err == nil {
+		panic(1) //assert.Fail("diff_fromDelta: Too long.");
+	}
 
 	// Generates error (19 > 18).
-	//try {
-	dmp.DiffFromDelta(text1[1:], delta)
-	//  assert.Fail("diff_fromDelta: Too short.");
-	//} catch (ArgumentException) {
-	// Exception expected.
-	//}
+	_, err = dmp.DiffFromDelta(text1[1:], delta)
+	if err == nil {
+		panic(1) //assert.Fail("diff_fromDelta: Too short.");
+	}
 
 	// Generates error (%c3%xy invalid Unicode).
-	//try {
-	dmp.DiffFromDelta("", "+%c3%xy")
-	//assert.Fail("diff_fromDelta: Invalid character.");
-	//} catch (ArgumentException) {
-	// Exception expected.
-	//}
+	_, err = dmp.DiffFromDelta("", "+%c3%xy")
+	if err == nil {
+		panic(1) //assert.Fail("diff_fromDelta: Invalid character.");
+	}
 
 	// Test deltas with special characters.
 	zero := "0"
@@ -686,7 +683,8 @@ func Test_diffDelta(t *testing.T) {
 	// Lowercase, due to UrlEncode uses lower.
 	assert.Equal(t, "=7\t-7\t+%da%82 %02 %5c %7c", delta)
 
-	assertSeqEqual(diffs, dmp.DiffFromDelta(text1, delta))
+	_res1, _ := dmp.DiffFromDelta(text1, delta)
+	assertSeqEqual(diffs, _res1)
 
 	// Verify pool of unchanged characters.
 	diffs = []Diff{
@@ -698,7 +696,8 @@ func Test_diffDelta(t *testing.T) {
 	assert.Equal(t, "+A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # ", delta, "diff_toDelta: Unchanged characters.")
 
 	// Convert delta string into a diff.
-	assertSeqEqual(diffs, dmp.DiffFromDelta("", delta))
+	_res2, _ := dmp.DiffFromDelta("", delta)
+	assertSeqEqual(diffs, _res2)
 }
 
 func Test_diffXIndex(t *testing.T) {
@@ -784,6 +783,8 @@ func Test_diffMain(t *testing.T) {
 	assertSeqEqual(diffs, dmp.DiffMain("a", "b", false))
 
 	diffs = []Diff{Diff{DiffDelete, "Apple"}, Diff{DiffInsert, "Banana"}, Diff{DiffEqual, "s are a"}, Diff{DiffInsert, "lso"}, Diff{DiffEqual, " fruit."}}
+	fmt.Println("^^^^ ", diffs)
+	fmt.Println("^^^^ ", dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 	assertSeqEqual(diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "\u0680"}, Diff{DiffEqual, "x"}, Diff{DiffDelete, "\t"}, Diff{DiffInsert, "0"}}
@@ -949,36 +950,38 @@ func Test_patch_patchObj(t *testing.T) {
 
 func Test_patch_fromText(t *testing.T) {
 	dmp := createDMP()
-	softAssert(t, len(dmp.PatchFromText("")) == 0, "patch_fromText: #0.")
+
+	_v1, _ := dmp.PatchFromText("")
+	softAssert(t, len(_v1) == 0, "patch_fromText: #0.")
 
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0alaz\n"
-	assert.Equal(t, strp, dmp.PatchFromText(strp)[0].String(), "patch_fromText: #1.")
+	_v2, _ := dmp.PatchFromText(strp)
+	assert.Equal(t, strp, _v2[0].String(), "patch_fromText: #1.")
 
-	assert.Equal(t, "@@ -1 +1 @@\n-a\n+b\n", dmp.PatchFromText("@@ -1 +1 @@\n-a\n+b\n")[0].String(), "patch_fromText: #2.")
+	_v3, _ := dmp.PatchFromText("@@ -1 +1 @@\n-a\n+b\n")
+	assert.Equal(t, "@@ -1 +1 @@\n-a\n+b\n", _v3[0].String(), "patch_fromText: #2.")
 
-	assert.Equal(t, "@@ -1,3 +0,0 @@\n-abc\n", dmp.PatchFromText("@@ -1,3 +0,0 @@\n-abc\n")[0].String(), "patch_fromText: #3.")
+	_v4, _ := dmp.PatchFromText("@@ -1,3 +0,0 @@\n-abc\n")
+	assert.Equal(t, "@@ -1,3 +0,0 @@\n-abc\n", _v4[0].String(), "patch_fromText: #3.")
 
-	assert.Equal(t, "@@ -0,0 +1,3 @@\n+abc\n", dmp.PatchFromText("@@ -0,0 +1,3 @@\n+abc\n")[0].String(), "patch_fromText: #4.")
+	_v5, _ := dmp.PatchFromText("@@ -0,0 +1,3 @@\n+abc\n")
+	assert.Equal(t, "@@ -0,0 +1,3 @@\n+abc\n", _v5[0].String(), "patch_fromText: #4.")
 
 	// Generates error.
-	//try {
-	//dmp.PatchFromText("Bad\nPatch\n");
-	//assert.Fail("patch_fromText: #5.");
-	//} catch (ArgumentException) {
-	// Exception expected.
-	//  }
+	_, err := dmp.PatchFromText("Bad\nPatch\n")
+	softAssert(t, err != nil, "There should be an error")
 }
 
 func Test_patch_toText(t *testing.T) {
 	dmp := createDMP()
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n  laz\n"
 	var patches []Patch
-	patches = dmp.PatchFromText(strp)
+	patches, _ = dmp.PatchFromText(strp)
 	result := dmp.PatchToText(patches)
 	assert.Equal(t, strp, result)
 
 	strp = "@@ -1,9 +1,9 @@\n-f\n+F\n oo+fooba\n@@ -7,9 +7,9 @@\n obar\n-,\n+.\n  tes\n"
-	patches = dmp.PatchFromText(strp)
+	patches, _ = dmp.PatchFromText(strp)
 	result = dmp.PatchToText(patches)
 	assert.Equal(t, strp, result)
 }
@@ -987,19 +990,23 @@ func Test_patch_addContext(t *testing.T) {
 	dmp := createDMP()
 	dmp.PatchMargin = 4
 	var p Patch
-	p = dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")[0]
+	_p, _ := dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")
+	p = _p[0]
 	dmp.PatchAddContext(p, "The quick brown fox jumps over the lazy dog.")
 	assert.Equal(t, "@@ -17,12 +17,18 @@\n fox \n-jump\n+somersault\n s ov\n", p.String(), "patch_addContext: Simple case.")
 
-	p = dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")[0]
+	_p, _ = dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")
+	p = _p[0]
 	dmp.PatchAddContext(p, "The quick brown fox jumps.")
 	assert.Equal(t, "@@ -17,10 +17,16 @@\n fox \n-jump\n+somersault\n s.\n", p.String(), "patch_addContext: Not enough trailing context.")
 
-	p = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")[0]
+	_p, _ = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")
+	p = _p[0]
 	dmp.PatchAddContext(p, "The quick brown fox jumps.")
 	assert.Equal(t, "@@ -1,7 +1,8 @@\n Th\n-e\n+at\n  qui\n", p.String(), "patch_addContext: Not enough leading context.")
 
-	p = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")[0]
+	_p, _ = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")
+	p = _p[0]
 	dmp.PatchAddContext(p, "The quick brown fox jumps.  The quick brown fox crashes.")
 	assert.Equal(t, "@@ -1,27 +1,28 @@\n Th\n-e\n+at\n  quick brown fox jumps. \n", p.String(), "patch_addContext: Ambiguity.")
 }
@@ -1039,8 +1046,10 @@ func Test_patch_make(t *testing.T) {
 	diffs = []Diff{
 		Diff{DiffDelete, "`1234567890-=[]\\;',./"},
 		Diff{DiffInsert, "~!@#$%^&*()_+{}|:\"<>?"}}
+
+	_p1, _ := dmp.PatchFromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")
 	assertSeqEqual(diffs,
-		dmp.PatchFromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")[0].diffs,
+		_p1[0].diffs,
 	)
 
 	text1 = ""

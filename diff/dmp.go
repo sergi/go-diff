@@ -260,11 +260,11 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	diffs = dmp.diffCompute_(text1, text2, checklines, deadline)
 
 	// Restore the prefix and suffix.
-	if len(commonprefix) > 0 {
+	if len(commonprefix) != 0 {
 		diffs = append([]Diff{Diff{DiffEqual, commonprefix}}, diffs...)
 	}
 
-	if len(commonsuffix) > 0 {
+	if len(commonsuffix) != 0 {
 		diffs = append(diffs, Diff{DiffEqual, commonsuffix})
 	}
 
@@ -1475,7 +1475,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 	}()
 
 	pointer := 0 // Cursor in text1
-	var tokens []string = strings.Split(delta, "\t")
+	tokens := strings.Split(delta, "\t")
 
 	for _, token := range tokens {
 		if len(token) == 0 {
@@ -1486,6 +1486,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 		// Each token begins with a one character parameter which specifies the
 		// operation of this token (delete, insert, equality).
 		param := token[1:]
+
 		switch token[0] {
 		case '+':
 			// decode would Diff all "+" to " "
@@ -1493,11 +1494,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 			param, _ = url.QueryUnescape(param)
 			diffs = append(diffs, Diff{DiffInsert, param})
 			break
-		case '-':
-			// Fall through.
-		case '=':
-			var n int64
-
+		case '=', '-':
 			n, err := strconv.ParseInt(param, 10, 0)
 			if err != nil {
 				return diffs, err
@@ -1506,7 +1503,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 			if n < 0 {
 				return diffs, errors.New("Negative number in DiffFromDelta: " + param)
 			}
-			fmt.Println(text1, pointer, n)
+
 			text := text1[pointer : pointer+int(n)]
 			pointer += int(n)
 
@@ -1521,9 +1518,12 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 			return diffs, errors.New("Invalid diff operation in DiffFromDelta: " + string(token[0]))
 		}
 	}
+
 	if pointer != len(text1) {
 		return diffs, errors.New("Delta length (" + string(pointer) + ") smaller than source text length (" + string(len(text1)) + ").")
 	}
+	fmt.Println("") //text1, pointer, n)
+
 	return diffs, err
 }
 
@@ -1541,7 +1541,7 @@ func (dmp *DiffMatchPatch) MatchMain(text string, pattern string, loc int) int {
 	} else if len(text) == 0 {
 		// Nothing to match.
 		return -1
-	} else if loc+len(pattern) <= len(text) && text[loc:len(pattern)] == pattern {
+	} else if loc+len(pattern) <= len(text) && text[loc:loc+len(pattern)] == pattern {
 		// Perfect match at the perfect spot!  (Includes case of null pattern)
 		return loc
 	}
@@ -1687,7 +1687,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) {
 		return
 	}
 
-	pattern := text[patch.start2:patch.length1]
+	pattern := text[patch.start2 : patch.start2+patch.length1]
 	padding := 0
 
 	// Look for the first and last matches of pattern in text.  If two
@@ -1937,7 +1937,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 		x++
 	}
 	// Strip the padding off.
-	text = text[len(nullPadding) : len(text)-2*len(nullPadding)]
+	text = text[len(nullPadding) : len(nullPadding)+(len(text)-2*len(nullPadding))]
 	return text, results
 }
 

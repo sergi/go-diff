@@ -1597,18 +1597,20 @@ func (dmp *DiffMatchPatch) MatchBitap(text string, pattern string, loc int) int 
 		start := int(math.Max(1, float64(loc-bin_mid+1)))
 		finish := int(math.Min(float64(loc+bin_mid), float64(len(text))) + float64(len(pattern)))
 
-		rd := []int{} //int[finish + 2] //TODO do it with make, length
+		rd := make([]int, finish+2)
 		rd[finish+1] = (1 << uint(d)) - 1
 
 		for j := finish; j >= start; j-- {
 			var charMatch int
-			_, containsKey := s[text[j-1]]
-			if len(text) <= j-1 || !containsKey {
+			if len(text) <= j-1 {
 				// Out of range.
+				charMatch = 0
+			} else if _, ok := s[text[j-1]]; !ok {
 				charMatch = 0
 			} else {
 				charMatch = s[text[j-1]]
 			}
+
 			if d == 0 {
 				// First pass: exact match.
 				rd[j] = ((rd[j+1] << 1) | 1) & charMatch
@@ -1726,9 +1728,9 @@ func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
 		return dmp.PatchMake(text1, diffs)
 	} else if len(opt) == 2 {
 		text1 := opt[0].(string)
-		text2 := opt[1].(string)
 		kind := reflect.TypeOf(opt[1]).Name()
 		if kind == "string" {
+			text2 := opt[1].(string)
 			diffs := dmp.DiffMain(text1, text2, true)
 			if len(diffs) > 2 {
 				diffs = dmp.DiffCleanupSemantic(diffs)

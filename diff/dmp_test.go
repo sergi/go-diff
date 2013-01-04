@@ -662,11 +662,7 @@ func Test_diffDelta(t *testing.T) {
 	assert.Equal(t, "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", delta)
 
 	// Convert delta string into a diff.
-	fmt.Println("$$$")
-
 	_seq1, err := dmp.DiffFromDelta(text1, delta)
-	fmt.Println(diffs)
-	fmt.Println(_seq1)
 	assertSeqEqual(diffs, _seq1)
 
 	// Generates error (19 < 20).
@@ -803,12 +799,23 @@ func Test_diffMain(t *testing.T) {
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}}
 	assertSeqEqual(diffs, dmp.DiffMain("a", "b", false))
 
-	diffs = []Diff{Diff{DiffDelete, "Apple"}, Diff{DiffInsert, "Banana"}, Diff{DiffEqual, "s are a"}, Diff{DiffInsert, "lso"}, Diff{DiffEqual, " fruit."}}
-	fmt.Println("^^^^ ", diffs)
-	fmt.Println("^^^^ ", dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
+	diffs = []Diff{
+		Diff{DiffDelete, "Apple"},
+		Diff{DiffInsert, "Banana"},
+		Diff{DiffEqual, "s are a"},
+		Diff{DiffInsert, "lso"},
+		Diff{DiffEqual, " fruit."}}
+
+	//fmt.Println("^^^^ ", diffs)
+	//fmt.Println("^^^^ ", dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 	assertSeqEqual(diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
-	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "\u0680"}, Diff{DiffEqual, "x"}, Diff{DiffDelete, "\t"}, Diff{DiffInsert, "0"}}
+	diffs = []Diff{
+		Diff{DiffDelete, "a"},
+		Diff{DiffInsert, "\u0680"},
+		Diff{DiffEqual, "x"},
+		Diff{DiffDelete, "\t"},
+		Diff{DiffInsert, "0"}}
 	assertSeqEqual(diffs, dmp.DiffMain("ax\t", "\u0680x"+"0", false))
 
 	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}

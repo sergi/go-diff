@@ -27,11 +27,11 @@ func assertSeqEqual(seq1, seq2 interface{}) {
 	v2 := reflect.ValueOf(seq2)
 	k2 := v2.Kind()
 
-	if k1 != reflect.Array && k1 != reflect.Slice {
+	if k1 != reflect.Array && k1 != reflect.Slice && k1 != reflect.Map {
 		fail("Parameters are not slices or Arrays")
 	}
 
-	if k2 != reflect.Array && k2 != reflect.Slice {
+	if k2 != reflect.Array && k2 != reflect.Slice && k2 != reflect.Map {
 		fail("Parameters are not slices or Arrays")
 	}
 
@@ -39,6 +39,24 @@ func assertSeqEqual(seq1, seq2 interface{}) {
 		fail("Sequences of different length:\n" + string(v1.Len()) + "\n" + string(v2.Len()))
 	}
 
+	if k1 == reflect.Map && k2 == reflect.Map {
+		keys1 := v1.MapKeys()
+		keys2 := v2.MapKeys()
+
+		for _, key1 := range keys1 {
+			v := v2.MapIndex(key1)
+			if v != v1.MapIndex(key1) {
+				fail("Different key/value in Map.")
+			}
+		}
+
+		for _, key2 := range keys2 {
+			v := v1.MapIndex(key2)
+			if v != v2.MapIndex(key2) {
+				fail("Different key/value in Map.")
+			}
+		}
+	} else {
 	for i := 0; i < v1.Len(); i++ {
 		if v1.Index(i).String() != v2.Index(i).String() {
 			fail("[" + v1.Index(i).Kind().String() + "] " + v1.Index(i).String() +
@@ -46,6 +64,7 @@ func assertSeqEqual(seq1, seq2 interface{}) {
 			break
 		}
 	}
+}
 }
 
 func diffRebuildtexts(diffs []Diff) []string {

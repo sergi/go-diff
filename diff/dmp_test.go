@@ -43,28 +43,30 @@ func assertSeqEqual(seq1, seq2 interface{}) {
 		keys1 := v1.MapKeys()
 		keys2 := v2.MapKeys()
 
+		if len(keys1) != len(keys2) {
+			fail("Maps of different length")
+		}
+
 		for _, key1 := range keys1 {
-			v := v2.MapIndex(key1)
-			if v != v1.MapIndex(key1) {
+			if v2.MapIndex(key1) != v1.MapIndex(key1) {
 				fail("Different key/value in Map.")
 			}
 		}
 
 		for _, key2 := range keys2 {
-			v := v1.MapIndex(key2)
-			if v != v2.MapIndex(key2) {
+			if v1.MapIndex(key2) != v2.MapIndex(key2) {
 				fail("Different key/value in Map.")
 			}
 		}
 	} else {
-	for i := 0; i < v1.Len(); i++ {
-		if v1.Index(i).String() != v2.Index(i).String() {
-			fail("[" + v1.Index(i).Kind().String() + "] " + v1.Index(i).String() +
-				" != [" + v2.Index(i).Kind().String() + "] " + v2.Index(i).String())
-			break
+		for i := 0; i < v1.Len(); i++ {
+			if v1.Index(i).String() != v2.Index(i).String() {
+				fail("[" + v1.Index(i).Kind().String() + "] " + v1.Index(i).String() +
+					" != [" + v2.Index(i).Kind().String() + "] " + v2.Index(i).String())
+				break
+			}
 		}
 	}
-}
 }
 
 func diffRebuildtexts(diffs []Diff) []string {
@@ -680,25 +682,23 @@ func Test_diffDelta(t *testing.T) {
 	// Generates error (%c3%xy invalid Unicode).
 	/*
 		seq, err := dmp.DiffFromDelta("", "+%c3%xy")
-	if err == nil {
-		panic(1) //assert.Fail("diff_fromDelta: Invalid character.");
-	}
+		if err == nil {
+			panic(1) //assert.Fail("diff_fromDelta: Invalid character.");
+		}
 	*/
 
 	// Test deltas with special characters.
-	zero := "0"
-	one := "1"
-	two := "2"
 	diffs = []Diff{
-		Diff{DiffEqual, "\u0680 " + zero + " \t %"},
-		Diff{DiffDelete, "\u0681 " + one + " \n ^"},
-		Diff{DiffInsert, "\u0682 " + two + " \\ |"}}
+		Diff{DiffEqual, "\u0680 \x00 \t %"},
+		Diff{DiffDelete, "\u0681 \x01 \n ^"},
+		Diff{DiffInsert, "\u0682 \x02 \\ |"}}
 	text1 = dmp.DiffText1(diffs)
-	assert.Equal(t, "\u0680 "+zero+" \t %\u0681 "+one+" \n ^", text1)
+	assert.Equal(t, "\u0680 \x00 \t %\u0681 \x01 \n ^", text1)
 
+	fmt.Println(diffs)
 	delta = dmp.DiffToDelta(diffs)
 	// Lowercase, due to UrlEncode uses lower.
-	assert.Equal(t, "=7\t-7\t+%da%82 %02 %5c %7c", delta)
+	assert.Equal(t, "=7\t-7\t+%DA%82 %02 %5C %7C", delta)
 
 	_res1, _ := dmp.DiffFromDelta(text1, delta)
 	assertSeqEqual(diffs, _res1)

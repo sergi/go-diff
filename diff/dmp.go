@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // The data structure representing a diff is an array of tuples:
@@ -48,12 +49,11 @@ const (
 //
 // Example: "%3f" -> "?", "%24" -> "$", etc.
 var unescaper = strings.NewReplacer(
-	"%21", "!", "%7e", "~",
-	"%27", "'", "%28", "(", "%29", ")",
-	"%3b", ";", "%2f", "/", "%3f", "?",
-	"%3a", ":", "%40", "@", "%26", "&",
-	"%3d", "=", "%2b", "+", "%24", "$",
-	"%2c", ",", "%23", "#")
+	"%21", "!", "%7E", "~", "%27", "'",
+	"%28", "(", "%29", ")", "%3B", ";",
+	"%2F", "/", "%3F", "?", "%3A", ":",
+	"%40", "@", "%26", "&", "%3D", "=",
+	"%2B", "+", "%24", "$", "%2C", ",", "%23", "#", "%2A", "*")
 
 // Define some regex patterns for matching boundaries.
 var (
@@ -1433,7 +1433,6 @@ func (dmp *DiffMatchPatch) DiffLevenshtein(diffs []Diff) int {
 // Operations are tab-separated.  Inserted text is escaped using %xx
 // notation.
 func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
-	//StringBuilder text = new StringBuilder()
 	var text bytes.Buffer
 	for _, aDiff := range diffs {
 		switch aDiff.Type {
@@ -1444,12 +1443,12 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 			break
 		case DiffDelete:
 			text.WriteString("-")
-			text.WriteString(strconv.Itoa(len(aDiff.Text)))
+			text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
 			text.WriteString("\t")
 			break
 		case DiffEqual:
 			text.WriteString("=")
-			text.WriteString(strconv.Itoa(len(aDiff.Text)))
+			text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
 			text.WriteString("\t")
 			break
 		}
@@ -1457,7 +1456,7 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 	delta := text.String()
 	if len(delta) != 0 {
 		// Strip off trailing tab character.
-		delta = delta[0 : len(delta)-1]
+		delta = delta[0 : utf8.RuneCountInString(delta)-1]
 		delta = unescaper.Replace(delta)
 	}
 	return delta
@@ -1576,7 +1575,6 @@ func (dmp *DiffMatchPatch) MatchBitap(text string, pattern string, loc int) int 
 
 	var bin_min, bin_mid int
 	bin_max := len(pattern) + len(text)
-	// Empty initialization added to appease C# compiler.
 	last_rd := []int{}
 	for d := 0; d < len(pattern); d++ {
 		// Scan for the best match; each iteration allows for one more error.

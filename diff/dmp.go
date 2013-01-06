@@ -229,6 +229,8 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 		checklines = opt[0].(bool)
 
 		if len(opt) > 1 {
+			deadline = opt[1].(int32)
+		} else {
 			if dmp.DiffTimeout <= 0 {
 				deadline = max32
 			} else {
@@ -257,7 +259,7 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	text2 = text2[0 : len(text2)-commonlength]
 
 	// Compute the diff on the middle block.
-	diffs = dmp.diffCompute_(text1, text2, checklines, deadline)
+	diffs = dmp.diffCompute(text1, text2, checklines, deadline)
 
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
@@ -273,9 +275,8 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 
 // diff_compute_ finds the differences between two texts.  Assumes that the texts do not
 // have any common prefix or suffix.
-func (dmp *DiffMatchPatch) diffCompute_(text1 string, text2 string, checklines bool, deadline int32) []Diff {
+func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bool, deadline int32) []Diff {
 	diffs := []Diff{}
-
 	if len(text1) == 0 {
 		// Just add some text (speedup).
 		return append(diffs, Diff{DiffInsert, text2})
@@ -288,7 +289,7 @@ func (dmp *DiffMatchPatch) diffCompute_(text1 string, text2 string, checklines b
 
 	var longtext, shorttext string
 
-	if len(text1) > len(text2) {
+	if utf8.RuneCountInString(text1) > utf8.RuneCountInString(text2) {
 		longtext = text1
 		shorttext = text2
 	} else {
@@ -297,24 +298,22 @@ func (dmp *DiffMatchPatch) diffCompute_(text1 string, text2 string, checklines b
 	}
 
 	var i = strings.Index(longtext, shorttext)
-
 	if i != -1 {
 		var op int8 = DiffInsert
 		// Swap insertions for deletions if diff is reversed.
-		if len(text1) > len(text2) {
+		if utf8.RuneCountInString(text1) > utf8.RuneCountInString(text2) {
 			op = DiffDelete
 		}
 		// Shorter text is inside the longer text (speedup).
 		diffs = []Diff{
 			Diff{op, longtext[0:i]},
 			Diff{DiffEqual, shorttext},
-			Diff{op, longtext[i+len(shorttext):]},
+			Diff{op, longtext[i+utf8.RuneCountInString(shorttext):]},
 		}
 
 		return diffs
 	}
-
-	if len(shorttext) == 1 {
+	if utf8.RuneCountInString(shorttext) == 1 {
 		// Single character string.
 		// After the previous speedup, the character can't be an equality.
 		return []Diff{
@@ -322,7 +321,6 @@ func (dmp *DiffMatchPatch) diffCompute_(text1 string, text2 string, checklines b
 			Diff{DiffInsert, text2},
 		}
 	}
-
 	// Check to see if the problem can be split in two.
 	hm := dmp.DiffHalfMatch(text1, text2)
 	if hm != nil {
@@ -340,11 +338,9 @@ func (dmp *DiffMatchPatch) diffCompute_(text1 string, text2 string, checklines b
 		concat1 := concat(diffs_a, []Diff{Diff{DiffEqual, mid_common}})
 		return concat(concat1, diffs_b)
 	}
-
-	if checklines && len(text1) > 100 && len(text2) > 100 {
+	if checklines && utf8.RuneCountInString(text1) > 100 && utf8.RuneCountInString(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)
 	}
-
 	return dmp.DiffBisect(text1, text2, deadline)
 }
 
@@ -423,10 +419,10 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32) []Diff {
 	// Cache the text lengths to prevent multiple calls.
-	text1_length := len(text1)
-	text2_length := len(text2)
+	text1_length := utf8.RuneCountInString(text1)
+	text2_length := utf8.RuneCountInString(text2)
 
-	max_d := int(math.Ceil(float64((text1_length + text2_length/2))))
+	max_d := int(math.Ceil(float64(((text1_length + text2_length) / 2))))
 	v_offset := max_d
 	v_length := 2 * max_d
 	v1 := make([]int, v_length)
@@ -487,7 +483,6 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32
 				}
 			}
 		}
-
 		// Walk the reverse path one step.
 		for k2 := -d + k2start; k2 <= d-k2end; k2 += 2 {
 			k2_offset := v_offset + k2
@@ -512,7 +507,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32
 				// Ran off the top of the graph.
 				k2start += 2
 			} else if !front {
-				var k1_offset = v_offset + delta - k2
+				k1_offset := v_offset + delta - k2
 				if k1_offset >= 0 && k1_offset < v_length && v1[k1_offset] != -1 {
 					x1 := v1[k1_offset]
 					y1 := v_offset + x1 - k1_offset
@@ -539,7 +534,6 @@ func (dmp *DiffMatchPatch) diffBisectSplit_(text1 string, text2 string, x int, y
 	text2a := text2[0:y]
 	text1b := text1[x:]
 	text2b := text2[y:]
-
 	// Compute both diffs serially.
 	diffs := dmp.DiffMain(text1a, text2a, false, deadline)
 	diffsb := dmp.DiffMain(text1b, text2b, false, deadline)

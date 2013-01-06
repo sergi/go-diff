@@ -695,7 +695,6 @@ func Test_diffDelta(t *testing.T) {
 	text1 = dmp.DiffText1(diffs)
 	assert.Equal(t, "\u0680 \x00 \t %\u0681 \x01 \n ^", text1)
 
-	fmt.Println(diffs)
 	delta = dmp.DiffToDelta(diffs)
 	// Lowercase, due to UrlEncode uses lower.
 	assert.Equal(t, "=7\t-7\t+%DA%82 %02 %5C %7C", delta)
@@ -806,8 +805,6 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffInsert, "lso"},
 		Diff{DiffEqual, " fruit."}}
 
-	//fmt.Println("^^^^ ", diffs)
-	//fmt.Println("^^^^ ", dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 	assertSeqEqual(diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
 	diffs = []Diff{
@@ -815,9 +812,10 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffInsert, "\u0680"},
 		Diff{DiffEqual, "x"},
 		Diff{DiffDelete, "\t"},
-		Diff{DiffInsert, "0"}}
-	assertSeqEqual(diffs, dmp.DiffMain("ax\t", "\u0680x"+"0", false))
+		Diff{DiffInsert, "\u0000"}}
 
+
+	assertSeqEqual(diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
 	assertSeqEqual(diffs, dmp.DiffMain("1ayb2", "abxab", false))
 

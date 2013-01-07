@@ -1676,9 +1676,9 @@ func (dmp *DiffMatchPatch) MatchAlphabet(pattern string) map[byte]int {
 
 // PatchAddContext increases the context until it is unique,
 // but doesn't let the pattern expand beyond MatchMaxBits.
-func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) {
+func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	if len(text) == 0 {
-		return
+		return patch
 	}
 
 	pattern := text[patch.start2 : patch.start2+patch.length1]
@@ -1689,7 +1689,9 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) {
 	for strings.Index(text, pattern) != strings.LastIndex(text, pattern) &&
 		len(pattern) < dmp.MatchMaxBits-dmp.PatchMargin-dmp.PatchMargin {
 		padding += dmp.PatchMargin
-		pattern = text[int(math.Max(0, float64(patch.start2-padding))):int(math.Min(float64(len(text)), float64(patch.start2+patch.length1+padding)))]
+		maxStart := int(math.Max(0, float64(patch.start2-padding)))
+		minEnd := int(math.Min(float64(len(text)), float64(patch.start2+patch.length1+padding)))
+		pattern = text[maxStart:minEnd]
 	}
 	// Add one chunk for good luck.
 	padding += dmp.PatchMargin
@@ -1697,7 +1699,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) {
 	// Add the prefix.
 	prefix := text[int(math.Max(0, float64(patch.start2-padding))):int(patch.start2)]
 	if len(prefix) != 0 {
-		patch.diffs = append(patch.diffs, Diff{DiffEqual, prefix})
+		patch.diffs = append([]Diff{Diff{DiffEqual, prefix}}, patch.diffs...)
 	}
 	// Add the suffix.
 	suffix := text[patch.start2+patch.length1 : int(math.Min(float64(len(text)), float64(patch.start2+patch.length1+padding)))]
@@ -1711,6 +1713,8 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) {
 	// Extend the lengths.
 	patch.length1 += len(prefix) + len(suffix)
 	patch.length2 += len(prefix) + len(suffix)
+
+	return patch
 }
 
 func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
@@ -2104,18 +2108,20 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	text := strings.Split(textline, "\n")
 	textPointer := 0
-	var patch Patch
 	patchHeader := regexp.MustCompile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@$")
+
+	var patch Patch
 	var sign uint8
 	var line string
 	for textPointer < len(text) {
+
 		if !patchHeader.MatchString(text[textPointer]) {
 			return patches, errors.New("Invalid patch string: " + text[textPointer])
 		}
-		patch = Patch{}
-		patches = append(patches, patch)
 
+		patch = Patch{}
 		m := patchHeader.FindStringSubmatch(text[textPointer])
+
 		patch.start1, _ = strconv.Atoi(m[1])
 		if len(m[2]) == 0 {
 			patch.start1--
@@ -2169,6 +2175,8 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 			}
 			textPointer++
 		}
+
+		patches = append(patches, patch)
 	}
 	return patches, nil
 }

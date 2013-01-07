@@ -970,7 +970,8 @@ func Test_patch_patchObj(t *testing.T) {
 		Diff{DiffDelete, "the"},
 		Diff{DiffInsert, "a"},
 		Diff{DiffEqual, "\nlaz"}}
-	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0alaz\n"
+	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0Alaz\n"
+
 	assert.Equal(t, strp, p.String(), "Patch: toString.")
 }
 
@@ -979,8 +980,7 @@ func Test_patch_fromText(t *testing.T) {
 
 	_v1, _ := dmp.PatchFromText("")
 	softAssert(t, len(_v1) == 0, "patch_fromText: #0.")
-
-	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0alaz\n"
+	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0Alaz\n"
 	_v2, _ := dmp.PatchFromText(strp)
 	assert.Equal(t, strp, _v2[0].String(), "patch_fromText: #1.")
 
@@ -1018,22 +1018,22 @@ func Test_patch_addContext(t *testing.T) {
 	var p Patch
 	_p, _ := dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")
 	p = _p[0]
-	dmp.PatchAddContext(p, "The quick brown fox jumps over the lazy dog.")
+	p = dmp.PatchAddContext(p, "The quick brown fox jumps over the lazy dog.")
 	assert.Equal(t, "@@ -17,12 +17,18 @@\n fox \n-jump\n+somersault\n s ov\n", p.String(), "patch_addContext: Simple case.")
 
 	_p, _ = dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")
 	p = _p[0]
-	dmp.PatchAddContext(p, "The quick brown fox jumps.")
+	p = dmp.PatchAddContext(p, "The quick brown fox jumps.")
 	assert.Equal(t, "@@ -17,10 +17,16 @@\n fox \n-jump\n+somersault\n s.\n", p.String(), "patch_addContext: Not enough trailing context.")
 
 	_p, _ = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")
 	p = _p[0]
-	dmp.PatchAddContext(p, "The quick brown fox jumps.")
+	p = dmp.PatchAddContext(p, "The quick brown fox jumps.")
 	assert.Equal(t, "@@ -1,7 +1,8 @@\n Th\n-e\n+at\n  qui\n", p.String(), "patch_addContext: Not enough leading context.")
 
 	_p, _ = dmp.PatchFromText("@@ -3 +3,2 @@\n-e\n+at\n")
 	p = _p[0]
-	dmp.PatchAddContext(p, "The quick brown fox jumps.  The quick brown fox crashes.")
+	p = dmp.PatchAddContext(p, "The quick brown fox jumps.  The quick brown fox crashes.")
 	assert.Equal(t, "@@ -1,27 +1,28 @@\n Th\n-e\n+at\n  quick brown fox jumps. \n", p.String(), "patch_addContext: Ambiguity.")
 }
 

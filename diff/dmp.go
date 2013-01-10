@@ -220,7 +220,7 @@ func createDMP() DiffMatchPatch {
 	return dmp
 }
 
-// Diff_main finds the differences between two texts.
+// DiffMain finds the differences between two texts.
 func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface{}) []Diff {
 	checklines := true
 	var deadline int32
@@ -255,12 +255,12 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	// Trim off common suffix (speedup).
 	commonlength = dmp.DiffCommonSuffix(text1, text2)
 	commonsuffix := text1[len(text1)-commonlength:]
+
 	text1 = text1[0 : len(text1)-commonlength]
 	text2 = text2[0 : len(text2)-commonlength]
 
 	// Compute the diff on the middle block.
 	diffs = dmp.diffCompute(text1, text2, checklines, deadline)
-
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
 		diffs = append([]Diff{Diff{DiffEqual, commonprefix}}, diffs...)
@@ -273,7 +273,7 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	return dmp.DiffCleanupMerge(diffs)
 }
 
-// diff_compute_ finds the differences between two texts.  Assumes that the texts do not
+// diffCompute finds the differences between two texts.  Assumes that the texts do not
 // have any common prefix or suffix.
 func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bool, deadline int32) []Diff {
 	diffs := []Diff{}
@@ -344,16 +344,8 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 	return dmp.DiffBisect(text1, text2, deadline)
 }
 
-/**
- * Do a quick line-level diff on both strings, then rediff the parts for
- * greater accuracy.
- * This speedup can produce non-minimal diffs.
- * @param {string} text1 Old string to be diffed.
- * @param {string} text2 New string to be diffed.
- * @param {number} deadline Time when the diff should be complete by.
- * @return {!Array.<!diff_match_patch.Diff>} Array of diff tuples.
- * @private
- */
+// diffLineMode does a quick line-level diff on both strings, then rediff the parts for
+// greater accuracy. This speedup can produce non-minimal diffs.
 func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int32) []Diff {
 	// Scan the text on a line-by-line basis first.
 	text1, text2, linearray := dmp.DiffLinesToChars(text1, text2)
@@ -414,13 +406,13 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int
 	return diffs[:len(diffs)-1] // Remove the dummy entry at the end.
 }
 
-// Diff_bisect finds the 'middle snake' of a diff, split the problem in two
+// DiffBisect finds the 'middle snake' of a diff, split the problem in two
 // and return the recursively constructed diff.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32) []Diff {
 	// Cache the text lengths to prevent multiple calls.
-	text1_length := utf8.RuneCountInString(text1)
-	text2_length := utf8.RuneCountInString(text2)
+	text1_length := len(text1)
+	text2_length := len(text2)
 
 	max_d := int(math.Ceil(float64(((text1_length + text2_length) / 2))))
 	v_offset := max_d
@@ -534,14 +526,15 @@ func (dmp *DiffMatchPatch) diffBisectSplit_(text1 string, text2 string, x int, y
 	text2a := text2[0:y]
 	text1b := text1[x:]
 	text2b := text2[y:]
+
 	// Compute both diffs serially.
 	diffs := dmp.DiffMain(text1a, text2a, false, deadline)
 	diffsb := dmp.DiffMain(text1b, text2b, false, deadline)
 
-	return concat(diffs, diffsb)
+	return append(diffs, diffsb...)
 }
 
-// Diff_linesToChars split two texts into a list of strings.  Reduces the texts to a string of
+// DiffLinesToChars split two texts into a list of strings.  Reduces the texts to a string of
 // hashes where each Unicode character represents one line.
 func (dmp *DiffMatchPatch) DiffLinesToChars(text1 string, text2 string) (string, string, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it.
@@ -555,7 +548,7 @@ func (dmp *DiffMatchPatch) DiffLinesToChars(text1 string, text2 string) (string,
 	return chars1, chars2, lineArray
 }
 
-// diff_linesToCharsMunge splits a text into an array of strings.  Reduces the texts to a string of
+// diffLinesToCharsMunge splits a text into an array of strings.  Reduces the texts to a string of
 // hashes where each Unicode character represents one line.
 // Modifies linearray and linehash through being a closure.
 func (dmp *DiffMatchPatch) diffLinesToCharsMunge(text string, lineArray *[]string, lineHash map[string]int) string {
@@ -637,7 +630,7 @@ func (dmp *DiffMatchPatch) DiffCommonPrefix(text1 string, text2 string) int {
 	*/
 }
 
-// Diff_commonSuffix determines the common suffix length of two strings.
+// DiffCommonSuffix determines the common suffix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonSuffix(text1 string, text2 string) int {
 	text1_length := len(text1)
 	text2_length := len(text2)
@@ -669,7 +662,7 @@ func (dmp *DiffMatchPatch) DiffCommonSuffix(text1 string, text2 string) int {
 	*/
 }
 
-// Diff_commonOverlap determines if the suffix of one string is the prefix of another.
+// DiffCommonOverlap determines if the suffix of one string is the prefix of another.
 func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 	// Cache the text lengths to prevent multiple calls.
 	text1_length := len(text1)
@@ -710,9 +703,8 @@ func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 	return 0
 }
 
-// Diff_halfMatch. Do the two texts share a substring which is at least half the length of the
-// longer text?
-// This speedup can produce non-minimal diffs.
+// DiffHalfMatch checks whether the two texts share a substring which is at 
+// least half the length of the longer text. This speedup can produce non-minimal diffs.
 func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	if dmp.DiffTimeout <= 0 {
 		// Don't risk returning a non-optimal diff if we have unlimited time.

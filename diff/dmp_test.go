@@ -753,7 +753,6 @@ func Test_diffLevenshtein(t *testing.T) {
 	assert.Equal(t, 7, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with middle equality.")
 }
 
-/*
 func Test_diffBisect(t *testing.T) {
     dmp := createDMP()
     // Normal.
@@ -762,14 +761,21 @@ func Test_diffBisect(t *testing.T) {
     // Since the resulting diff hasn't been normalized, it would be ok if
     // the insertion and deletion pairs are swapped.
     // If the order changes, tweak this test as required.
-    diffs := []Diff{Diff{DiffDelete, "c"}, Diff{DiffInsert, "m"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "t"}, Diff{DiffInsert, "p"}}
-    assertSeqEqual(diffs, dmp.DiffBisect(a, b, DateTime.MaxValue)) TODO
+	diffs := []Diff{
+		Diff{DiffDelete, "c"},
+		Diff{DiffInsert, "m"},
+		Diff{DiffEqual, "a"},
+		Diff{DiffDelete, "t"},
+		Diff{DiffInsert, "p"}}
+
+	fmt.Println(dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix())))
+
+	assertSeqEqual(diffs, dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix()))) //TODO
 
     // Timeout.
     diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-    assertSeqEqual(diffs, dmp.DiffBisect(a, b, DateTime.MinValue)) TODO
+	assertSeqEqual(diffs, dmp.DiffBisect(a, b, int32(time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix()))) //TODO
 }
-*/
 
 func Test_diffMain(t *testing.T) {
 	dmp := createDMP()

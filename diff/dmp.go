@@ -37,7 +37,7 @@ const (
 	DiffDelete = -1
 	DiffInsert = 1
 	DiffEqual  = 0
-	max32      = int32(uint32(1<<31) - 1)
+	max64      = int64(uint64(1<<63) - 1)
 )
 
 // unescaper unescapes selected chars for compatability with JavaScript's encodeURI.
@@ -223,18 +223,18 @@ func createDMP() DiffMatchPatch {
 // DiffMain finds the differences between two texts.
 func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface{}) []Diff {
 	checklines := true
-	var deadline int32
+	var deadline int64
 
 	if opt != nil && len(opt) > 0 {
 		checklines = opt[0].(bool)
 
 		if len(opt) > 1 {
-			deadline = opt[1].(int32)
+			deadline = opt[1].(int64)
 		} else {
 			if dmp.DiffTimeout <= 0 {
-				deadline = max32
+				deadline = max64
 			} else {
-				deadline = int32(int(time.Now().Unix()) + int(dmp.DiffTimeout*1000))
+				deadline = int64(int64(time.Now().Unix()) + int64(dmp.DiffTimeout*1000))
 			}
 		}
 	}
@@ -275,7 +275,7 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 
 // diffCompute finds the differences between two texts.  Assumes that the texts do not
 // have any common prefix or suffix.
-func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bool, deadline int32) []Diff {
+func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bool, deadline int64) []Diff {
 	diffs := []Diff{}
 	if len(text1) == 0 {
 		// Just add some text (speedup).
@@ -346,7 +346,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 
 // diffLineMode does a quick line-level diff on both strings, then rediff the parts for
 // greater accuracy. This speedup can produce non-minimal diffs.
-func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int32) []Diff {
+func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int64) []Diff {
 	// Scan the text on a line-by-line basis first.
 	text1, text2, linearray := dmp.DiffLinesToChars(text1, text2)
 
@@ -409,7 +409,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int
 // DiffBisect finds the 'middle snake' of a diff, split the problem in two
 // and return the recursively constructed diff.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
-func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32) []Diff {
+func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64) []Diff {
 	// Cache the text lengths to prevent multiple calls.
 	text1_length := len(text1)
 	text2_length := len(text2)
@@ -435,7 +435,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32
 	k2end := 0
 	for d := 0; d < max_d; d++ {
 		// Bail out if deadline is reached.
-		if int32(time.Now().Unix()) > deadline {
+		if time.Now().Unix() > deadline {
 			break
 		}
 
@@ -521,7 +521,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int32
 	}
 }
 
-func (dmp *DiffMatchPatch) diffBisectSplit_(text1 string, text2 string, x int, y int, deadline int32) []Diff {
+func (dmp *DiffMatchPatch) diffBisectSplit_(text1 string, text2 string, x int, y int, deadline int64) []Diff {
 	text1a := text1[0:x]
 	text2a := text2[0:y]
 	text1b := text1[x:]

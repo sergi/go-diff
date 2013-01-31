@@ -789,13 +789,13 @@ func Test_diffLevenshtein(t *testing.T) {
 }
 
 func Test_diffBisect(t *testing.T) {
-    dmp := createDMP()
-    // Normal.
-    a := "cat"
-    b := "map"
-    // Since the resulting diff hasn't been normalized, it would be ok if
-    // the insertion and deletion pairs are swapped.
-    // If the order changes, tweak this test as required.
+	dmp := createDMP()
+	// Normal.
+	a := "cat"
+	b := "map"
+	// Since the resulting diff hasn't been normalized, it would be ok if
+	// the insertion and deletion pairs are swapped.
+	// If the order changes, tweak this test as required.
 	diffs := []Diff{
 		Diff{DiffDelete, "c"},
 		Diff{DiffInsert, "m"},
@@ -803,13 +803,11 @@ func Test_diffBisect(t *testing.T) {
 		Diff{DiffDelete, "t"},
 		Diff{DiffInsert, "p"}}
 
-	fmt.Println(dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix())))
+	assertDiffEqual(diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix())) //TODO
 
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix()))) //TODO
-
-    // Timeout.
-    diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, int32(time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix()))) //TODO
+	// Timeout.
+	diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
+	assertDiffEqual(diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix())) //TODO
 }
 
 func Test_diffMain(t *testing.T) {
@@ -837,11 +835,7 @@ func Test_diffMain(t *testing.T) {
 	// Switch off the timeout.
 	dmp.DiffTimeout = 0
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}}
-<<<<<<< HEAD
-	assertSeqEqual(diffs, dmp.DiffMain("a", "b", false))
-=======
-	assertDiffEqual(t, diffs, dmp.diffMain("a", "b", false))
->>>>>>> f737cb4... reworked assertions in tests to be more informative
+	assertDiffEqual(t, diffs, dmp.DiffMain("a", "b", false))
 
 	diffs = []Diff{
 		Diff{DiffDelete, "Apple"},
@@ -850,11 +844,7 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffInsert, "lso"},
 		Diff{DiffEqual, " fruit."}}
 
-<<<<<<< HEAD
-	assertSeqEqual(diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
-=======
-	assertDiffEqual(t, diffs, dmp.diffMain("Apples are a fruit.", "Bananas are also fruit.", false))
->>>>>>> f737cb4... reworked assertions in tests to be more informative
+	assertDiffEqual(t, diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
 	diffs = []Diff{
 		Diff{DiffDelete, "a"},
@@ -863,34 +853,19 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffDelete, "\t"},
 		Diff{DiffInsert, "\u0000"}}
 
-
-<<<<<<< HEAD
-	assertSeqEqual(diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
+	assertDiffEqual(diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
-	assertSeqEqual(diffs, dmp.DiffMain("1ayb2", "abxab", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("1ayb2", "abxab", false))
 
 	diffs = []Diff{Diff{DiffInsert, "xaxcx"}, Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
-	assertSeqEqual(diffs, dmp.DiffMain("abcy", "xaxcxabc", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("abcy", "xaxcxabc", false))
 
 	diffs = []Diff{Diff{DiffDelete, "ABCD"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "bcd"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "efghijklmnopqrs"}, Diff{DiffDelete, "EFGHIJKLMNOefg"}}
-	assertSeqEqual(diffs, dmp.DiffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
 
 	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}
-	assertSeqEqual(diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
-=======
-	assertDiffEqual(t, diffs, dmp.diffMain("ax\t", "\u0680x\u0000", false))
-	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
-	assertDiffEqual(t, diffs, dmp.diffMain("1ayb2", "abxab", false))
-
-	diffs = []Diff{Diff{DiffInsert, "xaxcx"}, Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
-	assertDiffEqual(t, diffs, dmp.diffMain("abcy", "xaxcxabc", false))
-
-	diffs = []Diff{Diff{DiffDelete, "ABCD"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "bcd"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "efghijklmnopqrs"}, Diff{DiffDelete, "EFGHIJKLMNOefg"}}
-	assertDiffEqual(t, diffs, dmp.diffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
-
-	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}
-	assertDiffEqual(t, diffs, dmp.diffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
->>>>>>> f737cb4... reworked assertions in tests to be more informative
+	assertDiffEqual(t, diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
 
 	dmp.DiffTimeout = 0.1 // 100ms
 	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
@@ -917,31 +892,17 @@ func Test_diffMain(t *testing.T) {
 	// Must be long to pass the 100 char cutoff.
 	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
 	b = "abcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\n"
-<<<<<<< HEAD
-	assertSeqEqual(dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
+	assertDiffEqual(t, dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
 
 	a = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
 	b = "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
-	assertSeqEqual(dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
+	assertDiffEqual(t, dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
 
 	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
 	b = "abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n"
 	texts_linemode := diffRebuildtexts(dmp.DiffMain(a, b, true))
 	texts_textmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
-	assertSeqEqual(texts_textmode, texts_linemode)
-=======
-	assertDiffEqual(t, dmp.diffMain(a, b, true), dmp.diffMain(a, b, false))
-
-	a = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
-	b = "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
-	assertDiffEqual(t, dmp.diffMain(a, b, true), dmp.diffMain(a, b, false))
-
-	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
-	b = "abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n"
-	texts_linemode := diffRebuildtexts(dmp.diffMain(a, b, true))
-	texts_textmode := diffRebuildtexts(dmp.diffMain(a, b, false))
 	assertStrEqual(t, texts_textmode, texts_linemode)
->>>>>>> f737cb4... reworked assertions in tests to be more informative
 
 	// Test null inputs -- not needed because nulls can't be passed in C#.
 }

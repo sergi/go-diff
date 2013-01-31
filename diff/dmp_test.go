@@ -768,11 +768,11 @@ func Test_diffBisect(t *testing.T) {
 		Diff{DiffDelete, "t"},
 		Diff{DiffInsert, "p"}}
 
-	assertSeqEqual(diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix())) //TODO
+	assertSeqEqual(diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix()))
 
 	// Timeout.
 	diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-	assertSeqEqual(diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix())) //TODO
+	assertSeqEqual(diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix()))
 }
 
 func Test_diffMain(t *testing.T) {

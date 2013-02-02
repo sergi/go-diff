@@ -854,7 +854,7 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffInsert, "\u0000"}}
 
 	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
-	assertDiffEqual(diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("1ayb2", "abxab", false))
 

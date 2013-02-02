@@ -64,13 +64,6 @@ var (
 	blanklineStartRegex_  = regexp.MustCompile(`^\r?\n\r?\n`)
 )
 
-func concat(old1, old2 []Diff) []Diff {
-	newslice := make([]Diff, len(old1)+len(old2))
-	copy(newslice, old1)
-	copy(newslice[len(old1):], old2)
-	return newslice
-}
-
 func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 	return append(slice[:index], append(elements, slice[index+amount:]...)...)
 }
@@ -334,9 +327,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 		diffs_a := dmp.DiffMain(text1_a, text2_a, checklines, deadline)
 		diffs_b := dmp.DiffMain(text1_b, text2_b, checklines, deadline)
 		// Merge the results.
-		// TODO: Concat should accept several arguments
-		concat1 := concat(diffs_a, []Diff{Diff{DiffEqual, mid_common}})
-		return concat(concat1, diffs_b)
+		return append(diffs_a, append([]Diff{Diff{DiffEqual, mid_common}}, diffs_b...)...)
 	}
 	if checklines && utf8.RuneCountInString(text1) > 100 && utf8.RuneCountInString(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)

@@ -590,9 +590,8 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 		chars := aDiff.Text
 		text := make([]string, len(chars))
 
-		for y := 0; y < len(chars); y++ {
-			unicodeCodePoints := []byte(chars)
-			text[y] = lineArray[unicodeCodePoints[y]]
+		for i, r := range chars {
+			text[i] = lineArray[r]
 		}
 
 		aDiff.Text = strings.Join(text, "")

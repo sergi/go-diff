@@ -237,12 +237,12 @@ func Test_diffCharsToLines(t *testing.T) {
 		Diff{DiffInsert, "beta\nalpha\nbeta\n"}}, actual)
 
 	// More than 256 to reveal any 8-bit limitations.
-	n := 300
+	n := 257
 	tmpVector = []string{}
 	lineList := []rune{}
 	charList := []rune{}
 
-	for x := 1; x < n+1; x++ {
+	for x := 1; x <= n; x++ {
 		tmpVector = append(tmpVector, string(x)+"\n")
 		lineList = append(lineList, rune(x), '\n')
 		charList = append(charList, rune(x))

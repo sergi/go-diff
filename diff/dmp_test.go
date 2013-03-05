@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 	"runtime"
+	"bytes"
 
 	"github.com/bmizerany/assert"
 )
@@ -23,6 +24,25 @@ func caller() string {
 		return fmt.Sprintf("(actual-line %v) ", line)
 	}
 	return ""
+}
+
+func pretty(diffs []Diff) string {
+	var w bytes.Buffer
+	for i, diff := range diffs {
+		w.WriteString(fmt.Sprintf("%v. ",i))
+		switch diff.Type {
+		case DiffInsert:
+			w.WriteString("DiffIns")
+		case DiffDelete:
+			w.WriteString("DiffDel")
+		case DiffEqual:
+			w.WriteString("DiffEql")
+		default:
+			w.WriteString("Unknown")
+		}
+		w.WriteString(fmt.Sprintf(": %v\n", diff.Text))
+	}
+	return w.String()
 }
 
 func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
@@ -63,6 +83,7 @@ func assertDiffEqual(t *testing.T, seq1, seq2 []Diff) {
 
 	for i := range seq1 {
 		if a, b := seq1[i], seq2[i]; a != b {
+			t.Errorf("%v\nseq1:\n%v\nseq2:\n%v", caller(), pretty(seq1), pretty(seq2))
 			t.Fatalf("%v %v != %v", caller(), a, b)
 		}
 	}

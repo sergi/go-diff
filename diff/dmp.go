@@ -277,7 +277,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 
 	if len(text2) == 0 {
 		// Just delete some text (speedup).
-		return append(diffs, Diff{DiffInsert, text1})
+		return append(diffs, Diff{DiffDelete, text1})
 	}
 
 	var longtext, shorttext string

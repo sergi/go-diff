@@ -585,6 +585,7 @@ func (dmp *DiffMatchPatch) diffLinesToCharsMunge(text string, lineArray *[]strin
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of
 // text.
 func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
+	hydrated := make([]Diff, 0, len(diffs))
 	for _, aDiff := range diffs {
 		chars := aDiff.Text
 		text := make([]string, len(chars))
@@ -595,8 +596,9 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 		}
 
 		aDiff.Text = strings.Join(text, "")
+		hydrated = append(hydrated, aDiff)
 	}
-	return diffs
+	return hydrated
 }
 
 // DiffCommonPrefix determines the common prefix length of two strings.

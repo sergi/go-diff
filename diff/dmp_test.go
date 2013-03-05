@@ -731,7 +731,10 @@ func Test_diffDelta(t *testing.T) {
 	// Lowercase, due to UrlEncode uses lower.
 	assert.Equal(t, "=7\t-7\t+%DA%82 %02 %5C %7C", delta)
 
-	_res1, _ := dmp.DiffFromDelta(text1, delta)
+	_res1, err := dmp.DiffFromDelta(text1, delta)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertDiffEqual(t, diffs, _res1)
 
 	// Verify pool of unchanged characters.

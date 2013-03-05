@@ -1474,43 +1474,38 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 		// operation of this token (delete, insert, equality).
 		param := token[1:]
 
-		switch token[0] {
+		switch op := token[0]; op {
 		case '+':
 			// decode would Diff all "+" to " "
 			param = strings.Replace(param, "+", "%2b", -1)
 			param, _ = url.QueryUnescape(param)
 			diffs = append(diffs, Diff{DiffInsert, param})
-			break
 		case '=', '-':
 			n, err := strconv.ParseInt(param, 10, 0)
 			if err != nil {
 				return diffs, err
-			}
-
-			if n < 0 {
+			} else if n < 0 {
 				return diffs, errors.New("Negative number in DiffFromDelta: " + param)
 			}
 
-			text := text1[pointer : pointer+int(n)]
+			// remember that string slicing is by byte - we want by rune here.
+			text := string([]rune(text1)[pointer : pointer+int(n)])
 			pointer += int(n)
 
-			if token[0] == '=' {
+			if op == '=' {
 				diffs = append(diffs, Diff{DiffEqual, text})
 			} else {
 				diffs = append(diffs, Diff{DiffDelete, text})
 			}
-			break
 		default:
 			// Anything else is an error.
 			return diffs, errors.New("Invalid diff operation in DiffFromDelta: " + string(token[0]))
 		}
 	}
 
-	if pointer != len(text1) {
-		return diffs, errors.New("Delta length (" + string(pointer) + ") smaller than source text length (" + string(len(text1)) + ").")
+	if pointer != len([]rune(text1)) {
+		return diffs, fmt.Errorf("Delta length (%v) smaller than source text length (%v)", pointer, len(text1))
 	}
-	fmt.Println("") //text1, pointer, n)
-
 	return diffs, err
 }
 

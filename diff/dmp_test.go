@@ -2,11 +2,13 @@ package diffmatchpatch
 
 import (
 	"fmt"
-	"github.com/bmizerany/assert"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+	"runtime"
+
+	"github.com/bmizerany/assert"
 )
 
 func softAssert(t *testing.T, cond bool, msg string) {
@@ -16,55 +18,64 @@ func softAssert(t *testing.T, cond bool, msg string) {
 	}
 }
 
-func assertSeqEqual(seq1, seq2 interface{}) {
-	var fail = func(msg string) {
-		fmt.Println("assertion fail: \n", msg, "\n")
-		panic(1)
+func caller() string {
+	if _, _, line, ok := runtime.Caller(2); ok {
+		return fmt.Sprintf("(actual-line %v) ", line)
 	}
+	return ""
+}
 
+func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
 	v1 := reflect.ValueOf(seq1)
 	k1 := v1.Kind()
 	v2 := reflect.ValueOf(seq2)
 	k2 := v2.Kind()
 
-	if k1 != reflect.Array && k1 != reflect.Slice && k1 != reflect.Map {
-		fail("Parameters are not slices or Arrays")
+	if k1 != reflect.Map || k2 != reflect.Map {
+		t.Fatalf("%v Parameters are not maps", caller())
+	} else if v1.Len() != v2.Len() {
+		t.Fatalf("%v Maps of different length: %v != %v", caller(), v1.Len(), v2.Len())
 	}
 
-	if k2 != reflect.Array && k2 != reflect.Slice && k2 != reflect.Map {
-		fail("Parameters are not slices or Arrays")
+	keys1, keys2 := v1.MapKeys(), v2.MapKeys()
+
+	if len(keys1) != len(keys2) {
+		t.Fatalf("%v Maps of different length", caller())
 	}
 
-	if v1.Len() != v2.Len() {
-		fail("Sequences of different length:\n" + string(v1.Len()) + "\n" + string(v2.Len()))
+	for _, key1 := range keys1 {
+		if a, b := v2.MapIndex(key1), v1.MapIndex(key1); a != b {
+			t.Fatal("%v Different key/value in Map: %v != %v", caller(), a, b)
+		}
 	}
 
-	if k1 == reflect.Map && k2 == reflect.Map {
-		keys1 := v1.MapKeys()
-		keys2 := v2.MapKeys()
-
-		if len(keys1) != len(keys2) {
-			fail("Maps of different length")
+	for _, key2 := range keys2 {
+		if a, b := v1.MapIndex(key2), v2.MapIndex(key2); a != b {
+			t.Fatal("%v Different key/value in Map: %v != %v", caller(), a, b)
 		}
+	}
+}
 
-		for _, key1 := range keys1 {
-			if v2.MapIndex(key1) != v1.MapIndex(key1) {
-				fail("Different key/value in Map.")
-			}
-		}
+func assertDiffEqual(t *testing.T, seq1, seq2 []Diff) {
+	if a, b := len(seq1), len(seq2); a != b {
+		t.Fatalf("%v Sequences of different length: %v != %v", caller(), a, b)
+	}
 
-		for _, key2 := range keys2 {
-			if v1.MapIndex(key2) != v2.MapIndex(key2) {
-				fail("Different key/value in Map.")
-			}
+	for i := range seq1 {
+		if a, b := seq1[i], seq2[i]; a != b {
+			t.Fatalf("%v %v != %v", caller(), a, b)
 		}
-	} else {
-		for i := 0; i < v1.Len(); i++ {
-			if v1.Index(i).String() != v2.Index(i).String() {
-				fail("[" + v1.Index(i).Kind().String() + "] " + v1.Index(i).String() +
-					" != [" + v2.Index(i).Kind().String() + "] " + v2.Index(i).String())
-				break
-			}
+	}
+}
+
+func assertStrEqual(t *testing.T, seq1, seq2 []string) {
+	if a, b := len(seq1), len(seq2); a != b {
+		t.Fatalf("%v Sequences of different length: %v != %v", caller(), a, b)
+	}
+
+	for i := range seq1 {
+		if a, b := seq1[i], seq2[i]; a != b {
+			t.Fatalf("%v %v != %v", caller(), a, b)
 		}
 	}
 }
@@ -137,26 +148,26 @@ func Test_diffHalfmatchTest(t *testing.T) {
 	softAssert(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
 
 	// Single Match.
-	assertSeqEqual(
+	assertStrEqual(t, 
 		[]string{"12", "90", "a", "z", "345678"},
 		dmp.DiffHalfMatch("1234567890", "a345678z"))
 
-	assertSeqEqual([]string{"a", "z", "12", "90", "345678"}, dmp.DiffHalfMatch("a345678z", "1234567890"))
+	assertStrEqual(t, []string{"a", "z", "12", "90", "345678"}, dmp.DiffHalfMatch("a345678z", "1234567890"))
 
-	assertSeqEqual([]string{"abc", "z", "1234", "0", "56789"}, dmp.DiffHalfMatch("abc56789z", "1234567890"))
+	assertStrEqual(t, []string{"abc", "z", "1234", "0", "56789"}, dmp.DiffHalfMatch("abc56789z", "1234567890"))
 
-	assertSeqEqual([]string{"a", "xyz", "1", "7890", "23456"}, dmp.DiffHalfMatch("a23456xyz", "1234567890"))
+	assertStrEqual(t, []string{"a", "xyz", "1", "7890", "23456"}, dmp.DiffHalfMatch("a23456xyz", "1234567890"))
 
 	// Multiple Matches.
-	assertSeqEqual([]string{"12123", "123121", "a", "z", "1234123451234"}, dmp.DiffHalfMatch("121231234123451234123121", "a1234123451234z"))
+	assertStrEqual(t, []string{"12123", "123121", "a", "z", "1234123451234"}, dmp.DiffHalfMatch("121231234123451234123121", "a1234123451234z"))
 
-	assertSeqEqual([]string{"", "-=-=-=-=-=", "x", "", "x-=-=-=-=-=-=-="}, dmp.DiffHalfMatch("x-=-=-=-=-=-=-=-=-=-=-=-=", "xx-=-=-=-=-=-=-="))
+	assertStrEqual(t, []string{"", "-=-=-=-=-=", "x", "", "x-=-=-=-=-=-=-="}, dmp.DiffHalfMatch("x-=-=-=-=-=-=-=-=-=-=-=-=", "xx-=-=-=-=-=-=-="))
 
-	assertSeqEqual([]string{"-=-=-=-=-=", "", "", "y", "-=-=-=-=-=-=-=y"}, dmp.DiffHalfMatch("-=-=-=-=-=-=-=-=-=-=-=-=y", "-=-=-=-=-=-=-=yy"))
+	assertStrEqual(t, []string{"-=-=-=-=-=", "", "", "y", "-=-=-=-=-=-=-=y"}, dmp.DiffHalfMatch("-=-=-=-=-=-=-=-=-=-=-=-=y", "-=-=-=-=-=-=-=yy"))
 
 	// Non-optimal halfmatch.
 	// Optimal diff would be -q+x=H-i+e=lloHe+Hu=llo-Hew+y not -qHillo+x=HelloHe-w+Hulloy
-	assertSeqEqual([]string{"qHillo", "w", "x", "Hulloy", "HelloHe"}, dmp.DiffHalfMatch("qHilloHelloHew", "xHelloHeHulloy"))
+	assertStrEqual(t, []string{"qHillo", "w", "x", "Hulloy", "HelloHe"}, dmp.DiffHalfMatch("qHilloHelloHew", "xHelloHeHulloy"))
 
 	// Optimal no halfmatch.
 	dmp.DiffTimeout = 0
@@ -171,19 +182,19 @@ func Test_diffLinesToChars(t *testing.T) {
 	result0, result1, result2 := dmp.DiffLinesToChars("alpha\nbeta\nalpha\n", "beta\nalpha\nbeta\n")
 	assert.Equal(t, "\u0001\u0002\u0001", result0, "")
 	assert.Equal(t, "\u0002\u0001\u0002", result1, "")
-	assertSeqEqual(tmpVector, result2)
+	assertStrEqual(t, tmpVector, result2)
 
 	tmpVector = []string{"", "alpha\r\n", "beta\r\n", "\r\n"}
 	result0, result1, result2 = dmp.DiffLinesToChars("", "alpha\r\nbeta\r\n\r\n\r\n")
 	assert.Equal(t, "", result0, "")
 	assert.Equal(t, "\u0001\u0002\u0003\u0003", result1, "")
-	assertSeqEqual(tmpVector, result2)
+	assertStrEqual(t, tmpVector, result2)
 
 	tmpVector = []string{"", "a", "b"}
 	result0, result1, result2 = dmp.DiffLinesToChars("a", "b")
 	assert.Equal(t, "\u0001", result0, "")
 	assert.Equal(t, "\u0002", result1, "")
-	assertSeqEqual(tmpVector, result2)
+	assertStrEqual(t, tmpVector, result2)
 
 	// More than 256 to reveal any 8-bit limitations.
 	/*
@@ -208,7 +219,7 @@ func Test_diffLinesToChars(t *testing.T) {
 
 	   assert.Equal(t, chars, result0)
 	   assert.Equal(t, "", result1, "")
-	   assertSeqEqual(tmpVector, result2)
+	   assertDiffEqual(t, tmpVector, result2)
 	*/
 }
 
@@ -221,7 +232,7 @@ func Test_diffCharsToLines(t *testing.T) {
 
 	tmpVector := []string{"", "alpha\n", "beta\n"}
 	dmp.DiffCharsToLines(diffs, tmpVector)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "alpha\nbeta\nalpha\n"},
 		Diff{DiffInsert, "beta\nalpha\nbeta\n"}}, diffs)
 
@@ -243,7 +254,7 @@ func Test_diffCharsToLines(t *testing.T) {
 	tmpVector = append([]string{""}, tmpVector...)
 	diffs = []Diff{Diff{DiffDelete, string(charList)}}
 	dmp.DiffCharsToLines(diffs, tmpVector)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, string(lineList)}}, diffs)
 }
 
@@ -253,63 +264,63 @@ func Test_diffCleanupMerge(t *testing.T) {
 	// Null case.
 	diffs := []Diff{}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{}, diffs)
+	assertDiffEqual(t, []Diff{}, diffs)
 
 	// No Diff case.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}, diffs)
 
 	// Merge equalities.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffEqual, "b"}, Diff{DiffEqual, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffEqual, "abc"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "abc"}}, diffs)
 
 	// Merge deletions.
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffDelete, "b"}, Diff{DiffDelete, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffDelete, "abc"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffDelete, "abc"}}, diffs)
 
 	// Merge insertions.
 	diffs = []Diff{Diff{DiffInsert, "a"}, Diff{DiffInsert, "b"}, Diff{DiffInsert, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffInsert, "abc"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffInsert, "abc"}}, diffs)
 
 	// Merge interweave.
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}, Diff{DiffDelete, "c"}, Diff{DiffInsert, "d"}, Diff{DiffEqual, "e"}, Diff{DiffEqual, "f"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffDelete, "ac"}, Diff{DiffInsert, "bd"}, Diff{DiffEqual, "ef"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffDelete, "ac"}, Diff{DiffInsert, "bd"}, Diff{DiffEqual, "ef"}}, diffs)
 
 	// Prefix and suffix detection.
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "c"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "c"}}, diffs)
 
 	// Prefix and suffix detection with equalities.
 	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}, Diff{DiffEqual, "y"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffEqual, "xa"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "xa"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
 
 	// Slide edit left.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "ba"}, Diff{DiffEqual, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffInsert, "ab"}, Diff{DiffEqual, "ac"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffInsert, "ab"}, Diff{DiffEqual, "ac"}}, diffs)
 
 	// Slide edit right.
 	diffs = []Diff{Diff{DiffEqual, "c"}, Diff{DiffInsert, "ab"}, Diff{DiffEqual, "a"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
 
-	assertSeqEqual([]Diff{Diff{DiffEqual, "ca"}, Diff{DiffInsert, "ba"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "ca"}, Diff{DiffInsert, "ba"}}, diffs)
 
 	// Slide edit left recursive.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "ac"}, Diff{DiffEqual, "x"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffDelete, "abc"}, Diff{DiffEqual, "acx"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffDelete, "abc"}, Diff{DiffEqual, "acx"}}, diffs)
 
 	// Slide edit right recursive.
 	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "ca"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "a"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertSeqEqual([]Diff{Diff{DiffEqual, "xca"}, Diff{DiffDelete, "cba"}}, diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "xca"}, Diff{DiffDelete, "cba"}}, diffs)
 }
 
 func Test_diffCleanupSemanticLossless(t *testing.T) {
@@ -318,7 +329,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 	// Null case.
 	diffs := []Diff{}
 	dmp.DiffCleanupSemanticLossless(diffs)
-	assertSeqEqual([]Diff{}, diffs)
+	assertDiffEqual(t, []Diff{}, diffs)
 
 	// Blank lines.
 	diffs = []Diff{
@@ -329,7 +340,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "AAA\r\n\r\n"},
 		Diff{DiffInsert, "BBB\r\nDDD\r\n\r\n"},
 		Diff{DiffEqual, "BBB\r\nEEE"}}, diffs)
@@ -342,7 +353,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "AAA\r\n"},
 		Diff{DiffInsert, "BBB DDD\r\n"},
 		Diff{DiffEqual, "BBB EEE"}}, diffs)
@@ -355,7 +366,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The "},
 		Diff{DiffInsert, "cow and the "},
 		Diff{DiffEqual, "cat."}}, diffs)
@@ -368,7 +379,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The-"},
 		Diff{DiffInsert, "cow-and-the-"},
 		Diff{DiffEqual, "cat."}}, diffs)
@@ -381,7 +392,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 
-	/*assertSeqEqual([]Diff{
+	/*assertDiffEqual(t, []Diff{
 	Diff{DiffDelete, "a"},
 	Diff{DiffEqual, "aax"}}, diffs)*/
 
@@ -393,7 +404,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 	/*
-		assertSeqEqual([]Diff{
+		assertDiffEqual(t, []Diff{
 			Diff{DiffEqual, "xaa"},
 			Diff{DiffDelete, "a"}}, diffs)
 	*/
@@ -405,7 +416,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	dmp.DiffCleanupSemanticLossless(diffs)
 
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The xxx."},
 		Diff{DiffInsert, " The zzz."},
 		Diff{DiffEqual, " The yyy."}}, diffs)
@@ -417,7 +428,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 	// Null case.
 	diffs := []Diff{}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{}, diffs)
+	assertDiffEqual(t, []Diff{}, diffs)
 
 	// No elimination #1.
 	diffs = []Diff{
@@ -426,7 +437,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffEqual, "12"},
 		Diff{DiffDelete, "e"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "ab"},
 		Diff{DiffInsert, "cd"},
 		Diff{DiffEqual, "12"},
@@ -439,7 +450,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffEqual, "1234"},
 		Diff{DiffDelete, "wxyz"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abc"},
 		Diff{DiffInsert, "ABC"},
 		Diff{DiffEqual, "1234"},
@@ -451,7 +462,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffEqual, "b"},
 		Diff{DiffDelete, "c"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abc"},
 		Diff{DiffInsert, "b"}}, diffs)
 
@@ -463,7 +474,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffEqual, "f"},
 		Diff{DiffInsert, "g"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abcdef"},
 		Diff{DiffInsert, "cdfg"}}, diffs)
 
@@ -479,7 +490,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "B"},
 		Diff{DiffInsert, "2"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "AB_AB"},
 		Diff{DiffInsert, "1A2_1A2"}}, diffs)
 
@@ -489,7 +500,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "ow and the c"},
 		Diff{DiffEqual, "at."}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The "},
 		Diff{DiffDelete, "cow and the "},
 		Diff{DiffEqual, "cat."}}, diffs)
@@ -499,7 +510,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "abcxx"},
 		Diff{DiffInsert, "xxdef"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abcxx"},
 		Diff{DiffInsert, "xxdef"}}, diffs)
 
@@ -508,7 +519,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "abcxxx"},
 		Diff{DiffInsert, "xxxdef"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abc"},
 		Diff{DiffEqual, "xxx"},
 		Diff{DiffInsert, "def"}}, diffs)
@@ -518,7 +529,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "xxxabc"},
 		Diff{DiffInsert, "defxxx"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffInsert, "def"},
 		Diff{DiffEqual, "xxx"},
 		Diff{DiffDelete, "abc"}}, diffs)
@@ -531,7 +542,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "A3"},
 		Diff{DiffInsert, "3BC"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abcd"},
 		Diff{DiffEqual, "1212"},
 		Diff{DiffInsert, "efghi"},
@@ -548,7 +559,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 	// Null case.
 	diffs := []Diff{}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
-	assertSeqEqual([]Diff{}, diffs)
+	assertDiffEqual(t, []Diff{}, diffs)
 
 	// No elimination.
 	diffs = []Diff{
@@ -558,7 +569,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 		Diff{DiffDelete, "cd"},
 		Diff{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "ab"},
 		Diff{DiffInsert, "12"},
 		Diff{DiffEqual, "wxyz"},
@@ -573,7 +584,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 		Diff{DiffDelete, "cd"},
 		Diff{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abxyzcd"},
 		Diff{DiffInsert, "12xyz34"}}, diffs)
 
@@ -584,7 +595,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 		Diff{DiffDelete, "cd"},
 		Diff{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "xcd"},
 		Diff{DiffInsert, "12x34"}}, diffs)
 
@@ -598,7 +609,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 		Diff{DiffDelete, "cd"},
 		Diff{DiffInsert, "56"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abxyzcd"},
 		Diff{DiffInsert, "12xy34z56"}}, diffs)
 
@@ -611,7 +622,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 		Diff{DiffDelete, "cd"},
 		Diff{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
-	assertSeqEqual([]Diff{
+	assertDiffEqual(t, []Diff{
 		Diff{DiffDelete, "abwxyzcd"},
 		Diff{DiffInsert, "12wxyz34"}}, diffs)
 	dmp.DiffEditCost = 4
@@ -665,7 +676,7 @@ func Test_diffDelta(t *testing.T) {
 
 	// Convert delta string into a diff.
 	_seq1, err := dmp.DiffFromDelta(text1, delta)
-	assertSeqEqual(diffs, _seq1)
+	assertDiffEqual(t, diffs, _seq1)
 
 	// Generates error (19 < 20).
 	_, err = dmp.DiffFromDelta(text1+"x", delta)
@@ -700,7 +711,7 @@ func Test_diffDelta(t *testing.T) {
 	assert.Equal(t, "=7\t-7\t+%DA%82 %02 %5C %7C", delta)
 
 	_res1, _ := dmp.DiffFromDelta(text1, delta)
-	assertSeqEqual(diffs, _res1)
+	assertDiffEqual(t, diffs, _res1)
 
 	// Verify pool of unchanged characters.
 	diffs = []Diff{
@@ -713,7 +724,7 @@ func Test_diffDelta(t *testing.T) {
 
 	// Convert delta string into a diff.
 	_res2, _ := dmp.DiffFromDelta("", delta)
-	assertSeqEqual(diffs, _res2)
+	assertDiffEqual(t, diffs, _res2)
 }
 
 func Test_diffXIndex(t *testing.T) {
@@ -770,39 +781,43 @@ func Test_diffBisect(t *testing.T) {
 
 	fmt.Println(dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix())))
 
-	assertSeqEqual(diffs, dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix()))) //TODO
+	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, int32(time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix()))) //TODO
 
     // Timeout.
     diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-	assertSeqEqual(diffs, dmp.DiffBisect(a, b, int32(time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix()))) //TODO
+	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, int32(time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix()))) //TODO
 }
 
 func Test_diffMain(t *testing.T) {
 	dmp := createDMP()
 	// Perform a trivial diff.
 	diffs := []Diff{}
-	assertSeqEqual(diffs, dmp.DiffMain("", "", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("", "", false))
 
 	diffs = []Diff{Diff{DiffEqual, "abc"}}
-	assertSeqEqual(diffs, dmp.DiffMain("abc", "abc", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("abc", "abc", false))
 
 	diffs = []Diff{Diff{DiffEqual, "ab"}, Diff{DiffInsert, "123"}, Diff{DiffEqual, "c"}}
-	assertSeqEqual(diffs, dmp.DiffMain("abc", "ab123c", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("abc", "ab123c", false))
 
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "123"}, Diff{DiffEqual, "bc"}}
-	assertSeqEqual(diffs, dmp.DiffMain("a123bc", "abc", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("a123bc", "abc", false))
 
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "123"}, Diff{DiffEqual, "b"}, Diff{DiffInsert, "456"}, Diff{DiffEqual, "c"}}
-	assertSeqEqual(diffs, dmp.DiffMain("abc", "a123b456c", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("abc", "a123b456c", false))
 
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "123"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "456"}, Diff{DiffEqual, "c"}}
-	assertSeqEqual(diffs, dmp.DiffMain("a123b456c", "abc", false))
+	assertDiffEqual(t, diffs, dmp.DiffMain("a123b456c", "abc", false))
 
 	// Perform a real diff.
 	// Switch off the timeout.
 	dmp.DiffTimeout = 0
 	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}}
+<<<<<<< HEAD
 	assertSeqEqual(diffs, dmp.DiffMain("a", "b", false))
+=======
+	assertDiffEqual(t, diffs, dmp.diffMain("a", "b", false))
+>>>>>>> f737cb4... reworked assertions in tests to be more informative
 
 	diffs = []Diff{
 		Diff{DiffDelete, "Apple"},
@@ -811,7 +826,11 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffInsert, "lso"},
 		Diff{DiffEqual, " fruit."}}
 
+<<<<<<< HEAD
 	assertSeqEqual(diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
+=======
+	assertDiffEqual(t, diffs, dmp.diffMain("Apples are a fruit.", "Bananas are also fruit.", false))
+>>>>>>> f737cb4... reworked assertions in tests to be more informative
 
 	diffs = []Diff{
 		Diff{DiffDelete, "a"},
@@ -821,6 +840,7 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffInsert, "\u0000"}}
 
 
+<<<<<<< HEAD
 	assertSeqEqual(diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
 	assertSeqEqual(diffs, dmp.DiffMain("1ayb2", "abxab", false))
@@ -833,6 +853,20 @@ func Test_diffMain(t *testing.T) {
 
 	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}
 	assertSeqEqual(diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
+=======
+	assertDiffEqual(t, diffs, dmp.diffMain("ax\t", "\u0680x\u0000", false))
+	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
+	assertDiffEqual(t, diffs, dmp.diffMain("1ayb2", "abxab", false))
+
+	diffs = []Diff{Diff{DiffInsert, "xaxcx"}, Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
+	assertDiffEqual(t, diffs, dmp.diffMain("abcy", "xaxcxabc", false))
+
+	diffs = []Diff{Diff{DiffDelete, "ABCD"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "bcd"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "efghijklmnopqrs"}, Diff{DiffDelete, "EFGHIJKLMNOefg"}}
+	assertDiffEqual(t, diffs, dmp.diffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
+
+	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}
+	assertDiffEqual(t, diffs, dmp.diffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
+>>>>>>> f737cb4... reworked assertions in tests to be more informative
 
 	dmp.DiffTimeout = 0.1 // 100ms
 	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
@@ -859,6 +893,7 @@ func Test_diffMain(t *testing.T) {
 	// Must be long to pass the 100 char cutoff.
 	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
 	b = "abcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\n"
+<<<<<<< HEAD
 	assertSeqEqual(dmp.DiffMain(a, b, true), dmp.DiffMain(a, b, false))
 
 	a = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
@@ -870,6 +905,19 @@ func Test_diffMain(t *testing.T) {
 	texts_linemode := diffRebuildtexts(dmp.DiffMain(a, b, true))
 	texts_textmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
 	assertSeqEqual(texts_textmode, texts_linemode)
+=======
+	assertDiffEqual(t, dmp.diffMain(a, b, true), dmp.diffMain(a, b, false))
+
+	a = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
+	b = "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+	assertDiffEqual(t, dmp.diffMain(a, b, true), dmp.diffMain(a, b, false))
+
+	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
+	b = "abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n"
+	texts_linemode := diffRebuildtexts(dmp.diffMain(a, b, true))
+	texts_textmode := diffRebuildtexts(dmp.diffMain(a, b, false))
+	assertStrEqual(t, texts_textmode, texts_linemode)
+>>>>>>> f737cb4... reworked assertions in tests to be more informative
 
 	// Test null inputs -- not needed because nulls can't be passed in C#.
 }
@@ -882,14 +930,14 @@ func Test_match_alphabet(t *testing.T) {
 		'b': 2,
 		'c': 1,
 	}
-	assertSeqEqual(bitmask, dmp.MatchAlphabet("abc"))
+	assertMapEqual(t, bitmask, dmp.MatchAlphabet("abc"))
 
 	bitmask = map[byte]int{
 		'a': 37,
 		'b': 18,
 		'c': 8,
 	}
-	assertSeqEqual(bitmask, dmp.MatchAlphabet("abcaba"))
+	assertMapEqual(t, bitmask, dmp.MatchAlphabet("abcaba"))
 }
 
 func Test_match_bitap(t *testing.T) {
@@ -1080,7 +1128,7 @@ func Test_patch_make(t *testing.T) {
 		Diff{DiffInsert, "~!@#$%^&*()_+{}|:\"<>?"}}
 
 	_p1, _ := dmp.PatchFromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")
-	assertSeqEqual(diffs,
+	assertDiffEqual(t, diffs,
 		_p1[0].diffs,
 	)
 

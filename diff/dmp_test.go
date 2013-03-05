@@ -78,6 +78,7 @@ func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
 
 func assertDiffEqual(t *testing.T, seq1, seq2 []Diff) {
 	if a, b := len(seq1), len(seq2); a != b {
+		t.Errorf("%v\nseq1:\n%v\nseq2:\n%v", caller(), pretty(seq1), pretty(seq2))
 		t.Fatalf("%v Sequences of different length: %v != %v", caller(), a, b)
 	}
 
@@ -853,7 +854,6 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffDelete, "\t"},
 		Diff{DiffInsert, "\u0000"}}
 
-	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("1ayb2", "abxab", false))

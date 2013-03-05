@@ -290,8 +290,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 		shorttext = text1
 	}
 
-	var i = strings.Index(longtext, shorttext)
-	if i != -1 {
+	if i := strings.Index(longtext, shorttext); i != -1 {
 		var op int8 = DiffInsert
 		// Swap insertions for deletions if diff is reversed.
 		if utf8.RuneCountInString(text1) > utf8.RuneCountInString(text2) {
@@ -305,18 +304,15 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 		}
 
 		return diffs
-	}
-	if utf8.RuneCountInString(shorttext) == 1 {
+	} else if utf8.RuneCountInString(shorttext) == 1 {
 		// Single character string.
 		// After the previous speedup, the character can't be an equality.
 		return []Diff{
 			Diff{DiffDelete, text1},
 			Diff{DiffInsert, text2},
 		}
-	}
 	// Check to see if the problem can be split in two.
-	hm := dmp.DiffHalfMatch(text1, text2)
-	if hm != nil {
+	} else if hm := dmp.DiffHalfMatch(text1, text2); hm != nil {
 		// A half-match was found, sort out the return data.
 		text1_a := hm[0]
 		text1_b := hm[1]
@@ -328,8 +324,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 		diffs_b := dmp.DiffMain(text1_b, text2_b, checklines, deadline)
 		// Merge the results.
 		return append(diffs_a, append([]Diff{Diff{DiffEqual, mid_common}}, diffs_b...)...)
-	}
-	if checklines && utf8.RuneCountInString(text1) > 100 && utf8.RuneCountInString(text2) > 100 {
+	} else if checklines && utf8.RuneCountInString(text1) > 100 && utf8.RuneCountInString(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)
 	}
 	return dmp.DiffBisect(text1, text2, deadline)
@@ -591,9 +586,16 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 	return hydrated
 }
 
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 // DiffCommonPrefix determines the common prefix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonPrefix(text1 string, text2 string) int {
-	n := int(math.Min(float64(len(text1)), float64(len(text2))))
+	n := min(len(text1), len(text2))
 	for i := 0; i < n; i++ {
 		if text1[i] != text2[i] {
 			return i
@@ -626,13 +628,13 @@ func (dmp *DiffMatchPatch) DiffCommonPrefix(text1 string, text2 string) int {
 func (dmp *DiffMatchPatch) DiffCommonSuffix(text1 string, text2 string) int {
 	text1_length := len(text1)
 	text2_length := len(text2)
-	n := math.Min(float64(text1_length), float64(text2_length))
-	for i := 1; i <= int(n); i++ {
+	n := min(text1_length, text2_length)
+	for i := 1; i <= n; i++ {
 		if text1[text1_length-i] != text2[text2_length-i] {
 			return i - 1
 		}
 	}
-	return int(n)
+	return n
 	// Binary search.
 	// Performance analysis: http://neil.fraser.name/news/2007/10/09/
 	/*

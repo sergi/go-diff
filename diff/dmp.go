@@ -184,33 +184,18 @@ func (patch *Patch) String() string {
 	return unescaper.Replace(text.String())
 }
 
-func createDMP() DiffMatchPatch {
-	dmp := DiffMatchPatch{}
+// New creates a new DiffMatchPatch object with default parameters.
+func New() *DiffMatchPatch {
 	// Defaults.
-	// Set these on your diff_match_patch instance to override the defaults.
-
-	// Number of seconds to map a diff before giving up (0 for infinity).
-	dmp.DiffTimeout = 1.0
-	// Cost of an empty edit operation in terms of edit characters.
-	dmp.DiffEditCost = 4
-	// At what point is no match declared (0.0 = perfection, 1.0 = very loose).
-	dmp.MatchThreshold = 0.5
-	// How far to search for a match (0 = exact location, 1000+ = broad match).
-	// A match this many characters away from the expected location will add
-	// 1.0 to the score (0.0 is a perfect match).
-	dmp.MatchDistance = 1000
-	// When deleting a large block of text (over ~64 characters), how close
-	// do the contents have to be to match the expected contents. (0.0 =
-	// perfection, 1.0 = very loose).  Note that Match_Threshold controls
-	// how closely the end points of a delete need to match.
-	dmp.PatchDeleteThreshold = 0.5
-	// Chunk size for context length.
-	dmp.PatchMargin = 4
-
-	// The number of bits in an int.
-	dmp.MatchMaxBits = 32
-
-	return dmp
+	return &DiffMatchPatch{
+		DiffTimeout:  1.0,
+		DiffEditCost:  4,
+		MatchThreshold:  0.5,
+		MatchDistance:  1000,
+		PatchDeleteThreshold:  0.5,
+		PatchMargin:  4,
+		MatchMaxBits:  32,
+	}
 }
 
 // DiffMain finds the differences between two texts.

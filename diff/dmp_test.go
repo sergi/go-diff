@@ -116,7 +116,7 @@ func diffRebuildtexts(diffs []Diff) []string {
 }
 
 func Test_diffCommonPrefix(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Detect any common suffix.
 	// Null case.
 	assert.Equal(t, 0, dmp.DiffCommonPrefix("abc", "xyz"), "'abc' and 'xyz' should not be equal")
@@ -129,7 +129,7 @@ func Test_diffCommonPrefix(t *testing.T) {
 }
 
 func Test_diffCommonSuffixTest(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Detect any common suffix.
 	// Null case.
 	assert.Equal(t, 0, dmp.DiffCommonSuffix("abc", "xyz"), "")
@@ -142,7 +142,7 @@ func Test_diffCommonSuffixTest(t *testing.T) {
 }
 
 func Test_diffCommonOverlapTest(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Detect any suffix/prefix overlap.
 	// Null case.
 	assert.Equal(t, 0, dmp.DiffCommonOverlap("", "abcd"), "")
@@ -163,7 +163,7 @@ func Test_diffCommonOverlapTest(t *testing.T) {
 }
 
 func Test_diffHalfmatchTest(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	dmp.DiffTimeout = 1
 	// No match.
 	softAssert(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
@@ -197,7 +197,7 @@ func Test_diffHalfmatchTest(t *testing.T) {
 }
 
 func Test_diffLinesToChars(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Convert lines down to characters.
 	tmpVector := []string{"", "alpha\n", "beta\n"}
 
@@ -246,7 +246,7 @@ func Test_diffLinesToChars(t *testing.T) {
 }
 
 func Test_diffCharsToLines(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Convert chars up to lines.
 	diffs := []Diff{
 		Diff{DiffEqual, "\u0001\u0002\u0001"},
@@ -281,7 +281,7 @@ func Test_diffCharsToLines(t *testing.T) {
 }
 
 func Test_diffCleanupMerge(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Cleanup a messy diff.
 	// Null case.
 	diffs := []Diff{}
@@ -346,7 +346,7 @@ func Test_diffCleanupMerge(t *testing.T) {
 }
 
 func Test_diffCleanupSemanticLossless(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Slide diffs to match logical boundaries.
 	// Null case.
 	diffs := []Diff{}
@@ -445,7 +445,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 }
 
 func Test_diffCleanupSemantic(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Cleanup semantically trivial equalities.
 	// Null case.
 	diffs := []Diff{}
@@ -575,7 +575,7 @@ func Test_diffCleanupSemantic(t *testing.T) {
 }
 
 func Test_diffCleanupEfficiency(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Cleanup operationally trivial equalities.
 	dmp.DiffEditCost = 4
 	// Null case.
@@ -652,7 +652,7 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 
 /*
 func Test_diffPrettyHtml(t *testing.T) {
-    dmp := createDMP()
+    dmp := New()
     // Pretty print.
     diffs := []Diff{
         Diff{DiffEqual, "a\n"},
@@ -663,7 +663,7 @@ func Test_diffPrettyHtml(t *testing.T) {
 }*/
 
 func Test_diffText(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Compute the source and destination texts.
 	diffs := []Diff{
 		Diff{DiffEqual, "jump"},
@@ -678,7 +678,7 @@ func Test_diffText(t *testing.T) {
 }
 
 func Test_diffDelta(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Convert a diff into delta string.
 	diffs := []Diff{
 		Diff{DiffEqual, "jump"},
@@ -753,7 +753,7 @@ func Test_diffDelta(t *testing.T) {
 }
 
 func Test_diffXIndex(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Translate a location in text1 to text2.
 	diffs := []Diff{
 		Diff{DiffDelete, "a"},
@@ -769,7 +769,7 @@ func Test_diffXIndex(t *testing.T) {
 }
 
 func Test_diffLevenshtein(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	diffs := []Diff{
 		Diff{DiffDelete, "abc"},
 		Diff{DiffInsert, "1234"},
@@ -790,7 +790,7 @@ func Test_diffLevenshtein(t *testing.T) {
 }
 
 func Test_diffBisect(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Normal.
 	a := "cat"
 	b := "map"
@@ -812,7 +812,7 @@ func Test_diffBisect(t *testing.T) {
 }
 
 func Test_diffMain(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Perform a trivial diff.
 	diffs := []Diff{}
 	assertDiffEqual(t, diffs, dmp.DiffMain("", "", false))
@@ -908,7 +908,7 @@ func Test_diffMain(t *testing.T) {
 }
 
 func Test_match_alphabet(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Initialise the bitmasks for Bitap.
 	bitmask := map[byte]int{
 		'a': 4,
@@ -926,7 +926,7 @@ func Test_match_alphabet(t *testing.T) {
 }
 
 func Test_match_bitap(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 
 	// Bitap algorithm.
 	dmp.MatchDistance = 100
@@ -973,7 +973,7 @@ func Test_match_bitap(t *testing.T) {
 }
 
 func Test_MatchMain(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	// Full match.
 	assert.Equal(t, 0, dmp.MatchMain("abcdef", "abcdef", 1000), "MatchMain: Equality.")
 
@@ -1015,7 +1015,7 @@ func Test_patch_patchObj(t *testing.T) {
 }
 
 func Test_patch_fromText(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 
 	_v1, _ := dmp.PatchFromText("")
 	softAssert(t, len(_v1) == 0, "patch_fromText: #0.")
@@ -1038,7 +1038,7 @@ func Test_patch_fromText(t *testing.T) {
 }
 
 func Test_patch_toText(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n  laz\n"
 	var patches []Patch
 	patches, _ = dmp.PatchFromText(strp)
@@ -1052,7 +1052,7 @@ func Test_patch_toText(t *testing.T) {
 }
 
 func Test_patch_addContext(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	dmp.PatchMargin = 4
 	var p Patch
 	_p, _ := dmp.PatchFromText("@@ -21,4 +21,10 @@\n-jump\n+somersault\n")
@@ -1077,7 +1077,7 @@ func Test_patch_addContext(t *testing.T) {
 }
 
 func Test_patch_make(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "")
 	assert.Equal(t, "", dmp.PatchToText(patches), "patch_make: Null case.")
@@ -1131,7 +1131,7 @@ func Test_patch_make(t *testing.T) {
 
 func Test_PatchSplitMax(t *testing.T) {
 	// Assumes that Match_MaxBits is 32.
-	dmp := createDMP()
+	dmp := New()
 	var patches []Patch
 
 	patches = dmp.PatchMake("abcdefghijklmnopqrstuvwxyz01234567890", "XabXcdXefXghXijXklXmnXopXqrXstXuvXwxXyzX01X23X45X67X89X0")
@@ -1153,7 +1153,7 @@ func Test_PatchSplitMax(t *testing.T) {
 }
 
 func Test_PatchAddPadding(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "test")
 	assert.Equal(t, "@@ -0,0 +1,4 @@\n+test\n",
@@ -1184,7 +1184,7 @@ func Test_PatchAddPadding(t *testing.T) {
 }
 
 func Test_patchApply(t *testing.T) {
-	dmp := createDMP()
+	dmp := New()
 	dmp.MatchDistance = 1000
 	dmp.MatchThreshold = 0.5
 	dmp.PatchDeleteThreshold = 0.5

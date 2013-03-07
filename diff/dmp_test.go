@@ -1,13 +1,13 @@
 package diffmatchpatch
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
+	"runtime"
 	"strconv"
 	"testing"
 	"time"
-	"runtime"
-	"bytes"
 
 	"github.com/bmizerany/assert"
 )
@@ -29,7 +29,7 @@ func caller() string {
 func pretty(diffs []Diff) string {
 	var w bytes.Buffer
 	for i, diff := range diffs {
-		w.WriteString(fmt.Sprintf("%v. ",i))
+		w.WriteString(fmt.Sprintf("%v. ", i))
 		switch diff.Type {
 		case DiffInsert:
 			w.WriteString("DiffIns")
@@ -170,7 +170,7 @@ func Test_diffHalfmatchTest(t *testing.T) {
 	softAssert(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
 
 	// Single Match.
-	assertStrEqual(t, 
+	assertStrEqual(t,
 		[]string{"12", "90", "a", "z", "345678"},
 		dmp.DiffHalfMatch("1234567890", "a345678z"))
 
@@ -874,7 +874,7 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffDelete, "="},
 		Diff{DiffInsert, "-"},
 		Diff{DiffEqual, "bcd"},
-		Diff{DiffDelete, "="}, 
+		Diff{DiffDelete, "="},
 		Diff{DiffInsert, "-"},
 		Diff{DiffEqual, "efghijklmnopqrs"},
 		Diff{DiffDelete, "EFGHIJKLMNOefg"}}

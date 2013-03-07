@@ -12,7 +12,7 @@
  * See included LICENSE file for license details.
  */
 
-// Package diffmatchpatch offers robust algorithms to perform the 
+// Package diffmatchpatch offers robust algorithms to perform the
 // operations required for synchronizing plain text.
 package diffmatchpatch
 
@@ -188,13 +188,13 @@ func (patch *Patch) String() string {
 func New() *DiffMatchPatch {
 	// Defaults.
 	return &DiffMatchPatch{
-		DiffTimeout:  1.0,
-		DiffEditCost:  4,
-		MatchThreshold:  0.5,
-		MatchDistance:  1000,
-		PatchDeleteThreshold:  0.5,
-		PatchMargin:  4,
-		MatchMaxBits:  32,
+		DiffTimeout:          1.0,
+		DiffEditCost:         4,
+		MatchThreshold:       0.5,
+		MatchDistance:        1000,
+		PatchDeleteThreshold: 0.5,
+		PatchMargin:          4,
+		MatchMaxBits:         32,
 	}
 }
 
@@ -297,7 +297,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 			Diff{DiffDelete, text1},
 			Diff{DiffInsert, text2},
 		}
-	// Check to see if the problem can be split in two.
+		// Check to see if the problem can be split in two.
 	} else if hm := dmp.DiffHalfMatch(text1, text2); hm != nil {
 		// A half-match was found, sort out the return data.
 		text1_a := hm[0]
@@ -493,7 +493,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 	}
 }
 
-func (dmp *DiffMatchPatch) diffBisectSplit_(text1 , text2 []rune, x, y int, deadline int64) []Diff {
+func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 []rune, x, y int, deadline int64) []Diff {
 	text1a := string(text1[:x])
 	text2a := string(text2[:y])
 	text1b := string(text1[x:])
@@ -663,7 +663,7 @@ func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 	return 0
 }
 
-// DiffHalfMatch checks whether the two texts share a substring which is at 
+// DiffHalfMatch checks whether the two texts share a substring which is at
 // least half the length of the longer text. This speedup can produce non-minimal diffs.
 func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	if dmp.DiffTimeout <= 0 {
@@ -773,7 +773,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l string, s string, i int) []string {
 	return nil
 }
 
-// Diff_cleanupSemantic reduces the number of edits by eliminating 
+// Diff_cleanupSemantic reduces the number of edits by eliminating
 // semantically trivial equalities.
 func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	changes := false
@@ -1026,7 +1026,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 	return diffs
 }
 
-// Diff_cleanupEfficiency reduces the number of edits by eliminating 
+// Diff_cleanupEfficiency reduces the number of edits by eliminating
 // operationally trivial equalities.
 func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 	changes := false
@@ -1770,7 +1770,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	return patches
 }
 
-// PatchDeepCopy returns an array that is identical to a 
+// PatchDeepCopy returns an array that is identical to a
 // given an array of patches.
 func (dmp *DiffMatchPatch) PatchDeepCopy(patches []Patch) []Patch {
 	patchesCopy := []Patch{}
@@ -2128,4 +2128,3 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	return patches, nil
 }
-

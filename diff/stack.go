@@ -36,7 +36,7 @@ func (s *Stack) Pop() (value interface{}) {
 	return nil
 }
 
-// Peek returns the value of the element on the top of the stack 
+// Peek returns the value of the element on the top of the stack
 // but don't remove it. If the stack is empty, return nil
 func (s *Stack) Peek() (value interface{}) {
 	if s.size > 0 {

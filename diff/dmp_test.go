@@ -9,15 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchrcom/testify/assert"
 )
-
-func softAssert(t *testing.T, cond bool, msg string) {
-	if !cond {
-		print("assertion fail: ", msg, "\n")
-		panic(1)
-	}
-}
 
 func caller() string {
 	if _, _, line, ok := runtime.Caller(2); ok {
@@ -79,13 +72,15 @@ func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
 func assertDiffEqual(t *testing.T, seq1, seq2 []Diff) {
 	if a, b := len(seq1), len(seq2); a != b {
 		t.Errorf("%v\nseq1:\n%v\nseq2:\n%v", caller(), pretty(seq1), pretty(seq2))
-		t.Fatalf("%v Sequences of different length: %v != %v", caller(), a, b)
+		t.Errorf("%v Sequences of different length: %v != %v", caller(), a, b)
+		return
 	}
 
 	for i := range seq1 {
 		if a, b := seq1[i], seq2[i]; a != b {
 			t.Errorf("%v\nseq1:\n%v\nseq2:\n%v", caller(), pretty(seq1), pretty(seq2))
-			t.Fatalf("%v %v != %v", caller(), a, b)
+			t.Errorf("%v %v != %v", caller(), a, b)
+			return
 		}
 	}
 }
@@ -166,8 +161,8 @@ func Test_diffHalfmatchTest(t *testing.T) {
 	dmp := New()
 	dmp.DiffTimeout = 1
 	// No match.
-	softAssert(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
-	softAssert(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
+	assert.True(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
+	assert.True(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
 
 	// Single Match.
 	assertStrEqual(t,
@@ -193,7 +188,7 @@ func Test_diffHalfmatchTest(t *testing.T) {
 
 	// Optimal no halfmatch.
 	dmp.DiffTimeout = 0
-	softAssert(t, dmp.DiffHalfMatch("qHilloHelloHew", "xHelloHeHulloy") == nil, "")
+	assert.True(t, dmp.DiffHalfMatch("qHilloHelloHew", "xHelloHeHulloy") == nil, "")
 }
 
 func Test_diffLinesToChars(t *testing.T) {
@@ -703,13 +698,13 @@ func Test_diffDelta(t *testing.T) {
 	// Generates error (19 < 20).
 	_, err = dmp.DiffFromDelta(text1+"x", delta)
 	if err == nil {
-		panic(1) //assert.Fail("diff_fromDelta: Too long.");
+		t.Fatal("diff_fromDelta: Too long.")
 	}
 
 	// Generates error (19 > 18).
 	_, err = dmp.DiffFromDelta(text1[1:], delta)
 	if err == nil {
-		panic(1) //assert.Fail("diff_fromDelta: Too short.");
+		t.Fatal("diff_fromDelta: Too short.")
 	}
 
 	// Generates error (%c3%xy invalid Unicode).
@@ -880,7 +875,12 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffDelete, "EFGHIJKLMNOefg"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
 
-	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}
+	diffs = []Diff{
+		Diff{DiffInsert, " "},
+		Diff{DiffEqual, "a"},
+		Diff{DiffInsert, "nd"},
+		Diff{DiffEqual, " [[Pennsylvania]]"},
+		Diff{DiffDelete, " and [[New"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
 
 	dmp.DiffTimeout = 0.1 // 100ms
@@ -897,11 +897,11 @@ func Test_diffMain(t *testing.T) {
 	endTime := time.Now().Unix()
 	endTime *= 1000
 	// Test that we took at least the timeout period.
-	softAssert(t, dmp.DiffTimeout*1000 <= float64(endTime-startTime), "")
+	assert.True(t, dmp.DiffTimeout*1000 <= float64(endTime-startTime), "")
 	// Test that we didn't take forever (be forgiving).
 	// Theoretically this test could fail very occasionally if the
 	// OS task swaps or locks up for a second at the wrong moment.
-	softAssert(t, dmp.DiffTimeout*1000*2 > float64(endTime-startTime), "")
+	assert.True(t, dmp.DiffTimeout*1000*2 > float64(endTime-startTime), "")
 	dmp.DiffTimeout = 0
 
 	// Test the linemode speedup.
@@ -1034,7 +1034,7 @@ func Test_patch_fromText(t *testing.T) {
 	dmp := New()
 
 	_v1, _ := dmp.PatchFromText("")
-	softAssert(t, len(_v1) == 0, "patch_fromText: #0.")
+	assert.True(t, len(_v1) == 0, "patch_fromText: #0.")
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0Alaz\n"
 	_v2, _ := dmp.PatchFromText(strp)
 	assert.Equal(t, strp, _v2[0].String(), "patch_fromText: #1.")
@@ -1050,7 +1050,7 @@ func Test_patch_fromText(t *testing.T) {
 
 	// Generates error.
 	_, err := dmp.PatchFromText("Bad\nPatch\n")
-	softAssert(t, err != nil, "There should be an error")
+	assert.True(t, err != nil, "There should be an error")
 }
 
 func Test_patch_toText(t *testing.T) {
@@ -1172,9 +1172,13 @@ func Test_PatchAddPadding(t *testing.T) {
 	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "test")
-	assert.Equal(t, "@@ -0,0 +1,4 @@\n+test\n",
+	pass := assert.Equal(t, "@@ -0,0 +1,4 @@\n+test\n",
 		dmp.PatchToText(patches),
 		"PatchAddPadding: Both edges full.")
+	if !pass {
+		t.FailNow()
+	}
+
 	dmp.PatchAddPadding(patches)
 	assert.Equal(t, "@@ -1,8 +1,12 @@\n %01%02%03%04\n+test\n %01%02%03%04\n",
 		dmp.PatchToText(patches),
@@ -1209,7 +1213,10 @@ func Test_patchApply(t *testing.T) {
 	results0, results1 := dmp.PatchApply(patches, "Hello world.")
 	boolArray := results1
 	resultStr := results0 + "\t" + string(len(boolArray))
-	assert.Equal(t, "Hello world.\t0", resultStr, "patch_apply: Null case.")
+	pass := assert.Equal(t, "Hello world.\t0", resultStr, "patch_apply: Null case.")
+	if !pass {
+		t.FailNow()
+	}
 
 	patches = dmp.PatchMake("The quick brown fox jumps over the lazy dog.", "That quick brown fox jumped over a lazy dog.")
 	results0, results1 = dmp.PatchApply(patches, "The quick brown fox jumps over the lazy dog.")

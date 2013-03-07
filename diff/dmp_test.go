@@ -844,7 +844,6 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffEqual, "s are a"},
 		Diff{DiffInsert, "lso"},
 		Diff{DiffEqual, " fruit."}}
-
 	assertDiffEqual(t, diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
 	diffs = []Diff{
@@ -853,15 +852,32 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffEqual, "x"},
 		Diff{DiffDelete, "\t"},
 		Diff{DiffInsert, "\u0000"}}
-
 	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
-	diffs = []Diff{Diff{DiffDelete, "1"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "y"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "2"}, Diff{DiffInsert, "xab"}}
+
+	diffs = []Diff{
+		Diff{DiffDelete, "1"},
+		Diff{DiffEqual, "a"},
+		Diff{DiffDelete, "y"},
+		Diff{DiffEqual, "b"},
+		Diff{DiffDelete, "2"},
+		Diff{DiffInsert, "xab"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("1ayb2", "abxab", false))
 
-	diffs = []Diff{Diff{DiffInsert, "xaxcx"}, Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
+	diffs = []Diff{
+		Diff{DiffInsert, "xaxcx"},
+		Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("abcy", "xaxcxabc", false))
 
-	diffs = []Diff{Diff{DiffDelete, "ABCD"}, Diff{DiffEqual, "a"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "bcd"}, Diff{DiffDelete, "="}, Diff{DiffInsert, "-"}, Diff{DiffEqual, "efghijklmnopqrs"}, Diff{DiffDelete, "EFGHIJKLMNOefg"}}
+	diffs = []Diff{
+		Diff{DiffDelete, "ABCD"},
+		Diff{DiffEqual, "a"},
+		Diff{DiffDelete, "="},
+		Diff{DiffInsert, "-"},
+		Diff{DiffEqual, "bcd"},
+		Diff{DiffDelete, "="}, 
+		Diff{DiffInsert, "-"},
+		Diff{DiffEqual, "efghijklmnopqrs"},
+		Diff{DiffDelete, "EFGHIJKLMNOefg"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
 
 	diffs = []Diff{Diff{DiffInsert, " "}, Diff{DiffEqual, "a"}, Diff{DiffInsert, "nd"}, Diff{DiffEqual, " [[Pennsylvania]]"}, Diff{DiffDelete, " and [[New"}}

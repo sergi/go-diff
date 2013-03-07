@@ -225,8 +225,9 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 		return diffs
 	}
 
+	// Trim off common prefix (speedup).
 	commonlength := dmp.DiffCommonPrefix(text1, text2)
-	commonprefix := text1[0:commonlength]
+	commonprefix := text1[:commonlength]
 	text1 = text1[commonlength:]
 	text2 = text2[commonlength:]
 
@@ -234,8 +235,8 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	commonlength = dmp.DiffCommonSuffix(text1, text2)
 	commonsuffix := text1[len(text1)-commonlength:]
 
-	text1 = text1[0 : len(text1)-commonlength]
-	text2 = text2[0 : len(text2)-commonlength]
+	text1 = text1[:len(text1)-commonlength]
+	text2 = text2[:len(text2)-commonlength]
 
 	// Compute the diff on the middle block.
 	diffs = dmp.diffCompute(text1, text2, checklines, deadline)
@@ -382,10 +383,10 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline int
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64) []Diff {
 	// Cache the text lengths to prevent multiple calls.
-	text1_length := len(text1)
-	text2_length := len(text2)
+	s1, s2 := []rune(text1), []rune(text2)
+	s1_length, s2_length := len(s1), len(s2)
 
-	max_d := int(math.Ceil(float64(((text1_length + text2_length) / 2))))
+	max_d := int(math.Ceil(float64(((s1_length + s2_length) / 2))))
 	v_offset := max_d
 	v_length := 2 * max_d
 	v1 := make([]int, v_length)
@@ -394,7 +395,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 	v1[v_offset+1] = 0
 	v2[v_offset+1] = 0
 
-	delta := text1_length - text2_length
+	delta := s1_length - s2_length
 	// If the total number of characters is odd, then the front path will collide
 	// with the reverse path.
 	front := (delta%2 != 0)
@@ -422,26 +423,26 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 			}
 
 			y1 := x1 - k1
-			for x1 < text1_length && y1 < text2_length &&
-				text1[x1] == text2[y1] {
+			for x1 < s1_length && y1 < s2_length &&
+				s1[x1] == s2[y1] {
 				x1++
 				y1++
 			}
 			v1[k1_offset] = x1
-			if x1 > text1_length {
+			if x1 > s1_length {
 				// Ran off the right of the graph.
 				k1end += 2
-			} else if y1 > text2_length {
+			} else if y1 > s2_length {
 				// Ran off the bottom of the graph.
 				k1start += 2
 			} else if front {
 				k2_offset := v_offset + delta - k1
 				if k2_offset >= 0 && k2_offset < v_length && v2[k2_offset] != -1 {
 					// Mirror x2 onto top-left coordinate system.
-					x2 := text1_length - v2[k2_offset]
+					x2 := s1_length - v2[k2_offset]
 					if x1 >= x2 {
 						// Overlap detected.
-						return dmp.diffBisectSplit_(text1, text2, x1, y1, deadline)
+						return dmp.diffBisectSplit_(s1, s2, x1, y1, deadline)
 					}
 				}
 			}
@@ -456,17 +457,17 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 				x2 = v2[k2_offset-1] + 1
 			}
 			var y2 = x2 - k2
-			for x2 < text1_length &&
-				y2 < text2_length &&
-				(text1[text1_length-x2-1] == text2[text2_length-y2-1]) {
+			for x2 < s1_length &&
+				y2 < s2_length &&
+				(s1[s1_length-x2-1] == s2[s2_length-y2-1]) {
 				x2++
 				y2++
 			}
 			v2[k2_offset] = x2
-			if x2 > text1_length {
+			if x2 > s1_length {
 				// Ran off the left of the graph.
 				k2end += 2
-			} else if y2 > text2_length {
+			} else if y2 > s2_length {
 				// Ran off the top of the graph.
 				k2start += 2
 			} else if !front {
@@ -475,10 +476,10 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 					x1 := v1[k1_offset]
 					y1 := v_offset + x1 - k1_offset
 					// Mirror x2 onto top-left coordinate system.
-					x2 = text1_length - x2
+					x2 = s1_length - x2
 					if x1 >= x2 {
 						// Overlap detected.
-						return dmp.diffBisectSplit_(text1, text2, x1, y1, deadline)
+						return dmp.diffBisectSplit_(s1, s2, x1, y1, deadline)
 					}
 				}
 			}
@@ -492,11 +493,11 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 	}
 }
 
-func (dmp *DiffMatchPatch) diffBisectSplit_(text1 string, text2 string, x int, y int, deadline int64) []Diff {
-	text1a := text1[0:x]
-	text2a := text2[0:y]
-	text1b := text1[x:]
-	text2b := text2[y:]
+func (dmp *DiffMatchPatch) diffBisectSplit_(text1 , text2 []rune, x, y int, deadline int64) []Diff {
+	text1a := string(text1[:x])
+	text2a := string(text2[:y])
+	text1b := string(text1[x:])
+	text2b := string(text2[y:])
 
 	// Compute both diffs serially.
 	diffs := dmp.DiffMain(text1a, text2a, false, deadline)
@@ -587,26 +588,6 @@ func (dmp *DiffMatchPatch) DiffCommonPrefix(text1 string, text2 string) int {
 		}
 	}
 	return n
-
-	// Binary search.
-	// Performance analysis: http://neil.fraser.name/news/2007/10/09/
-	/*
-	   pointermin := 0
-	   pointermax := math.Min(len(text1), len(text2))
-	   pointermid := pointermax
-	   pointerstart := 0
-	   for pointermin < pointermid {
-	       if text1[pointerstart:pointermid] ==
-	           text2[pointerstart:pointermid] {
-	           pointermin = pointermid
-	           pointerstart = pointermin
-	       } else {
-	           pointermax = pointermid
-	       }
-	       pointermid = math.Floor((pointermax-pointermin)/2 + pointermin)
-	   }
-	   return pointermid
-	*/
 }
 
 // DiffCommonSuffix determines the common suffix length of two strings.
@@ -2147,3 +2128,4 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	return patches, nil
 }
+

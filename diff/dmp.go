@@ -234,17 +234,16 @@ func (dmp *DiffMatchPatch) DiffMain(text1 string, text2 string, opt ...interface
 	// Trim off common suffix (speedup).
 	commonlength = dmp.DiffCommonSuffix(text1, text2)
 	commonsuffix := text1[len(text1)-commonlength:]
-
 	text1 = text1[:len(text1)-commonlength]
 	text2 = text2[:len(text2)-commonlength]
 
 	// Compute the diff on the middle block.
 	diffs = dmp.diffCompute(text1, text2, checklines, deadline)
+
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
 		diffs = append([]Diff{Diff{DiffEqual, commonprefix}}, diffs...)
 	}
-
 	if len(commonsuffix) != 0 {
 		diffs = append(diffs, Diff{DiffEqual, commonsuffix})
 	}
@@ -259,15 +258,12 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 	if len(text1) == 0 {
 		// Just add some text (speedup).
 		return append(diffs, Diff{DiffInsert, text2})
-	}
-
-	if len(text2) == 0 {
+	} else if len(text2) == 0 {
 		// Just delete some text (speedup).
 		return append(diffs, Diff{DiffDelete, text1})
 	}
 
 	var longtext, shorttext string
-
 	if utf8.RuneCountInString(text1) > utf8.RuneCountInString(text2) {
 		longtext = text1
 		shorttext = text2
@@ -279,14 +275,14 @@ func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string, checklines bo
 	if i := strings.Index(longtext, shorttext); i != -1 {
 		var op int8 = DiffInsert
 		// Swap insertions for deletions if diff is reversed.
-		if utf8.RuneCountInString(text1) > utf8.RuneCountInString(text2) {
+		if len(text1) > len(text2) {
 			op = DiffDelete
 		}
 		// Shorter text is inside the longer text (speedup).
 		diffs = []Diff{
-			Diff{op, longtext[0:i]},
+			Diff{op, longtext[:i]},
 			Diff{DiffEqual, shorttext},
-			Diff{op, longtext[i+utf8.RuneCountInString(shorttext):]},
+			Diff{op, longtext[i+len(shorttext):]},
 		}
 
 		return diffs
@@ -386,7 +382,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 	s1, s2 := []rune(text1), []rune(text2)
 	s1_length, s2_length := len(s1), len(s2)
 
-	max_d := int(math.Ceil(float64(((s1_length + s2_length) / 2))))
+	max_d := (s1_length + s2_length + 1) / 2
 	v_offset := max_d
 	v_length := 2 * max_d
 	v1 := make([]int, v_length)
@@ -413,7 +409,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline int64
 
 		// Walk the front path one step.
 		for k1 := -d + k1start; k1 <= d-k1end; k1 += 2 {
-			var k1_offset = v_offset + k1
+			k1_offset := v_offset + k1
 			var x1 int
 
 			if k1 == -d || (k1 != d && v1[k1_offset-1] < v1[k1_offset+1]) {
@@ -680,16 +676,15 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 		shorttext = text1
 	}
 
-	//TODO
 	if len(longtext) < 4 || len(shorttext)*2 < len(longtext) {
 		return nil // Pointless.
 	}
 
 	// First check if the second quarter is the seed for a half-match.
-	hm1 := dmp.diffHalfMatchI(longtext, shorttext, int(math.Ceil(float64(len(longtext)/4))))
+	hm1 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+3)/4))
 
 	// Check again based on the third quarter.
-	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(math.Ceil(float64(len(longtext)/2))))
+	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+1)/2))
 
 	hm := []string{}
 	if hm1 == nil && hm2 == nil {

@@ -891,17 +891,17 @@ func Test_diffMain(t *testing.T) {
 		a = a + a
 		b = b + b
 	}
-	startTime := time.Now().Unix()
-	startTime *= 1000
+	startTime := time.Now()
 	dmp.DiffMain(a, b)
-	endTime := time.Now().Unix()
-	endTime *= 1000
+	endTime := time.Now()
+	delta := endTime.Sub(startTime)
+	expected := time.Duration(dmp.DiffTimeout) * time.Second
 	// Test that we took at least the timeout period.
-	assert.True(t, dmp.DiffTimeout*1000 <= float64(endTime-startTime), "")
+	assert.True(t, delta >= expected, "")
 	// Test that we didn't take forever (be forgiving).
 	// Theoretically this test could fail very occasionally if the
 	// OS task swaps or locks up for a second at the wrong moment.
-	assert.True(t, dmp.DiffTimeout*1000*2 > float64(endTime-startTime), "")
+	assert.True(t, delta < (expected * 2), "")
 	dmp.DiffTimeout = 0
 
 	// Test the linemode speedup.

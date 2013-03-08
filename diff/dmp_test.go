@@ -799,11 +799,11 @@ func Test_diffBisect(t *testing.T) {
 		Diff{DiffDelete, "t"},
 		Diff{DiffInsert, "p"}}
 
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC).Unix()))
+	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC)))
 
 	// Timeout.
 	diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC).Unix()))
+	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC)))
 }
 
 func Test_diffMain(t *testing.T) {
@@ -883,11 +883,11 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffDelete, " and [[New"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
 
-	dmp.DiffTimeout = 0.1 // 100ms
+	dmp.DiffTimeout = 100 * time.Millisecond // 100ms
 	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
 	b := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"
 	// Increase the text lengths by 1024 times to ensure a timeout.
-	for x := 0; x < 10; x++ {
+	for x := 0; x < 13; x++ {
 		a = a + a
 		b = b + b
 	}
@@ -895,13 +895,12 @@ func Test_diffMain(t *testing.T) {
 	dmp.DiffMain(a, b)
 	endTime := time.Now()
 	delta := endTime.Sub(startTime)
-	expected := time.Duration(dmp.DiffTimeout) * time.Second
 	// Test that we took at least the timeout period.
-	assert.True(t, delta >= expected, "")
+	assert.True(t, delta >= dmp.DiffTimeout, fmt.Sprintf("%v !>= %v", delta, dmp.DiffTimeout))
 	// Test that we didn't take forever (be forgiving).
 	// Theoretically this test could fail very occasionally if the
 	// OS task swaps or locks up for a second at the wrong moment.
-	assert.True(t, delta < (expected * 2), "")
+	assert.True(t, delta < (dmp.DiffTimeout * 2), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
 	dmp.DiffTimeout = 0
 
 	// Test the linemode speedup.

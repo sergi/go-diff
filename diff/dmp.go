@@ -305,7 +305,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, dea
 
 // diffLineMode does a quick line-level diff on both strings, then rediff the parts for
 // greater accuracy. This speedup can produce non-minimal diffs.
-func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffLineMode(text1, text2 string, deadline time.Time) []Diff {
 	// Scan the text on a line-by-line basis first.
 	text1, text2, linearray := dmp.DiffLinesToChars(text1, text2)
 
@@ -363,7 +363,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline tim
 // DiffBisect finds the 'middle snake' of a diff, split the problem in two
 // and return the recursively constructed diff.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
-func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) []Diff {
 	// Cache the text lengths to prevent multiple calls.
 	text1_len, text2_len := len(text1), len(text2)
 
@@ -372,6 +372,11 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.
 	v_length := 2 * max_d
 	v1 := make([]int, v_length)
 	v2 := make([]int, v_length)
+	fmt.Println("vlen: ", v_length)
+	for i := range v1 {
+		v1[i] = -1
+		v2[i] = -1
+	}
 
 	v1[v_offset+1] = 0
 	v2[v_offset+1] = 0
@@ -497,7 +502,7 @@ deadline time.Time) []Diff {
 
 // DiffLinesToChars split two texts into a list of strings.  Reduces the texts to a string of
 // hashes where each Unicode character represents one line.
-func (dmp *DiffMatchPatch) DiffLinesToChars(text1 string, text2 string) (string, string, []string) {
+func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it.
 	// So we'll insert a junk entry to avoid generating a null character.
 	lineArray := []string{""}    // e.g. lineArray[4] == 'Hello\n'
@@ -561,15 +566,8 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 	return hydrated
 }
 
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 // DiffCommonPrefix determines the common prefix length of two strings.
-func (dmp *DiffMatchPatch) DiffCommonPrefix(text1 string, text2 string) int {
+func (dmp *DiffMatchPatch) DiffCommonPrefix(text1, text2 string) int {
 	n := min(len(text1), len(text2))
 	for i := 0; i < n; i++ {
 		if text1[i] != text2[i] {
@@ -580,7 +578,7 @@ func (dmp *DiffMatchPatch) DiffCommonPrefix(text1 string, text2 string) int {
 }
 
 // DiffCommonSuffix determines the common suffix length of two strings.
-func (dmp *DiffMatchPatch) DiffCommonSuffix(text1 string, text2 string) int {
+func (dmp *DiffMatchPatch) DiffCommonSuffix(text1, text2 string) int {
 	text1_length := len(text1)
 	text2_length := len(text2)
 	n := min(text1_length, text2_length)
@@ -1460,7 +1458,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 
 // MatchMain locates the best instance of 'pattern' in 'text' near 'loc'.
 // Returns -1 if no match found.
-func (dmp *DiffMatchPatch) MatchMain(text string, pattern string, loc int) int {
+func (dmp *DiffMatchPatch) MatchMain(text, pattern string, loc int) int {
 	// Check for null inputs not needed since null can't be passed in C#.
 
 	loc = int(math.Max(0, math.Min(float64(loc), float64(len(text)))))
@@ -1480,7 +1478,7 @@ func (dmp *DiffMatchPatch) MatchMain(text string, pattern string, loc int) int {
 
 // MatchBitap locates the best instance of 'pattern' in 'text' near 'loc' using the
 // Bitap algorithm.  Returns -1 if no match found.
-func (dmp *DiffMatchPatch) MatchBitap(text string, pattern string, loc int) int {
+func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 	// Initialise the alphabet.
 	s := dmp.MatchAlphabet(pattern)
 
@@ -2116,3 +2114,11 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	return patches, nil
 }
+
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+

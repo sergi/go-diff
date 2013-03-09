@@ -1299,7 +1299,7 @@ func Benchmark_DiffMain(bench *testing.B) {
 	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
 	b := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"
 	// Increase the text lengths by 1024 times to ensure a timeout.
-	for x := 0; x < 18; x++ {
+	for x := 0; x < 10; x++ {
 		a = a + a
 		b = b + b
 	}

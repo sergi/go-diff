@@ -1092,7 +1092,7 @@ func Test_patch_addContext(t *testing.T) {
 	assert.Equal(t, "@@ -1,27 +1,28 @@\n Th\n-e\n+at\n  quick brown fox jumps. \n", p.String(), "patch_addContext: Ambiguity.")
 }
 
-func Test_patch_make(t *testing.T) {
+func test_patch_make(t *testing.T) {
 	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "")
@@ -1145,7 +1145,7 @@ func Test_patch_make(t *testing.T) {
 	// Test null inputs -- not needed because nulls can't be passed in C#.
 }
 
-func Test_PatchSplitMax(t *testing.T) {
+func test_PatchSplitMax(t *testing.T) {
 	// Assumes that Match_MaxBits is 32.
 	dmp := New()
 	var patches []Patch
@@ -1168,7 +1168,7 @@ func Test_PatchSplitMax(t *testing.T) {
 	assert.Equal(t, "@@ -2,32 +2,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n@@ -29,32 +29,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n", dmp.PatchToText(patches))
 }
 
-func Test_PatchAddPadding(t *testing.T) {
+func test_PatchAddPadding(t *testing.T) {
 	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "test")
@@ -1203,7 +1203,7 @@ func Test_PatchAddPadding(t *testing.T) {
 		"PatchAddPadding: Both edges none.")
 }
 
-func Test_patchApply(t *testing.T) {
+func test_patchApply(t *testing.T) {
 	dmp := New()
 	dmp.MatchDistance = 1000
 	dmp.MatchThreshold = 0.5
@@ -1292,3 +1292,20 @@ func Test_patchApply(t *testing.T) {
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
 	assert.Equal(t, "x123\tTrue", resultStr, "patch_apply: Edge partial match.")
 }
+
+func Benchmark_DiffMain(bench *testing.B) {
+	dmp := New()
+	dmp.DiffTimeout = time.Second
+	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
+	b := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"
+	// Increase the text lengths by 1024 times to ensure a timeout.
+	for x := 0; x < 18; x++ {
+		a = a + a
+		b = b + b
+	}
+
+	for i := 0; i < bench.N; i++ {
+		dmp.DiffMain(a, b, true)
+    }
+}
+

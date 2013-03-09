@@ -246,8 +246,7 @@ func (dmp *DiffMatchPatch) diffMain(text1, text2 string, checklines bool, deadli
 
 // diffCompute finds the differences between two texts.  Assumes that the texts do not
 // have any common prefix or suffix.
-func (dmp *DiffMatchPatch) diffCompute(text1 string, text2 string,
-checklines bool, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, deadline time.Time) []Diff {
 	diffs := []Diff{}
 	if len(text1) == 0 {
 		// Just add some text (speedup).
@@ -258,7 +257,7 @@ checklines bool, deadline time.Time) []Diff {
 	}
 
 	var longtext, shorttext string
-	if utf8.RuneCountInString(text1) > utf8.RuneCountInString(text2) {
+	if len(text1) > len(text2) {
 		longtext = text1
 		shorttext = text2
 	} else {
@@ -273,13 +272,11 @@ checklines bool, deadline time.Time) []Diff {
 			op = DiffDelete
 		}
 		// Shorter text is inside the longer text (speedup).
-		diffs = []Diff{
+		return []Diff{
 			Diff{op, longtext[:i]},
 			Diff{DiffEqual, shorttext},
 			Diff{op, longtext[i+len(shorttext):]},
 		}
-
-		return diffs
 	} else if utf8.RuneCountInString(shorttext) == 1 {
 		// Single character string.
 		// After the previous speedup, the character can't be an equality.
@@ -300,7 +297,7 @@ checklines bool, deadline time.Time) []Diff {
 		diffs_b := dmp.diffMain(text1_b, text2_b, checklines, deadline)
 		// Merge the results.
 		return append(diffs_a, append([]Diff{Diff{DiffEqual, mid_common}}, diffs_b...)...)
-	} else if checklines && utf8.RuneCountInString(text1) > 100 && utf8.RuneCountInString(text2) > 100 {
+	} else if checklines && len(text1) > 100 && len(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)
 	}
 	return dmp.DiffBisect(text1, text2, deadline)
@@ -308,8 +305,7 @@ checklines bool, deadline time.Time) []Diff {
 
 // diffLineMode does a quick line-level diff on both strings, then rediff the parts for
 // greater accuracy. This speedup can produce non-minimal diffs.
-func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string,
-deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffLineMode(text1 string, text2 string, deadline time.Time) []Diff {
 	// Scan the text on a line-by-line basis first.
 	text1, text2, linearray := dmp.DiffLinesToChars(text1, text2)
 
@@ -369,10 +365,9 @@ deadline time.Time) []Diff {
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.Time) []Diff {
 	// Cache the text lengths to prevent multiple calls.
-	s1, s2 := []rune(text1), []rune(text2)
-	s1_length, s2_length := len(s1), len(s2)
+	text1_len, text2_len := len(text1), len(text2)
 
-	max_d := (s1_length + s2_length + 1) / 2
+	max_d := (text1_len + text2_len + 1) / 2
 	v_offset := max_d
 	v_length := 2 * max_d
 	v1 := make([]int, v_length)
@@ -381,7 +376,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.
 	v1[v_offset+1] = 0
 	v2[v_offset+1] = 0
 
-	delta := s1_length - s2_length
+	delta := text1_len - text2_len
 	// If the total number of characters is odd, then the front path will collide
 	// with the reverse path.
 	front := (delta%2 != 0)
@@ -409,26 +404,30 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.
 			}
 
 			y1 := x1 - k1
-			for x1 < s1_length && y1 < s2_length &&
-				s1[x1] == s2[y1] {
-				x1++
-				y1++
+			for x1 < text1_len && y1 < text2_len {
+				r1, size := utf8.DecodeRuneInString(text1[x1:])
+				r2, _ := utf8.DecodeRuneInString(text2[y1:])
+				if r1 != r2 {
+					break
+				}
+				x1 += size
+				y1 += size
 			}
 			v1[k1_offset] = x1
-			if x1 > s1_length {
+			if x1 > text1_len {
 				// Ran off the right of the graph.
 				k1end += 2
-			} else if y1 > s2_length {
+			} else if y1 > text2_len {
 				// Ran off the bottom of the graph.
 				k1start += 2
 			} else if front {
 				k2_offset := v_offset + delta - k1
 				if k2_offset >= 0 && k2_offset < v_length && v2[k2_offset] != -1 {
 					// Mirror x2 onto top-left coordinate system.
-					x2 := s1_length - v2[k2_offset]
+					x2 := text1_len - v2[k2_offset]
 					if x1 >= x2 {
 						// Overlap detected.
-						return dmp.diffBisectSplit_(s1, s2, x1, y1, deadline)
+						return dmp.diffBisectSplit_(text1, text2, x1, y1, deadline)
 					}
 				}
 			}
@@ -443,17 +442,20 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.
 				x2 = v2[k2_offset-1] + 1
 			}
 			var y2 = x2 - k2
-			for x2 < s1_length &&
-				y2 < s2_length &&
-				(s1[s1_length-x2-1] == s2[s2_length-y2-1]) {
-				x2++
-				y2++
+			for x2 < text1_len && y2 < text2_len {
+				r1, size := utf8.DecodeLastRuneInString(text1[:text1_len-x2])
+				r2, _ := utf8.DecodeLastRuneInString(text2[:text2_len-y2])
+				if r1 != r2 {
+					break
+				}
+				x2 += size
+				y2 += size
 			}
 			v2[k2_offset] = x2
-			if x2 > s1_length {
+			if x2 > text1_len {
 				// Ran off the left of the graph.
 				k2end += 2
-			} else if y2 > s2_length {
+			} else if y2 > text2_len {
 				// Ran off the top of the graph.
 				k2start += 2
 			} else if !front {
@@ -462,10 +464,10 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.
 					x1 := v1[k1_offset]
 					y1 := v_offset + x1 - k1_offset
 					// Mirror x2 onto top-left coordinate system.
-					x2 = s1_length - x2
+					x2 = text1_len - x2
 					if x1 >= x2 {
 						// Overlap detected.
-						return dmp.diffBisectSplit_(s1, s2, x1, y1, deadline)
+						return dmp.diffBisectSplit_(text1, text2, x1, y1, deadline)
 					}
 				}
 			}
@@ -479,12 +481,12 @@ func (dmp *DiffMatchPatch) DiffBisect(text1 string, text2 string, deadline time.
 	}
 }
 
-func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 []rune, x, y int,
+func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 string, x, y int,
 deadline time.Time) []Diff {
-	text1a := string(text1[:x])
-	text2a := string(text2[:y])
-	text1b := string(text1[x:])
-	text2b := string(text2[y:])
+	text1a := text1[:x]
+	text2a := text2[:y]
+	text1b := text1[x:]
+	text2b := text2[y:]
 
 	// Compute both diffs serially.
 	diffs := dmp.diffMain(text1a, text2a, false, deadline)

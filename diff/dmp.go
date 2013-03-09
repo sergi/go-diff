@@ -325,7 +325,7 @@ deadline time.Time) []Diff {
 	// Convert the diff back to original text.
 	diffs = dmp.DiffCharsToLines(diffs, linearray)
 	// Eliminate freak matches (e.g. blank lines)
-	dmp.DiffCleanupSemantic(diffs)
+	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	// Rediff any replacement blocks, this time character-by-character.
 	// Add a dummy entry at the end.
@@ -349,7 +349,7 @@ deadline time.Time) []Diff {
 			// Upon reaching an equality, check for prior redundancies.
 			if count_delete >= 1 && count_insert >= 1 {
 				// Delete the offending records and add the merged ones.
-				diffs := splice(diffs, pointer-count_delete-count_insert,
+				diffs = splice(diffs, pointer-count_delete-count_insert,
 					count_delete+count_insert)
 
 				pointer = pointer - count_delete - count_insert
@@ -360,10 +360,10 @@ deadline time.Time) []Diff {
 				pointer = pointer + len(a)
 			}
 
-			//count_insert := 0
-			//count_delete := 0
-			//text_delete := ""
-			//text_insert := ""
+			count_insert = 0
+			count_delete = 0
+			text_delete = ""
+			text_insert = ""
 		}
 		pointer++
 	}

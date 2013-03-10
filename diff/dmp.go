@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"math"
 	"net/url"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
+	"log"
 )
 
 // The data structure representing a diff is an array of tuples:
@@ -138,42 +138,37 @@ type Patch struct {
 // String emulates GNU diff's format.
 // Header: @@ -382,8 +481,9 @@
 // Indicies are printed as 1-based, not 0-based.
-func (patch *Patch) String() string {
+func (p *Patch) String() string {
 	var coords1, coords2 string
-	start1 := int64(patch.start1)
-	start2 := int64(patch.start2)
 
-	if patch.length1 == 0 {
-		coords1 = strconv.FormatInt(start1, 10) + ",0"
-	} else if patch.length1 == 1 {
-		coords1 = strconv.FormatInt(start1+1, 10)
+	if p.length1 == 0 {
+		coords1 = strconv.Itoa(p.start1) + ",0"
+	} else if p.length1 == 1 {
+		coords1 = strconv.Itoa(p.start1+1)
 	} else {
-		coords1 = strconv.FormatInt(start1+1, 10) + "," + strconv.FormatInt(int64(patch.length1), 10)
+		coords1 = strconv.Itoa(p.start1+1) + "," + strconv.Itoa(p.length1)
 	}
 
-	if patch.length2 == 0 {
-		coords2 = strconv.FormatInt(start2, 10) + ",0"
-	} else if patch.length2 == 1 {
-		coords2 = strconv.FormatInt(start2+1, 10)
+	if p.length2 == 0 {
+		coords2 = strconv.Itoa(p.start2) + ",0"
+	} else if p.length2 == 1 {
+		coords2 = strconv.Itoa(p.start2+1)
 	} else {
-		coords2 = strconv.FormatInt(start2+1, 10) + "," + strconv.FormatInt(int64(patch.length2), 10)
+		coords2 = strconv.Itoa(p.start2+1) + "," + strconv.Itoa(p.length2)
 	}
 
 	var text bytes.Buffer
 	text.WriteString("@@ -" + coords1 + " +" + coords2 + " @@\n")
 
 	// Escape the body of the patch with %xx notation.
-	for _, aDiff := range patch.diffs {
+	for _, aDiff := range p.diffs {
 		switch aDiff.Type {
 		case DiffInsert:
 			text.WriteString("+")
-			break
 		case DiffDelete:
 			text.WriteString("-")
-			break
 		case DiffEqual:
 			text.WriteString(" ")
-			break
 		}
 
 		text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
@@ -370,14 +365,13 @@ func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) [
 	max_d := (text1_len + text2_len + 1) / 2
 	v_offset := max_d
 	v_length := 2 * max_d
+
 	v1 := make([]int, v_length)
 	v2 := make([]int, v_length)
-	fmt.Println("vlen: ", v_length)
 	for i := range v1 {
 		v1[i] = -1
 		v2[i] = -1
 	}
-
 	v1[v_offset+1] = 0
 	v2[v_offset+1] = 0
 
@@ -1621,22 +1615,22 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	// Look for the first and last matches of pattern in text.  If two
 	// different matches are found, increase the pattern length.
 	for strings.Index(text, pattern) != strings.LastIndex(text, pattern) &&
-		len(pattern) < dmp.MatchMaxBits-dmp.PatchMargin-dmp.PatchMargin {
+		len(pattern) < dmp.MatchMaxBits-2*dmp.PatchMargin {
 		padding += dmp.PatchMargin
-		maxStart := int(math.Max(0, float64(patch.start2-padding)))
-		minEnd := int(math.Min(float64(len(text)), float64(patch.start2+patch.length1+padding)))
+		maxStart := max(0, patch.start2-padding)
+		minEnd := min(len(text), patch.start2+patch.length1+padding)
 		pattern = text[maxStart:minEnd]
 	}
 	// Add one chunk for good luck.
 	padding += dmp.PatchMargin
 
 	// Add the prefix.
-	prefix := text[int(math.Max(0, float64(patch.start2-padding))):int(patch.start2)]
+	prefix := text[max(0, patch.start2-padding):patch.start2]
 	if len(prefix) != 0 {
 		patch.diffs = append([]Diff{Diff{DiffEqual, prefix}}, patch.diffs...)
 	}
 	// Add the suffix.
-	suffix := text[patch.start2+patch.length1 : int(math.Min(float64(len(text)), float64(patch.start2+patch.length1+padding)))]
+	suffix := text[patch.start2+patch.length1 : min(len(text), patch.start2+patch.length1+padding)]
 	if len(suffix) != 0 {
 		patch.diffs = append(patch.diffs, Diff{DiffEqual, suffix})
 	}
@@ -1658,17 +1652,16 @@ func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
 		return dmp.PatchMake(text1, diffs)
 	} else if len(opt) == 2 {
 		text1 := opt[0].(string)
-		kind := reflect.TypeOf(opt[1]).Name()
-		if kind == "string" {
-			text2 := opt[1].(string)
-			diffs := dmp.DiffMain(text1, text2, true)
+		switch t := opt[1].(type) {
+		case string:
+			diffs := dmp.DiffMain(text1, t, true)
 			if len(diffs) > 2 {
 				diffs = dmp.DiffCleanupSemantic(diffs)
 				diffs = dmp.DiffCleanupEfficiency(diffs)
 			}
 			return dmp.PatchMake(text1, diffs)
-		} else if kind == "Diff" {
-			return dmp.patchMake2(text1, opt[1].([]Diff))
+		case []Diff:
+			return dmp.patchMake2(text1, t)
 		}
 	} else if len(opt) == 3 {
 		return dmp.PatchMake(opt[0], opt[2])
@@ -1694,7 +1687,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	prepatch_text := text1
 	postpatch_text := text1
 
-	for _, aDiff := range diffs {
+	for i, aDiff := range diffs {
 		if len(patch.diffs) == 0 && aDiff.Type != DiffEqual {
 			// A new patch starts here.
 			patch.start1 = char_count1
@@ -1705,27 +1698,24 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 		case DiffInsert:
 			patch.diffs = append(patch.diffs, aDiff)
 			patch.length2 += len(aDiff.Text)
-			postpatch_text = postpatch_text[0:char_count2] +
+			postpatch_text = postpatch_text[:char_count2] +
 				aDiff.Text + postpatch_text[char_count2:]
-			break
 		case DiffDelete:
 			patch.length1 += len(aDiff.Text)
 			patch.diffs = append(patch.diffs, aDiff)
-			postpatch_text = postpatch_text[0:char_count2] + postpatch_text[char_count2+len(aDiff.Text):]
-			break
+			postpatch_text = postpatch_text[:char_count2] + postpatch_text[char_count2+len(aDiff.Text):]
 		case DiffEqual:
 			if len(aDiff.Text) <= 2*dmp.PatchMargin &&
-				len(patch.diffs) != 0 && aDiff != diffs[len(diffs)-1] {
+				len(patch.diffs) != 0 && i != len(diffs)-1 {
 				// Small equality inside a patch.
 				patch.diffs = append(patch.diffs, aDiff)
 				patch.length1 += len(aDiff.Text)
 				patch.length2 += len(aDiff.Text)
 			}
-
 			if len(aDiff.Text) >= 2*dmp.PatchMargin {
 				// Time for a new patch.
 				if len(patch.diffs) != 0 {
-					dmp.PatchAddContext(patch, prepatch_text)
+					patch = dmp.PatchAddContext(patch, prepatch_text)
 					patches = append(patches, patch)
 					patch = Patch{}
 					// Unlike Unidiff, our patch lists have a rolling context.
@@ -1736,7 +1726,6 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 					char_count1 = char_count2
 				}
 			}
-			break
 		}
 
 		// Update the current character count.
@@ -1747,6 +1736,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 			char_count2 += len(aDiff.Text)
 		}
 	}
+
 	// Pick up the leftover patch if not empty.
 	if len(patch.diffs) != 0 {
 		dmp.PatchAddContext(patch, prepatch_text)
@@ -2117,6 +2107,13 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 
 func min(x, y int) int {
 	if x < y {
+		return x
+	}
+	return y
+}
+
+func max(x, y int) int {
+	if x > y {
 		return x
 	}
 	return y

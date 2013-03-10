@@ -1092,7 +1092,7 @@ func Test_patch_addContext(t *testing.T) {
 	assert.Equal(t, "@@ -1,27 +1,28 @@\n Th\n-e\n+at\n  quick brown fox jumps. \n", p.String(), "patch_addContext: Ambiguity.")
 }
 
-func test_patch_make(t *testing.T) {
+func Test_patch_make(t *testing.T) {
 	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "")

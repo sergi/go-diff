@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-	"log"
 )
 
 // The data structure representing a diff is an array of tuples:

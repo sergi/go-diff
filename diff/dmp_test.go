@@ -1120,7 +1120,7 @@ func Test_patch_make(t *testing.T) {
 	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Text1+Text2+Diff inputs (deprecated).")
 
 	patches = dmp.PatchMake("`1234567890-=[]\\;',./", "~!@#$%^&*()_+{}|:\"<>?")
-	assert.Equal(t, "@@ -1,21 +1,21 @@\n-%601234567890-=%5b%5d%5c;',./\n+~!@#$%25%5e&*()_+%7b%7d%7c:%22%3c%3e?\n",
+	assert.Equal(t, "@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n",
 		dmp.PatchToText(patches),
 		"patch_toText: Character encoding.")
 
@@ -1141,8 +1141,6 @@ func Test_patch_make(t *testing.T) {
 	expectedPatch = "@@ -573,28 +573,31 @@\n cdefabcdefabcdefabcdefabcdef\n+123\n"
 	patches = dmp.PatchMake(text1, text2)
 	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Long string with repeats.")
-
-	// Test null inputs -- not needed because nulls can't be passed in C#.
 }
 
 func test_PatchSplitMax(t *testing.T) {

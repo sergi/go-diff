@@ -1143,7 +1143,7 @@ func Test_patch_make(t *testing.T) {
 	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Long string with repeats.")
 }
 
-func test_PatchSplitMax(t *testing.T) {
+func Test_PatchSplitMax(t *testing.T) {
 	// Assumes that Match_MaxBits is 32.
 	dmp := New()
 	var patches []Patch

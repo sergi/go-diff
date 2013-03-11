@@ -91,38 +91,24 @@ func indexOf(str string, pattern string, i int) int {
 
 }
 
-type DiffMatchPatch struct {
-	// Number of seconds to map a diff before giving up (0 for infinity).
-	DiffTimeout time.Duration
-	// Cost of an empty edit operation in terms of edit characters.
-	DiffEditCost int
-	// How far to search for a match (0 = exact location, 1000+ = broad match).
-	// A match this many characters away from the expected location will add
-	// 1.0 to the score (0.0 is a perfect match).
-	MatchDistance int
-	// When deleting a large block of text (over ~64 characters), how close do
-	// the contents have to be to match the expected contents. (0.0 = perfection,
-	// 1.0 = very loose).  Note that Match_Threshold controls how closely the
-	// end points of a delete need to match.
-	PatchDeleteThreshold float64
-	// Chunk size for context length.
-	PatchMargin int
-	// The number of bits in an int.
-	MatchMaxBits int
-	// At what point is no match declared (0.0 = perfection, 1.0 = very loose).
-	MatchThreshold float64
+func min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }
 
 // Diff represents one diff operation
 type Diff struct {
 	Type int8
 	Text string
-}
-
-type LinesDiff struct {
-	chars1    string
-	chars2    string
-	lineArray []string
 }
 
 // Patch represents one patch operation.
@@ -175,6 +161,28 @@ func (p *Patch) String() string {
 	}
 
 	return unescaper.Replace(text.String())
+}
+
+type DiffMatchPatch struct {
+	// Number of seconds to map a diff before giving up (0 for infinity).
+	DiffTimeout time.Duration
+	// Cost of an empty edit operation in terms of edit characters.
+	DiffEditCost int
+	// How far to search for a match (0 = exact location, 1000+ = broad match).
+	// A match this many characters away from the expected location will add
+	// 1.0 to the score (0.0 is a perfect match).
+	MatchDistance int
+	// When deleting a large block of text (over ~64 characters), how close do
+	// the contents have to be to match the expected contents. (0.0 = perfection,
+	// 1.0 = very loose).  Note that Match_Threshold controls how closely the
+	// end points of a delete need to match.
+	PatchDeleteThreshold float64
+	// Chunk size for context length.
+	PatchMargin int
+	// The number of bits in an int.
+	MatchMaxBits int
+	// At what point is no match declared (0.0 = perfection, 1.0 = very loose).
+	MatchThreshold float64
 }
 
 // New creates a new DiffMatchPatch object with default parameters.
@@ -1738,7 +1746,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 
 	// Pick up the leftover patch if not empty.
 	if len(patch.diffs) != 0 {
-		dmp.PatchAddContext(patch, prepatch_text)
+		patch = dmp.PatchAddContext(patch, prepatch_text)
 		patches = append(patches, patch)
 	}
 
@@ -2102,19 +2110,5 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 		patches = append(patches, patch)
 	}
 	return patches, nil
-}
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func max(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
 }
 

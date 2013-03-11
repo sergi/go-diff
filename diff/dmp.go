@@ -1872,51 +1872,47 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 	paddingLength := dmp.PatchMargin
 	nullPadding := ""
 	for x := 1; x <= paddingLength; x++ {
-		nullPadding += strconv.FormatInt(int64(x), 10)
+		nullPadding += string(x)
 	}
 
 	// Bump all the patches forward.
-	for _, aPatch := range patches {
-		aPatch.start1 += paddingLength
-		aPatch.start2 += paddingLength
+	for i, _ := range patches {
+		patches[i].start1 += paddingLength
+		patches[i].start2 += paddingLength
 	}
 
 	// Add some padding on start of first diff.
-	patch := patches[0]
-	diffs := patch.diffs
-	if len(diffs) == 0 || diffs[0].Type != DiffEqual {
+	if len(patches[0].diffs) == 0 || patches[0].diffs[0].Type != DiffEqual {
 		// Add nullPadding equality.
-		diffs = append(diffs, Diff{DiffEqual, nullPadding})
-		patch.start1 -= paddingLength // Should be 0.
-		patch.start2 -= paddingLength // Should be 0.
-		patch.length1 += paddingLength
-		patch.length2 += paddingLength
-	} else if paddingLength > len(diffs[0].Text) {
+		patches[0].diffs = append([]Diff{Diff{DiffEqual, nullPadding}}, patches[0].diffs...)
+		patches[0].start1 -= paddingLength // Should be 0.
+		patches[0].start2 -= paddingLength // Should be 0.
+		patches[0].length1 += paddingLength
+		patches[0].length2 += paddingLength
+	} else if paddingLength > len(patches[0].diffs[0].Text) {
 		// Grow first equality.
-		firstDiff := diffs[0]
-		extraLength := paddingLength - len(firstDiff.Text)
-		firstDiff.Text = nullPadding[len(firstDiff.Text):] + firstDiff.Text
-		patch.start1 -= extraLength
-		patch.start2 -= extraLength
-		patch.length1 += extraLength
-		patch.length2 += extraLength
+		extraLength := paddingLength - len(patches[0].diffs[0].Text)
+		patches[0].diffs[0].Text = nullPadding[len(patches[0].diffs[0].Text):] + patches[0].diffs[0].Text
+		patches[0].start1 -= extraLength
+		patches[0].start2 -= extraLength
+		patches[0].length1 += extraLength
+		patches[0].length2 += extraLength
 	}
 
 	// Add some padding on end of last diff.
-	patch = patches[len(patches)-1]
-	diffs = patch.diffs
-	if len(diffs) == 0 || diffs[len(diffs)-1].Type != DiffEqual {
+	last := len(patches) - 1
+	if len(patches[last].diffs) == 0 || patches[last].diffs[len(patches[last].diffs)-1].Type != DiffEqual {
 		// Add nullPadding equality.
-		diffs = append(diffs, Diff{DiffEqual, nullPadding})
-		patch.length1 += paddingLength
-		patch.length2 += paddingLength
-	} else if paddingLength > len(diffs[len(diffs)-1].Text) {
+		patches[last].diffs = append(patches[last].diffs, Diff{DiffEqual, nullPadding})
+		patches[last].length1 += paddingLength
+		patches[last].length2 += paddingLength
+	} else if paddingLength > len(patches[last].diffs[len(patches[last].diffs)-1].Text) {
 		// Grow last equality.
-		lastDiff := diffs[len(diffs)-1]
+		lastDiff := patches[last].diffs[len(patches[last].diffs)-1]
 		extraLength := paddingLength - len(lastDiff.Text)
-		lastDiff.Text += nullPadding[0:extraLength]
-		patch.length1 += extraLength
-		patch.length2 += extraLength
+		patches[last].diffs[len(patches[last].diffs)-1].Text += nullPadding[:extraLength]
+		patches[last].length1 += extraLength
+		patches[last].length2 += extraLength
 	}
 
 	return nullPadding

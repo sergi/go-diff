@@ -1158,7 +1158,7 @@ func Test_PatchSplitMax(t *testing.T) {
 	assert.Equal(t, oldToText, dmp.PatchToText(patches))
 
 	patches = dmp.PatchMake("1234567890123456789012345678901234567890123456789012345678901234567890", "abc")
-	dmp.PatchSplitMax(patches)
+	patches = dmp.PatchSplitMax(patches)
 	assert.Equal(t, "@@ -1,32 +1,4 @@\n-1234567890123456789012345678\n 9012\n@@ -29,32 +1,4 @@\n-9012345678901234567890123456\n 7890\n@@ -57,14 +1,3 @@\n-78901234567890\n+abc\n", dmp.PatchToText(patches))
 
 	patches = dmp.PatchMake("abcdefghij , h : 0 , t : 1 abcdefghij , h : 0 , t : 1 abcdefghij , h : 0 , t : 1", "abcdefghij , h : 1 , t : 1 abcdefghij , h : 1 , t : 1 abcdefghij , h : 0 , t : 1")
@@ -1166,7 +1166,7 @@ func Test_PatchSplitMax(t *testing.T) {
 	assert.Equal(t, "@@ -2,32 +2,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n@@ -29,32 +29,32 @@\n bcdefghij , h : \n-0\n+1\n  , t : 1 abcdef\n", dmp.PatchToText(patches))
 }
 
-func test_PatchAddPadding(t *testing.T) {
+func Test_PatchAddPadding(t *testing.T) {
 	dmp := New()
 	var patches []Patch
 	patches = dmp.PatchMake("", "test")

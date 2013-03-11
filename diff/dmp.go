@@ -1340,20 +1340,17 @@ func (dmp *DiffMatchPatch) DiffLevenshtein(diffs []Diff) int {
 		switch aDiff.Type {
 		case DiffInsert:
 			insertions += len(aDiff.Text)
-			break
 		case DiffDelete:
 			deletions += len(aDiff.Text)
-			break
 		case DiffEqual:
 			// A deletion and an insertion is one substitution.
-			levenshtein += int(math.Max(float64(insertions), float64(deletions)))
+			levenshtein += max(insertions, deletions)
 			insertions = 0
 			deletions = 0
-			break
 		}
 	}
 
-	levenshtein += int(math.Max(float64(insertions), float64(deletions)))
+	levenshtein += max(insertions, deletions)
 	return levenshtein
 }
 
@@ -1790,7 +1787,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 	// positions 10 and 20, but the first patch was found at 12, delta is 2
 	// and the second patch has an effective expected position of 22.
 	delta := 0
-	results := []bool{}
+	results := make([]bool, len(patches))
 	for _, aPatch := range patches {
 		expected_loc := aPatch.start2 + delta
 		text1 := dmp.DiffText1(aPatch.diffs)
@@ -1833,7 +1830,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 				// Imperfect match.  Run a diff to get a framework of equivalent
 				// indices.
 				diffs := dmp.DiffMain(text1, text2, false)
-				if len(text1) > dmp.MatchMaxBits && float64(dmp.DiffLevenshtein(diffs)/len(text1)) > dmp.PatchDeleteThreshold {
+				if len(text1) > dmp.MatchMaxBits && float64(dmp.DiffLevenshtein(diffs))/float64(len(text1)) > dmp.PatchDeleteThreshold {
 					// The end points match, but the content is unacceptably bad.
 					results[x] = false
 				} else {

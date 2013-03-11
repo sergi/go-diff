@@ -1201,7 +1201,7 @@ func Test_PatchAddPadding(t *testing.T) {
 		"PatchAddPadding: Both edges none.")
 }
 
-func test_patchApply(t *testing.T) {
+func Test_patchApply(t *testing.T) {
 	dmp := New()
 	dmp.MatchDistance = 1000
 	dmp.MatchThreshold = 0.5
@@ -1210,7 +1210,7 @@ func test_patchApply(t *testing.T) {
 	patches = dmp.PatchMake("", "")
 	results0, results1 := dmp.PatchApply(patches, "Hello world.")
 	boolArray := results1
-	resultStr := results0 + "\t" + string(len(boolArray))
+	resultStr := fmt.Sprintf("%v\t%v", results0, len(boolArray))
 	pass := assert.Equal(t, "Hello world.\t0", resultStr, "patch_apply: Null case.")
 	if !pass {
 		t.FailNow()
@@ -1220,36 +1220,36 @@ func test_patchApply(t *testing.T) {
 	results0, results1 = dmp.PatchApply(patches, "The quick brown fox jumps over the lazy dog.")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "That quick brown fox jumped over a lazy dog.\tTrue\tTrue", resultStr, "patch_apply: Exact match.")
+	assert.Equal(t, "That quick brown fox jumped over a lazy dog.\ttrue\ttrue", resultStr, "patch_apply: Exact match.")
 
 	results0, results1 = dmp.PatchApply(patches, "The quick red rabbit jumps over the tired tiger.")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "That quick red rabbit jumped over a tired tiger.\tTrue\tTrue", resultStr, "patch_apply: Partial match.")
+	assert.Equal(t, "That quick red rabbit jumped over a tired tiger.\ttrue\ttrue", resultStr, "patch_apply: Partial match.")
 
 	results0, results1 = dmp.PatchApply(patches, "I am the very model of a modern major general.")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "I am the very model of a modern major general.\tFalse\tFalse", resultStr, "patch_apply: Failed match.")
+	assert.Equal(t, "I am the very model of a modern major general.\tfalse\tfalse", resultStr, "patch_apply: Failed match.")
 
 	patches = dmp.PatchMake("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
 	results0, results1 = dmp.PatchApply(patches, "x123456789012345678901234567890-----++++++++++-----123456789012345678901234567890y")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "xabcy\tTrue\tTrue", resultStr, "patch_apply: Big delete, small Diff.")
+	assert.Equal(t, "xabcy\ttrue\ttrue", resultStr, "patch_apply: Big delete, small Diff.")
 
 	patches = dmp.PatchMake("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
 	results0, results1 = dmp.PatchApply(patches, "x12345678901234567890---------------++++++++++---------------12345678901234567890y")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "xabc12345678901234567890---------------++++++++++---------------12345678901234567890y\tFalse\tTrue", resultStr, "patch_apply: Big delete, big Diff 1.")
+	assert.Equal(t, "xabc12345678901234567890---------------++++++++++---------------12345678901234567890y\tfalse\ttrue", resultStr, "patch_apply: Big delete, big Diff 1.")
 
 	dmp.PatchDeleteThreshold = 0.6
 	patches = dmp.PatchMake("x1234567890123456789012345678901234567890123456789012345678901234567890y", "xabcy")
 	results0, results1 = dmp.PatchApply(patches, "x12345678901234567890---------------++++++++++---------------12345678901234567890y")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "xabcy\tTrue\tTrue", resultStr, "patch_apply: Big delete, big Diff 2.")
+	assert.Equal(t, "xabcy\ttrue\ttrue", resultStr, "patch_apply: Big delete, big Diff 2.")
 	dmp.PatchDeleteThreshold = 0.5
 
 	dmp.MatchThreshold = 0.0
@@ -1258,7 +1258,7 @@ func test_patchApply(t *testing.T) {
 	results0, results1 = dmp.PatchApply(patches, "ABCDEFGHIJKLMNOPQRSTUVWXYZ--------------------1234567890")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0]) + "\t" + strconv.FormatBool(boolArray[1])
-	assert.Equal(t, "ABCDEFGHIJKLMNOPQRSTUVWXYZ--------------------1234567YYYYYYYYYY890\tFalse\tTrue", resultStr, "patch_apply: Compensate for failed patch.")
+	assert.Equal(t, "ABCDEFGHIJKLMNOPQRSTUVWXYZ--------------------1234567YYYYYYYYYY890\tfalse\ttrue", resultStr, "patch_apply: Compensate for failed patch.")
 	dmp.MatchThreshold = 0.5
 	dmp.MatchDistance = 1000
 
@@ -1276,19 +1276,19 @@ func test_patchApply(t *testing.T) {
 	results0, results1 = dmp.PatchApply(patches, "")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
-	assert.Equal(t, "test\tTrue", resultStr, "patch_apply: Edge exact match.")
+	assert.Equal(t, "test\ttrue", resultStr, "patch_apply: Edge exact match.")
 
 	patches = dmp.PatchMake("XY", "XtestY")
 	results0, results1 = dmp.PatchApply(patches, "XY")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
-	assert.Equal(t, "XtestY\tTrue", resultStr, "patch_apply: Near edge exact match.")
+	assert.Equal(t, "XtestY\ttrue", resultStr, "patch_apply: Near edge exact match.")
 
 	patches = dmp.PatchMake("y", "y123")
 	results0, results1 = dmp.PatchApply(patches, "x")
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
-	assert.Equal(t, "x123\tTrue", resultStr, "patch_apply: Edge partial match.")
+	assert.Equal(t, "x123\ttrue", resultStr, "patch_apply: Edge partial match.")
 }
 
 func Benchmark_DiffMain(bench *testing.B) {

@@ -125,7 +125,7 @@ func (p *Patch) String() string {
 	if p.length1 == 0 {
 		coords1 = strconv.Itoa(p.start1) + ",0"
 	} else if p.length1 == 1 {
-		coords1 = strconv.Itoa(p.start1+1)
+		coords1 = strconv.Itoa(p.start1 + 1)
 	} else {
 		coords1 = strconv.Itoa(p.start1+1) + "," + strconv.Itoa(p.length1)
 	}
@@ -133,7 +133,7 @@ func (p *Patch) String() string {
 	if p.length2 == 0 {
 		coords2 = strconv.Itoa(p.start2) + ",0"
 	} else if p.length2 == 1 {
-		coords2 = strconv.Itoa(p.start2+1)
+		coords2 = strconv.Itoa(p.start2 + 1)
 	} else {
 		coords2 = strconv.Itoa(p.start2+1) + "," + strconv.Itoa(p.length2)
 	}
@@ -199,7 +199,7 @@ func New() *DiffMatchPatch {
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
 	var deadline time.Time
 	if dmp.DiffTimeout <= 0 {
-		deadline = time.Now().Add(24*365*time.Hour)
+		deadline = time.Now().Add(24 * 365 * time.Hour)
 	} else {
 		deadline = time.Now().Add(dmp.DiffTimeout)
 	}
@@ -484,7 +484,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) [
 }
 
 func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 string, x, y int,
-deadline time.Time) []Diff {
+	deadline time.Time) []Diff {
 	text1a := text1[:x]
 	text2a := text2[:y]
 	text1b := text1[x:]
@@ -2101,4 +2101,3 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	return patches, nil
 }
-

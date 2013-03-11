@@ -901,7 +901,7 @@ func Test_diffMain(t *testing.T) {
 	// Test that we didn't take forever (be forgiving).
 	// Theoretically this test could fail very occasionally if the
 	// OS task swaps or locks up for a second at the wrong moment.
-	assert.True(t, delta < (dmp.DiffTimeout * 2), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
+	assert.True(t, delta < (dmp.DiffTimeout*2), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
 	dmp.DiffTimeout = 0
 
 	// Test the linemode speedup.
@@ -1304,6 +1304,5 @@ func Benchmark_DiffMain(bench *testing.B) {
 
 	for i := 0; i < bench.N; i++ {
 		dmp.DiffMain(a, b, true)
-    }
+	}
 }
-

@@ -66,10 +66,6 @@ func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 	return append(slice[:index], append(elements, slice[index+amount:]...)...)
 }
 
-func splice_patch(slice []Patch, index int, amount int, elements ...Patch) []Patch {
-	return append(slice[:index], append(elements, slice[index+amount:]...)...)
-}
-
 func indexOf(str string, pattern string, i int) int {
 	if i > len(str)-1 {
 		return -1
@@ -1786,7 +1782,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 
 	nullPadding := dmp.PatchAddPadding(patches)
 	text = nullPadding + text + nullPadding
-	dmp.PatchSplitMax(patches)
+	patches = dmp.PatchSplitMax(patches)
 
 	x := 0
 	// delta keeps track of the offset between the expected and actual
@@ -1929,7 +1925,7 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 // PatchSplitMax looks through the patches and breaks up any which are longer than the
 // maximum limit of the match algorithm.
 // Intended to be called only from within patch_apply.
-func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
+func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 	patch_size := dmp.MatchMaxBits
 	for x := 0; x < len(patches); x++ {
 		if patches[x].length1 <= patch_size {
@@ -1937,8 +1933,9 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
 		}
 		bigpatch := patches[x]
 		// Remove the big old patch.
-		x = x - 1
-		patches = splice_patch(patches, x, 1)
+		patches = append(patches[:x], patches[x+1:]...)
+		x -= 1
+
 		start1 := bigpatch.start1
 		start2 := bigpatch.start2
 		precontext := ""
@@ -1961,7 +1958,7 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
 					patch.length2 += len(diff_text)
 					start2 += len(diff_text)
 					patch.diffs = append(patch.diffs, bigpatch.diffs[0])
-					bigpatch.diffs = append(bigpatch.diffs[:0], bigpatch.diffs[0:]...)
+					bigpatch.diffs = bigpatch.diffs[1:]
 					empty = false
 				} else if diff_type == DiffDelete && len(patch.diffs) == 1 && patch.diffs[0].Type == DiffEqual && len(diff_text) > 2*patch_size {
 					// This is a large deletion.  Let it pass in one chunk.
@@ -1969,11 +1966,10 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
 					start1 += len(diff_text)
 					empty = false
 					patch.diffs = append(patch.diffs, Diff{diff_type, diff_text})
-					bigpatch.diffs = append(bigpatch.diffs[:0], bigpatch.diffs[0:]...)
+					bigpatch.diffs = bigpatch.diffs[1:]
 				} else {
 					// Deletion or equality.  Only take as much as we can stomach.
-					diff_text = diff_text[0:int(math.Min(float64(len(diff_text)),
-						float64(patch_size-patch.length1-dmp.PatchMargin)))]
+					diff_text = diff_text[:min(len(diff_text), patch_size-patch.length1-dmp.PatchMargin)]
 
 					patch.length1 += len(diff_text)
 					start1 += len(diff_text)
@@ -1985,7 +1981,7 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
 					}
 					patch.diffs = append(patch.diffs, Diff{diff_type, diff_text})
 					if diff_text == bigpatch.diffs[0].Text {
-						bigpatch.diffs = append(bigpatch.diffs[:0], bigpatch.diffs[0:]...)
+						bigpatch.diffs = bigpatch.diffs[1:]
 					} else {
 						bigpatch.diffs[0].Text =
 							bigpatch.diffs[0].Text[len(diff_text):]
@@ -1994,12 +1990,12 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
 			}
 			// Compute the head context for the next patch.
 			precontext = dmp.DiffText2(patch.diffs)
-			precontext = precontext[int(math.Max(0, float64(len(precontext)-dmp.PatchMargin))):]
+			precontext = precontext[max(0, len(precontext)-dmp.PatchMargin):]
 
 			postcontext := ""
 			// Append the end context for this patch.
 			if len(dmp.DiffText1(bigpatch.diffs)) > dmp.PatchMargin {
-				postcontext = dmp.DiffText1(bigpatch.diffs)[0:dmp.PatchMargin]
+				postcontext = dmp.DiffText1(bigpatch.diffs)[:dmp.PatchMargin]
 			} else {
 				postcontext = dmp.DiffText1(bigpatch.diffs)
 			}
@@ -2014,11 +2010,12 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) {
 				}
 			}
 			if !empty {
-				x = x + 1
-				splice_patch(patches, x, 0, patch)
+				x += 1
+				patches = append(patches[:x], append([]Patch{patch}, patches[x:]...)...)
 			}
 		}
 	}
+	return patches
 }
 
 // PatchToText takes a list of patches and returns a textual representation.

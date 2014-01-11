@@ -437,6 +437,19 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffEqual, "The xxx."},
 		Diff{DiffInsert, " The zzz."},
 		Diff{DiffEqual, " The yyy."}}, diffs)
+
+	// UTF-8 strings.
+	diffs = []Diff{
+		Diff{DiffEqual, "The ♕. The "},
+		Diff{DiffInsert, "♔. The "},
+		Diff{DiffEqual, "♖."}}
+
+	dmp.DiffCleanupSemanticLossless(diffs)
+
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "The ♕."},
+		Diff{DiffInsert, " The ♔."},
+		Diff{DiffEqual, " The ♖."}}, diffs)
 }
 
 func Test_diffCleanupSemantic(t *testing.T) {

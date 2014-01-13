@@ -901,16 +901,15 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 			return 6
 		}
 
-		_one := []rune(one)
-		_two := []rune(two)
-
 		// Each port of this function behaves slightly differently due to
 		// subtle differences in each language's definition of things like
 		// 'whitespace'.  Since this function's purpose is largely cosmetic,
 		// the choice has been made to use each language's native features
 		// rather than force total conformity.
-		char1 := string(_one[len(one)-1])
-		char2 := string(_two[0])
+		rune1, _ := utf8.DecodeLastRuneInString(one)
+		rune2, _ := utf8.DecodeRuneInString(two)
+		char1 := string(rune1)
+		char2 := string(rune2)
 
 		nonAlphaNumeric1 := nonAlphaNumericRegex_.MatchString(char1)
 		nonAlphaNumeric2 := nonAlphaNumericRegex_.MatchString(char2)

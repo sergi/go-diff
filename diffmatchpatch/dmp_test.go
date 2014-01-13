@@ -1319,3 +1319,19 @@ func Benchmark_DiffMain(bench *testing.B) {
 		dmp.DiffMain(a, b, true)
 	}
 }
+
+func Benchmark_DiffCommonPrefix(b *testing.B) {
+	dmp := New()
+	a := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCommonPrefix(a, a)
+	}
+}
+
+func Benchmark_DiffCommonSuffix(b *testing.B) {
+	dmp := New()
+	a := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCommonSuffix(a, a)
+	}
+}

@@ -566,25 +566,39 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 // DiffCommonPrefix determines the common prefix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonPrefix(text1, text2 string) int {
 	n := min(len(text1), len(text2))
-	for i := 0; i < n; i++ {
-		if text1[i] != text2[i] {
+	i := 0
+	for i < n {
+		_, sz := utf8.DecodeRuneInString(text1[i:])
+		if sz > n-i {
 			return i
 		}
+		for j := 0; j < sz; j++ {
+			if text1[i+j] != text2[i+j] {
+				return i
+			}
+		}
+		i += sz
 	}
-	return n
+	return i
 }
 
 // DiffCommonSuffix determines the common suffix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonSuffix(text1, text2 string) int {
-	text1_length := len(text1)
-	text2_length := len(text2)
-	n := min(text1_length, text2_length)
-	for i := 1; i <= n; i++ {
-		if text1[text1_length-i] != text2[text2_length-i] {
-			return i - 1
+	n := min(len(text1), len(text2))
+	i := 0
+	for i < n {
+		_, sz := utf8.DecodeLastRuneInString(text1[:len(text1)-i])
+		if sz > n-i {
+			return i
 		}
+		for j := 0; j < sz; j++ {
+			if text1[len(text1)-1-i-j] != text2[len(text2)-1-i-j] {
+				return i
+			}
+		}
+		i += sz
 	}
-	return n
+	return i
 	// Binary search.
 	// Performance analysis: http://neil.fraser.name/news/2007/10/09/
 	/*

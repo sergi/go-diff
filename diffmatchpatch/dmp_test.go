@@ -450,6 +450,19 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffEqual, "The ♕."},
 		Diff{DiffInsert, " The ♔."},
 		Diff{DiffEqual, " The ♖."}}, diffs)
+
+	// Rune boundaries.
+	diffs = []Diff{
+		Diff{DiffEqual, "♕♕"},
+		Diff{DiffInsert, "♔♔"},
+		Diff{DiffEqual, "♖♖"}}
+
+	dmp.DiffCleanupSemanticLossless(diffs)
+
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "♕♕"},
+		Diff{DiffInsert, "♔♔"},
+		Diff{DiffEqual, "♖♖"}}, diffs)
 }
 
 func Test_diffCleanupSemantic(t *testing.T) {

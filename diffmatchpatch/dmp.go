@@ -981,10 +981,14 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 			bestScore := diffCleanupSemanticScore_(equality1, edit) +
 				diffCleanupSemanticScore_(edit, equality2)
 
-			for len(edit) != 0 && len(equality2) != 0 && edit[0] == equality2[0] {
+			for len(edit) != 0 && len(equality2) != 0 {
+				_, sz := utf8.DecodeRuneInString(edit)
+				if edit[:sz] != equality2[:sz] {
+					break
+				}
 				equality1 += string(edit[0])
-				edit = edit[1:] + string(equality2[0])
-				equality2 = equality2[1:]
+				edit = edit[sz:] + string(equality2[0])
+				equality2 = equality2[sz:]
 				score := diffCleanupSemanticScore_(equality1, edit) +
 					diffCleanupSemanticScore_(edit, equality2)
 				// The >= encourages trailing rather than leading whitespace on

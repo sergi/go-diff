@@ -437,6 +437,32 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffEqual, "The xxx."},
 		Diff{DiffInsert, " The zzz."},
 		Diff{DiffEqual, " The yyy."}}, diffs)
+
+	// UTF-8 strings.
+	diffs = []Diff{
+		Diff{DiffEqual, "The ♕. The "},
+		Diff{DiffInsert, "♔. The "},
+		Diff{DiffEqual, "♖."}}
+
+	dmp.DiffCleanupSemanticLossless(diffs)
+
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "The ♕."},
+		Diff{DiffInsert, " The ♔."},
+		Diff{DiffEqual, " The ♖."}}, diffs)
+
+	// Rune boundaries.
+	diffs = []Diff{
+		Diff{DiffEqual, "♕♕"},
+		Diff{DiffInsert, "♔♔"},
+		Diff{DiffEqual, "♖♖"}}
+
+	dmp.DiffCleanupSemanticLossless(diffs)
+
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "♕♕"},
+		Diff{DiffInsert, "♔♔"},
+		Diff{DiffEqual, "♖♖"}}, diffs)
 }
 
 func Test_diffCleanupSemantic(t *testing.T) {
@@ -1304,5 +1330,21 @@ func Benchmark_DiffMain(bench *testing.B) {
 
 	for i := 0; i < bench.N; i++ {
 		dmp.DiffMain(a, b, true)
+	}
+}
+
+func Benchmark_DiffCommonPrefix(b *testing.B) {
+	dmp := New()
+	a := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCommonPrefix(a, a)
+	}
+}
+
+func Benchmark_DiffCommonSuffix(b *testing.B) {
+	dmp := New()
+	a := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCommonSuffix(a, a)
 	}
 }

@@ -566,25 +566,39 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 // DiffCommonPrefix determines the common prefix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonPrefix(text1, text2 string) int {
 	n := min(len(text1), len(text2))
-	for i := 0; i < n; i++ {
-		if text1[i] != text2[i] {
+	i := 0
+	for i < n {
+		_, sz := utf8.DecodeRuneInString(text1[i:])
+		if sz > n-i {
 			return i
 		}
+		for j := 0; j < sz; j++ {
+			if text1[i+j] != text2[i+j] {
+				return i
+			}
+		}
+		i += sz
 	}
-	return n
+	return i
 }
 
 // DiffCommonSuffix determines the common suffix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonSuffix(text1, text2 string) int {
-	text1_length := len(text1)
-	text2_length := len(text2)
-	n := min(text1_length, text2_length)
-	for i := 1; i <= n; i++ {
-		if text1[text1_length-i] != text2[text2_length-i] {
-			return i - 1
+	n := min(len(text1), len(text2))
+	i := 0
+	for i < n {
+		_, sz := utf8.DecodeLastRuneInString(text1[:len(text1)-i])
+		if sz > n-i {
+			return i
 		}
+		for j := 0; j < sz; j++ {
+			if text1[len(text1)-1-i-j] != text2[len(text2)-1-i-j] {
+				return i
+			}
+		}
+		i += sz
 	}
-	return n
+	return i
 	// Binary search.
 	// Performance analysis: http://neil.fraser.name/news/2007/10/09/
 	/*
@@ -901,16 +915,15 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 			return 6
 		}
 
-		_one := []rune(one)
-		_two := []rune(two)
-
 		// Each port of this function behaves slightly differently due to
 		// subtle differences in each language's definition of things like
 		// 'whitespace'.  Since this function's purpose is largely cosmetic,
 		// the choice has been made to use each language's native features
 		// rather than force total conformity.
-		char1 := string(_one[len(one)-1])
-		char2 := string(_two[0])
+		rune1, _ := utf8.DecodeLastRuneInString(one)
+		rune2, _ := utf8.DecodeRuneInString(two)
+		char1 := string(rune1)
+		char2 := string(rune2)
 
 		nonAlphaNumeric1 := nonAlphaNumericRegex_.MatchString(char1)
 		nonAlphaNumeric2 := nonAlphaNumericRegex_.MatchString(char2)
@@ -968,10 +981,14 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 			bestScore := diffCleanupSemanticScore_(equality1, edit) +
 				diffCleanupSemanticScore_(edit, equality2)
 
-			for len(edit) != 0 && len(equality2) != 0 && edit[0] == equality2[0] {
+			for len(edit) != 0 && len(equality2) != 0 {
+				_, sz := utf8.DecodeRuneInString(edit)
+				if edit[:sz] != equality2[:sz] {
+					break
+				}
 				equality1 += string(edit[0])
-				edit = edit[1:] + string(equality2[0])
-				equality2 = equality2[1:]
+				edit = edit[sz:] + string(equality2[0])
+				equality2 = equality2[sz:]
 				score := diffCleanupSemanticScore_(equality1, edit) +
 					diffCleanupSemanticScore_(edit, equality2)
 				// The >= encourages trailing rather than leading whitespace on

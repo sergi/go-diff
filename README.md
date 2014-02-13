@@ -16,7 +16,7 @@ In order to run the tests:
 
 ## Installation
 
-    go get github.com/sergi/go-diff/diff
+    go get github.com/sergi/go-diff/diffmatchpatch
 
 Copyright and License
 ---------------------

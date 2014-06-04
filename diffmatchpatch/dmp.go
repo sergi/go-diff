@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html"
 	"math"
 	"net/url"
 	"regexp"
@@ -1292,34 +1293,30 @@ func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
 	return last_chars2 + (loc - last_chars1)
 }
 
-/**
- * Convert a Diff list into a pretty HTML report.
- * @param diffs List of Diff objects.
- * @return HTML representation.
- */
-/*
-   func (dmp *DiffMatchPatch) diffPrettyHtml(diffs []Diff) {
-     StringBuilder html = new StringBuilder()
-     foreach (Diff aDiff in diffs) {
-       text := aDiff.text.Replace("&", "&amp;").Replace("<", "&lt;")
-         .Replace(">", "&gt;").Replace("\n", "&para;<br>")
-       switch (aDiff.Type) {
-         case DiffInsert:
-           html.Append("<ins style=\"background:#e6ffe6;\">").Append(text)
-               .Append("</ins>")
-           break
-         case DiffDelete:
-           html.Append("<del style=\"background:#ffe6e6;\">").Append(text)
-               .Append("</del>")
-           break
-         case DiffEqual:
-           html.Append("<span>").Append(text).Append("</span>")
-           break
-       }
-     }
-     return html.ToString()
-   }
-*/
+// DiffPrettyHtml converts a []Diff into a pretty HTML report.
+// It is indented as an example from which to write one's own
+// display functions.
+func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
+	var buff bytes.Buffer
+	for _, diff := range diffs {
+		text := strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
+		switch diff.Type {
+		case DiffInsert:
+			buff.WriteString("<ins style=\"background:#e6ffe6;\">")
+			buff.WriteString(text)
+			buff.WriteString("</ins>")
+		case DiffDelete:
+			buff.WriteString("<del style=\"background:#ffe6e6;\">")
+			buff.WriteString(text)
+			buff.WriteString("</del>")
+		case DiffEqual:
+			buff.WriteString("<span>")
+			buff.WriteString(text)
+			buff.WriteString("</span>")
+		}
+	}
+	return buff.String()
+}
 
 // Diff_text1 computes and returns the source text (all equalities and deletions).
 func (dmp *DiffMatchPatch) DiffText1(diffs []Diff) string {

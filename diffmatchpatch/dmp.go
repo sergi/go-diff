@@ -1294,7 +1294,7 @@ func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
 }
 
 // DiffPrettyHtml converts a []Diff into a pretty HTML report.
-// It is indented as an example from which to write one's own
+// It is intended as an example from which to write one's own
 // display functions.
 func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
 	var buff bytes.Buffer

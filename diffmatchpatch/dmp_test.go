@@ -924,10 +924,10 @@ func Test_diffMain(t *testing.T) {
 	delta := endTime.Sub(startTime)
 	// Test that we took at least the timeout period.
 	assert.True(t, delta >= dmp.DiffTimeout, fmt.Sprintf("%v !>= %v", delta, dmp.DiffTimeout))
-	// Test that we didn't take forever (be forgiving).
+	// Test that we didn't take forever (be very forgiving).
 	// Theoretically this test could fail very occasionally if the
 	// OS task swaps or locks up for a second at the wrong moment.
-	assert.True(t, delta < (dmp.DiffTimeout*2), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
+	assert.True(t, delta < (dmp.DiffTimeout*3), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
 	dmp.DiffTimeout = 0
 
 	// Test the linemode speedup.

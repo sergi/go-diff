@@ -257,25 +257,22 @@ func Test_diffCharsToLines(t *testing.T) {
 		Diff{DiffInsert, "beta\nalpha\nbeta\n"}}, actual)
 
 	// More than 256 to reveal any 8-bit limitations.
-	n := 257
-	tmpVector = []string{}
-	lineList := []rune{}
+	n := 300
+	lineList := []string{}
 	charList := []rune{}
 
 	for x := 1; x <= n; x++ {
-		tmpVector = append(tmpVector, string(x)+"\n")
-		lineList = append(lineList, rune(x), '\n')
+		lineList = append(lineList, strconv.Itoa(x) + "\n")
 		charList = append(charList, rune(x))
 	}
 
-	assert.Equal(t, n, len(tmpVector))
 	assert.Equal(t, n, len(charList))
 
-	tmpVector = append([]string{""}, tmpVector...)
+	lineList = append([]string{""}, lineList...)
 	diffs = []Diff{Diff{DiffDelete, string(charList)}}
-	actual = dmp.DiffCharsToLines(diffs, tmpVector)
+	actual = dmp.DiffCharsToLines(diffs, lineList)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, string(lineList)}}, actual)
+		Diff{DiffDelete, strings.Join(lineList, "")}}, actual)
 }
 
 func Test_diffCleanupMerge(t *testing.T) {

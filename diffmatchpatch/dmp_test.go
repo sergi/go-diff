@@ -6,8 +6,10 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchrcom/testify/assert"
 )
@@ -214,30 +216,26 @@ func Test_diffLinesToChars(t *testing.T) {
 	assertStrEqual(t, tmpVector, result2)
 
 	// More than 256 to reveal any 8-bit limitations.
-	/*
-	   n := 300
-	   tmpVector = []string{}
-	   lineList := []rune{}
-	   charList := []rune{}
 
-	   for x := 1; x < n+1; x++ {
-	       tmpVector = append(tmpVector, string(x)+"\n")
-	       lineList = append(lineList, rune(x), '\n')
-	       charList = append(charList, rune(x))
-	   }
-	   assert.Equal(t, n, len(tmpVector), "")
+	n := 300
+	lineList := []string{}
+	charList := []rune{}
 
-	   lines := string(lineList)
-	   chars := string(charList)
-	   assert.Equal(t, n, utf8.RuneCountInString(chars), "")
-	   tmpVector = append(tmpVector, "")
+	for x := 1; x < n+1; x++ {
+		lineList = append(lineList, strconv.Itoa(x)+"\n")
+		charList = append(charList, rune(x))
+	}
 
-	   result0, result1, result2 = dmp.DiffLinesToChars(lines, "")
+	lines := strings.Join(lineList, "")
+	chars := string(charList)
+	assert.Equal(t, n, utf8.RuneCountInString(chars), "")
 
-	   assert.Equal(t, chars, result0)
-	   assert.Equal(t, "", result1, "")
-	   assertDiffEqual(t, tmpVector, result2)
-	*/
+	result0, result1, result2 = dmp.DiffLinesToChars(lines, "")
+
+	assert.Equal(t, chars, result0)
+	assert.Equal(t, "", result1, "")
+	// Account for the initial empty element of the lines array.
+	assert.Equal(t, append([]string{""}, lineList...), result2)
 }
 
 func Test_diffCharsToLines(t *testing.T) {

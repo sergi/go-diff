@@ -240,7 +240,7 @@ func Test_diffLinesToChars(t *testing.T) {
 	assert.Equal(t, chars, result0)
 	assert.Equal(t, "", result1, "")
 	// Account for the initial empty element of the lines array.
-	assert.Equal(t, append([]string{""}, lineList...), result2)
+	assertStrEqual(t, append([]string{""}, lineList...), result2)
 }
 
 func Test_diffCharsToLines(t *testing.T) {

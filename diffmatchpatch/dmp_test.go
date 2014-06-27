@@ -215,8 +215,13 @@ func Test_diffLinesToChars(t *testing.T) {
 	assert.Equal(t, "\u0002", result1, "")
 	assertStrEqual(t, tmpVector, result2)
 
-	// More than 256 to reveal any 8-bit limitations.
+	// Omit final newline.
+	result0, result1, result2 = dmp.DiffLinesToChars("alpha\nbeta\nalpha", "")
+	assert.Equal(t, "\u0001\u0002\u0003", result0)
+	assert.Equal(t, "", result1)
+	assertStrEqual(t, []string{"", "alpha\n", "beta\n", "alpha"}, result2)
 
+	// More than 256 to reveal any 8-bit limitations.
 	n := 300
 	lineList := []string{}
 	charList := []rune{}

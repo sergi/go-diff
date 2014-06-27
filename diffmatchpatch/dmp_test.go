@@ -345,7 +345,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 	// Slide diffs to match logical boundaries.
 	// Null case.
 	diffs := []Diff{}
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 	assertDiffEqual(t, []Diff{}, diffs)
 
 	// Blank lines.
@@ -355,7 +355,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffEqual, "\r\nEEE"},
 	}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "AAA\r\n\r\n"},
@@ -368,7 +368,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, " DDD\r\nBBB"},
 		Diff{DiffEqual, " EEE"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "AAA\r\n"},
@@ -381,7 +381,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "ow and the c"},
 		Diff{DiffEqual, "at."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The "},
@@ -394,7 +394,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "ow-and-the-c"},
 		Diff{DiffEqual, "at."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The-"},
@@ -407,11 +407,11 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffDelete, "a"},
 		Diff{DiffEqual, "ax"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
-	/*assertDiffEqual(t, []Diff{
+	assertDiffEqual(t, []Diff{
 	Diff{DiffDelete, "a"},
-	Diff{DiffEqual, "aax"}}, diffs)*/
+	Diff{DiffEqual, "aax"}}, diffs)
 
 	// Hitting the end.
 	diffs = []Diff{
@@ -419,19 +419,18 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffDelete, "a"},
 		Diff{DiffEqual, "a"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
-	/*
-		assertDiffEqual(t, []Diff{
-			Diff{DiffEqual, "xaa"},
-			Diff{DiffDelete, "a"}}, diffs)
-	*/
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "xaa"},
+		Diff{DiffDelete, "a"}}, diffs)
+
 	// Sentence boundaries.
 	diffs = []Diff{
 		Diff{DiffEqual, "The xxx. The "},
 		Diff{DiffInsert, "zzz. The "},
 		Diff{DiffEqual, "yyy."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The xxx."},
@@ -444,7 +443,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "♔. The "},
 		Diff{DiffEqual, "♖."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The ♕."},
@@ -457,7 +456,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "♔♔"},
 		Diff{DiffEqual, "♖♖"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "♕♕"},

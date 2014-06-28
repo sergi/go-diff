@@ -38,7 +38,7 @@ type Operation int8
 const (
 	DiffDelete Operation = -1
 	DiffInsert Operation = 1
-	DiffEqual Operation  = 0
+	DiffEqual  Operation = 0
 )
 
 // unescaper unescapes selected chars for compatability with JavaScript's encodeURI.
@@ -751,9 +751,9 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l string, s string, i int) []string {
 
 			if len(best_common) < suffixLength+prefixLength {
 				best_common = s[j-suffixLength:j] + s[j:j+prefixLength]
-				best_longtext_a = l[: i-suffixLength]
+				best_longtext_a = l[:i-suffixLength]
 				best_longtext_b = l[i+prefixLength:]
-				best_shorttext_a = s[: j-suffixLength]
+				best_shorttext_a = s[:j-suffixLength]
 				best_shorttext_b = s[j+prefixLength:]
 			}
 

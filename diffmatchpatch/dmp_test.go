@@ -732,13 +732,17 @@ func Test_diffDelta(t *testing.T) {
 		t.Fatal("diff_fromDelta: Too short.")
 	}
 
-	// Generates error (%c3%xy invalid Unicode).
-	/*
-		seq, err := dmp.DiffFromDelta("", "+%c3%xy")
-		if err == nil {
-			panic(1) //assert.Fail("diff_fromDelta: Invalid character.");
-		}
-	*/
+	// Generates error (%xy invalid URL escape).
+	_, err = dmp.DiffFromDelta("", "+%c3%xy")
+	if err == nil {
+		assert.Fail(t, "diff_fromDelta: expected Invalid URL escape.");
+	}
+
+	// Generates error (invalid utf8).
+	_, err = dmp.DiffFromDelta("", "+%c3xy")
+	if err == nil {
+		assert.Fail(t, "diff_fromDelta: expected Invalid utf8.");
+	}
 
 	// Test deltas with special characters.
 	diffs = []Diff{

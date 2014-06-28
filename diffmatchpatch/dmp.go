@@ -1434,7 +1434,13 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 		case '+':
 			// decode would Diff all "+" to " "
 			param = strings.Replace(param, "+", "%2b", -1)
-			param, _ = url.QueryUnescape(param)
+			param, err = url.QueryUnescape(param)
+			if err != nil {
+				return nil, err
+			}
+			if !utf8.ValidString(param) {
+				return nil, fmt.Errorf("invalid UTF-8 token: %q", param)
+			}
 			diffs = append(diffs, Diff{DiffInsert, param})
 		case '=', '-':
 			n, err := strconv.ParseInt(param, 10, 0)

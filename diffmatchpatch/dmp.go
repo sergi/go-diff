@@ -747,13 +747,13 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l string, s string, i int) []string {
 			}
 
 			prefixLength := dmp.DiffCommonPrefix(l[i:], s[j:])
-			suffixLength := dmp.DiffCommonSuffix(l[0:i], s[0:j])
+			suffixLength := dmp.DiffCommonSuffix(l[:i], s[:j])
 
 			if len(best_common) < suffixLength+prefixLength {
 				best_common = s[j-suffixLength:j] + s[j:j+prefixLength]
-				best_longtext_a = l[0 : i-suffixLength]
+				best_longtext_a = l[: i-suffixLength]
 				best_longtext_b = l[i+prefixLength:]
-				best_shorttext_a = s[0 : j-suffixLength]
+				best_shorttext_a = s[: j-suffixLength]
 				best_shorttext_b = s[j+prefixLength:]
 			}
 
@@ -863,7 +863,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					// Overlap found.  Insert an equality and trim the surrounding edits.
 					diffs = append(
 						diffs[:pointer],
-						append([]Diff{Diff{DiffEqual, insertion[0:overlap_length1]}}, diffs[pointer:]...)...)
+						append([]Diff{Diff{DiffEqual, insertion[:overlap_length1]}}, diffs[pointer:]...)...)
 					//diffs.splice(pointer, 0,
 					//    [DiffEqual, insertion[0 : overlap_length1)]]
 					diffs[pointer-1].Text =
@@ -973,7 +973,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 			if commonOffset > 0 {
 				commonString := edit[len(edit)-commonOffset:]
 				equality1 = equality1[0 : len(equality1)-commonOffset]
-				edit = commonString + edit[0:len(edit)-commonOffset]
+				edit = commonString + edit[:len(edit)-commonOffset]
 				equality2 = commonString + equality2
 			}
 
@@ -1236,7 +1236,7 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			if strings.HasSuffix(diffs[pointer].Text, diffs[pointer-1].Text) {
 				// Shift the edit over the previous equality.
 				diffs[pointer].Text = diffs[pointer-1].Text +
-					diffs[pointer].Text[0:len(diffs[pointer].Text)-len(diffs[pointer-1].Text)]
+					diffs[pointer].Text[:len(diffs[pointer].Text)-len(diffs[pointer-1].Text)]
 				diffs[pointer+1].Text = diffs[pointer-1].Text + diffs[pointer+1].Text
 				diffs = splice(diffs, pointer-1, 1)
 				changes = true
@@ -1816,7 +1816,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 		if len(text1) > dmp.MatchMaxBits {
 			// PatchSplitMax will only provide an oversized pattern
 			// in the case of a monster delete.
-			start_loc = dmp.MatchMain(text, text1[0:dmp.MatchMaxBits], expected_loc)
+			start_loc = dmp.MatchMain(text, text1[:dmp.MatchMaxBits], expected_loc)
 			if start_loc != -1 {
 				end_loc = dmp.MatchMain(text,
 					text1[len(text1)-dmp.MatchMaxBits:], expected_loc+len(text1)-dmp.MatchMaxBits)
@@ -1845,7 +1845,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 			}
 			if text1 == text2 {
 				// Perfect match, just shove the Replacement text in.
-				text = text[0:start_loc] + dmp.DiffText2(aPatch.diffs) + text[start_loc+len(text1):]
+				text = text[:start_loc] + dmp.DiffText2(aPatch.diffs) + text[start_loc+len(text1):]
 			} else {
 				// Imperfect match.  Run a diff to get a framework of equivalent
 				// indices.
@@ -1861,11 +1861,11 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 							index2 := dmp.DiffXIndex(diffs, index1)
 							if aDiff.Type == DiffInsert {
 								// Insertion
-								text = text[0:start_loc+index2] + aDiff.Text + text[start_loc+index2:]
+								text = text[:start_loc+index2] + aDiff.Text + text[start_loc+index2:]
 							} else if aDiff.Type == DiffDelete {
 								// Deletion
 								start_index := start_loc + index2
-								text = text[0:start_index] +
+								text = text[:start_index] +
 									text[start_index+dmp.DiffXIndex(diffs, index1+len(aDiff.Text))-index2:]
 							}
 						}

@@ -32,10 +32,13 @@ import (
 // The data structure representing a diff is an array of tuples:
 // [[DiffDelete, 'Hello'], [DiffInsert, 'Goodbye'], [DiffEqual, ' world.']]
 // which means: delete 'Hello', add 'Goodbye' and keep ' world.'
+
+type Operation int8
+
 const (
-	DiffDelete = -1
-	DiffInsert = 1
-	DiffEqual  = 0
+	DiffDelete Operation = -1
+	DiffInsert Operation = 1
+	DiffEqual Operation  = 0
 )
 
 // unescaper unescapes selected chars for compatability with JavaScript's encodeURI.
@@ -103,7 +106,7 @@ func max(x, y int) int {
 
 // Diff represents one diff operation
 type Diff struct {
-	Type int8
+	Type Operation
 	Text string
 }
 
@@ -264,7 +267,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, dea
 	}
 
 	if i := strings.Index(longtext, shorttext); i != -1 {
-		var op int8 = DiffInsert
+		op := DiffInsert
 		// Swap insertions for deletions if diff is reversed.
 		if len(text1) > len(text2) {
 			op = DiffDelete

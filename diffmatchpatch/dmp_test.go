@@ -949,7 +949,7 @@ func Test_diffMain(t *testing.T) {
 	texts_textmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
 	assertStrEqual(t, texts_textmode, texts_linemode)
 
-	// Test null inputs -- not needed because nulls can't be passed in C#.
+	// Test null inputs -- not needed because nulls can't be passed in Go.
 }
 
 func Test_match_alphabet(t *testing.T) {

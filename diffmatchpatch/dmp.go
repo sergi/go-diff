@@ -983,11 +983,11 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 
 			for len(edit) != 0 && len(equality2) != 0 {
 				_, sz := utf8.DecodeRuneInString(edit)
-				if edit[:sz] != equality2[:sz] {
+				if len(equality2) < sz || edit[:sz] != equality2[:sz] {
 					break
 				}
-				equality1 += string(edit[0])
-				edit = edit[sz:] + string(equality2[0])
+				equality1 += edit[:sz]
+				edit = edit[sz:] + equality2[:sz]
 				equality2 = equality2[sz:]
 				score := diffCleanupSemanticScore_(equality1, edit) +
 					diffCleanupSemanticScore_(edit, equality2)
@@ -1007,7 +1007,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 					diffs[pointer-1].Text = bestEquality1
 				} else {
 					diffs = splice(diffs, pointer-1, 1)
-					pointer -= 1
+					pointer--
 				}
 
 				diffs[pointer].Text = bestEdit
@@ -1016,7 +1016,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 				} else {
 					//splice(diffs, pointer+1, 1)
 					diffs = append(diffs[:pointer+1], diffs[pointer+2:]...)
-					pointer -= 1
+					pointer--
 				}
 			}
 		}
@@ -1434,7 +1434,13 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 		case '+':
 			// decode would Diff all "+" to " "
 			param = strings.Replace(param, "+", "%2b", -1)
-			param, _ = url.QueryUnescape(param)
+			param, err = url.QueryUnescape(param)
+			if err != nil {
+				return nil, err
+			}
+			if !utf8.ValidString(param) {
+				return nil, fmt.Errorf("invalid UTF-8 token: %q", param)
+			}
 			diffs = append(diffs, Diff{DiffInsert, param})
 		case '=', '-':
 			n, err := strconv.ParseInt(param, 10, 0)

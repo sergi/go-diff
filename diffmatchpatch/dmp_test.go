@@ -6,8 +6,10 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchrcom/testify/assert"
 )
@@ -213,31 +215,32 @@ func Test_diffLinesToChars(t *testing.T) {
 	assert.Equal(t, "\u0002", result1, "")
 	assertStrEqual(t, tmpVector, result2)
 
+	// Omit final newline.
+	result0, result1, result2 = dmp.DiffLinesToChars("alpha\nbeta\nalpha", "")
+	assert.Equal(t, "\u0001\u0002\u0003", result0)
+	assert.Equal(t, "", result1)
+	assertStrEqual(t, []string{"", "alpha\n", "beta\n", "alpha"}, result2)
+
 	// More than 256 to reveal any 8-bit limitations.
-	/*
-	   n := 300
-	   tmpVector = []string{}
-	   lineList := []rune{}
-	   charList := []rune{}
+	n := 300
+	lineList := []string{}
+	charList := []rune{}
 
-	   for x := 1; x < n+1; x++ {
-	       tmpVector = append(tmpVector, string(x)+"\n")
-	       lineList = append(lineList, rune(x), '\n')
-	       charList = append(charList, rune(x))
-	   }
-	   assert.Equal(t, n, len(tmpVector), "")
+	for x := 1; x < n+1; x++ {
+		lineList = append(lineList, strconv.Itoa(x)+"\n")
+		charList = append(charList, rune(x))
+	}
 
-	   lines := string(lineList)
-	   chars := string(charList)
-	   assert.Equal(t, n, utf8.RuneCountInString(chars), "")
-	   tmpVector = append(tmpVector, "")
+	lines := strings.Join(lineList, "")
+	chars := string(charList)
+	assert.Equal(t, n, utf8.RuneCountInString(chars), "")
 
-	   result0, result1, result2 = dmp.DiffLinesToChars(lines, "")
+	result0, result1, result2 = dmp.DiffLinesToChars(lines, "")
 
-	   assert.Equal(t, chars, result0)
-	   assert.Equal(t, "", result1, "")
-	   assertDiffEqual(t, tmpVector, result2)
-	*/
+	assert.Equal(t, chars, result0)
+	assert.Equal(t, "", result1, "")
+	// Account for the initial empty element of the lines array.
+	assertStrEqual(t, append([]string{""}, lineList...), result2)
 }
 
 func Test_diffCharsToLines(t *testing.T) {
@@ -254,25 +257,22 @@ func Test_diffCharsToLines(t *testing.T) {
 		Diff{DiffInsert, "beta\nalpha\nbeta\n"}}, actual)
 
 	// More than 256 to reveal any 8-bit limitations.
-	n := 257
-	tmpVector = []string{}
-	lineList := []rune{}
+	n := 300
+	lineList := []string{}
 	charList := []rune{}
 
 	for x := 1; x <= n; x++ {
-		tmpVector = append(tmpVector, string(x)+"\n")
-		lineList = append(lineList, rune(x), '\n')
+		lineList = append(lineList, strconv.Itoa(x) + "\n")
 		charList = append(charList, rune(x))
 	}
 
-	assert.Equal(t, n, len(tmpVector))
 	assert.Equal(t, n, len(charList))
 
-	tmpVector = append([]string{""}, tmpVector...)
+	lineList = append([]string{""}, lineList...)
 	diffs = []Diff{Diff{DiffDelete, string(charList)}}
-	actual = dmp.DiffCharsToLines(diffs, tmpVector)
+	actual = dmp.DiffCharsToLines(diffs, lineList)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, string(lineList)}}, actual)
+		Diff{DiffDelete, strings.Join(lineList, "")}}, actual)
 }
 
 func Test_diffCleanupMerge(t *testing.T) {
@@ -345,7 +345,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 	// Slide diffs to match logical boundaries.
 	// Null case.
 	diffs := []Diff{}
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 	assertDiffEqual(t, []Diff{}, diffs)
 
 	// Blank lines.
@@ -355,7 +355,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffEqual, "\r\nEEE"},
 	}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "AAA\r\n\r\n"},
@@ -368,7 +368,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, " DDD\r\nBBB"},
 		Diff{DiffEqual, " EEE"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "AAA\r\n"},
@@ -381,7 +381,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "ow and the c"},
 		Diff{DiffEqual, "at."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The "},
@@ -394,7 +394,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "ow-and-the-c"},
 		Diff{DiffEqual, "at."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The-"},
@@ -407,11 +407,11 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffDelete, "a"},
 		Diff{DiffEqual, "ax"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
-	/*assertDiffEqual(t, []Diff{
+	assertDiffEqual(t, []Diff{
 	Diff{DiffDelete, "a"},
-	Diff{DiffEqual, "aax"}}, diffs)*/
+	Diff{DiffEqual, "aax"}}, diffs)
 
 	// Hitting the end.
 	diffs = []Diff{
@@ -419,19 +419,18 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffDelete, "a"},
 		Diff{DiffEqual, "a"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
-	/*
-		assertDiffEqual(t, []Diff{
-			Diff{DiffEqual, "xaa"},
-			Diff{DiffDelete, "a"}}, diffs)
-	*/
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "xaa"},
+		Diff{DiffDelete, "a"}}, diffs)
+
 	// Sentence boundaries.
 	diffs = []Diff{
 		Diff{DiffEqual, "The xxx. The "},
 		Diff{DiffInsert, "zzz. The "},
 		Diff{DiffEqual, "yyy."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The xxx."},
@@ -444,7 +443,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "♔. The "},
 		Diff{DiffEqual, "♖."}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "The ♕."},
@@ -457,7 +456,7 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 		Diff{DiffInsert, "♔♔"},
 		Diff{DiffEqual, "♖♖"}}
 
-	dmp.DiffCleanupSemanticLossless(diffs)
+	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
 		Diff{DiffEqual, "♕♕"},
@@ -733,13 +732,17 @@ func Test_diffDelta(t *testing.T) {
 		t.Fatal("diff_fromDelta: Too short.")
 	}
 
-	// Generates error (%c3%xy invalid Unicode).
-	/*
-		seq, err := dmp.DiffFromDelta("", "+%c3%xy")
-		if err == nil {
-			panic(1) //assert.Fail("diff_fromDelta: Invalid character.");
-		}
-	*/
+	// Generates error (%xy invalid URL escape).
+	_, err = dmp.DiffFromDelta("", "+%c3%xy")
+	if err == nil {
+		assert.Fail(t, "diff_fromDelta: expected Invalid URL escape.");
+	}
+
+	// Generates error (invalid utf8).
+	_, err = dmp.DiffFromDelta("", "+%c3xy")
+	if err == nil {
+		assert.Fail(t, "diff_fromDelta: expected Invalid utf8.");
+	}
 
 	// Test deltas with special characters.
 	diffs = []Diff{
@@ -924,10 +927,10 @@ func Test_diffMain(t *testing.T) {
 	delta := endTime.Sub(startTime)
 	// Test that we took at least the timeout period.
 	assert.True(t, delta >= dmp.DiffTimeout, fmt.Sprintf("%v !>= %v", delta, dmp.DiffTimeout))
-	// Test that we didn't take forever (be forgiving).
+	// Test that we didn't take forever (be very forgiving).
 	// Theoretically this test could fail very occasionally if the
 	// OS task swaps or locks up for a second at the wrong moment.
-	assert.True(t, delta < (dmp.DiffTimeout*2), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
+	assert.True(t, delta < (dmp.DiffTimeout*3), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*2))
 	dmp.DiffTimeout = 0
 
 	// Test the linemode speedup.
@@ -946,7 +949,7 @@ func Test_diffMain(t *testing.T) {
 	texts_textmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
 	assertStrEqual(t, texts_textmode, texts_linemode)
 
-	// Test null inputs -- not needed because nulls can't be passed in C#.
+	// Test null inputs -- not needed because nulls can't be passed in Go.
 }
 
 func Test_match_alphabet(t *testing.T) {

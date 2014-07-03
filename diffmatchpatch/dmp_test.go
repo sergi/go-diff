@@ -196,8 +196,8 @@ func Test_diffHalfmatchTest(t *testing.T) {
 func Test_diffBisectSplit(t *testing.T) {
 	// As originally written, this can produce invalid utf8 strings.
 	dmp := New()
-	diffs := dmp.diffBisectSplit_("STUV\x05WX\x05YZ\x05[",
-		"WĺĻļ\x05YZ\x05ĽľĿŀZ", 7, 6, time.Now().Add(time.Hour))
+	diffs := dmp.diffBisectSplit_([]rune("STUV\x05WX\x05YZ\x05["),
+		[]rune("WĺĻļ\x05YZ\x05ĽľĿŀZ"), 7, 6, time.Now().Add(time.Hour))
 	for _, d := range diffs {
 		assert.True(t, utf8.ValidString(d.Text))
 	}

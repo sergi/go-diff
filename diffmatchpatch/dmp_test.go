@@ -1364,22 +1364,35 @@ func Benchmark_DiffCommonSuffix(b *testing.B) {
 }
 
 func Benchmark_DiffMainLarge(b *testing.B) {
-	bytes1, err := ioutil.ReadFile("speedtest1.txt")
-	if err != nil {
-		b.Fatal(err)
-	}
-	bytes2, err := ioutil.ReadFile("speedtest2.txt")
-	if err != nil {
-		b.Fatal(err)
-	}
-	s1 := string(bytes1)
-	s2 := string(bytes2)
+	s1 := readFile("speedtest1.txt", b)
+	s2 := readFile("speedtest2.txt", b)
 	dmp := New()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		dmp.DiffMain(s1, s2, true)
 	}
 }
+
+func Benchmark_DiffMainLargeLines(b *testing.B) {
+	s1 := readFile("speedtest1.txt", b)
+	s2 := readFile("speedtest2.txt", b)
+	dmp := New()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		text1, text2, linearray := dmp.DiffLinesToChars(s1, s2)
+		diffs := dmp.DiffMain(text1, text2, false)
+		diffs = dmp.DiffCharsToLines(diffs, linearray)
+	}
+}
+
+func readFile(filename string, b *testing.B) string {
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		b.Fatal(err)
+	}
+	return string(bytes)
+}
+	
 
 	
 	

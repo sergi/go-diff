@@ -3,6 +3,7 @@ package diffmatchpatch
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -1340,7 +1341,7 @@ func Benchmark_DiffMain(bench *testing.B) {
 		a = a + a
 		b = b + b
 	}
-
+	bench.ResetTimer()
 	for i := 0; i < bench.N; i++ {
 		dmp.DiffMain(a, b, true)
 	}
@@ -1361,3 +1362,25 @@ func Benchmark_DiffCommonSuffix(b *testing.B) {
 		dmp.DiffCommonSuffix(a, a)
 	}
 }
+
+func Benchmark_DiffMainLarge(b *testing.B) {
+	bytes1, err := ioutil.ReadFile("speedtest1.txt")
+	if err != nil {
+		b.Fatal(err)
+	}
+	bytes2, err := ioutil.ReadFile("speedtest2.txt")
+	if err != nil {
+		b.Fatal(err)
+	}
+	s1 := string(bytes1)
+	s2 := string(bytes2)
+	dmp := New()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		dmp.DiffMain(s1, s2, true)
+	}
+}
+
+	
+	
+	

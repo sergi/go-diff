@@ -1424,8 +1424,8 @@ func Benchmark_DiffMainLargeLines(b *testing.B) {
 	dmp := New()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		text1, text2, linearray := dmp.DiffLinesToChars(s1, s2)
-		diffs := dmp.DiffMain(text1, text2, false)
+		text1, text2, linearray := dmp.DiffLinesToRunes(s1, s2)
+		diffs := dmp.DiffMainRunes(text1, text2, false)
 		diffs = dmp.DiffCharsToLines(diffs, linearray)
 	}
 }

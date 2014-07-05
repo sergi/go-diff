@@ -557,6 +557,7 @@ func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 []rune, x, y int,
 
 // DiffLinesToChars split two texts into a list of strings.  Reduces the texts to a string of
 // hashes where each Unicode character represents one line.
+// It's slightly faster to call DiffLinesToRunes first, followed by DiffMainRunes.
 func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
 	chars1, chars2, lineArray := dmp.DiffLinesToRunes(text1, text2)
 	return string(chars1), string(chars2), lineArray

@@ -126,6 +126,20 @@ func Test_diffCommonPrefix(t *testing.T) {
 	assert.Equal(t, 4, dmp.DiffCommonPrefix("1234", "1234xyz"), "")
 }
 
+func Test_commonPrefixLength(t *testing.T) {
+	for _, test := range []struct{
+		s1, s2 string
+		want int
+	} {
+		{"abc", "xyz", 0},
+		{"1234abcdef", "1234xyz", 4},
+		{"1234", "1234xyz", 4},
+	} {
+		assert.Equal(t, test.want, commonPrefixLength([]rune(test.s1), []rune(test.s2)),
+			fmt.Sprintf("%q, %q", test.s1, test.s2))
+	}
+}
+
 func Test_diffCommonSuffixTest(t *testing.T) {
 	dmp := New()
 	// Detect any common suffix.
@@ -138,6 +152,47 @@ func Test_diffCommonSuffixTest(t *testing.T) {
 	// Whole case.
 	assert.Equal(t, 4, dmp.DiffCommonSuffix("1234", "xyz1234"), "")
 }
+
+func Test_commonSuffixLength(t *testing.T) {
+	for _, test := range []struct{
+		s1, s2 string
+		want int
+	} {
+		{"abc", "xyz", 0},
+		{"abcdef1234", "xyz1234", 4},
+		{"1234", "xyz1234", 4},
+		{"123", "a3", 1},
+	} {
+		assert.Equal(t, test.want, commonSuffixLength([]rune(test.s1), []rune(test.s2)),
+			fmt.Sprintf("%q, %q", test.s1, test.s2))
+	}
+}
+
+func Test_runesIndexOf(t *testing.T) {
+	target := []rune("abcde")
+	for _, test := range []struct{
+		pattern string
+		start int
+		want int
+	} {
+		{"abc", 0, 0},
+		{"cde", 0, 2},
+		{"e", 0, 4},
+		{"cdef", 0, -1},
+		{"abcdef", 0, -1},
+		{"abc", 2, -1},
+		{"cde", 2, 2},
+		{"e", 2, 4},
+		{"cdef", 2, -1},
+		{"abcdef", 2, -1},
+		{"e", 6, -1},
+	} {
+		assert.Equal(t, test.want,
+			runesIndexOf(target, []rune(test.pattern), test.start),
+			fmt.Sprintf("%q, %d", test.pattern, test.start))
+	}
+}
+
 
 func Test_diffCommonOverlapTest(t *testing.T) {
 	dmp := New()
@@ -164,8 +219,8 @@ func Test_diffHalfmatchTest(t *testing.T) {
 	dmp := New()
 	dmp.DiffTimeout = 1
 	// No match.
-	assert.True(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
-	assert.True(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
+ 	assert.True(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
+ 	assert.True(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
 
 	// Single Match.
 	assertStrEqual(t,
@@ -913,7 +968,7 @@ func Test_diffMain(t *testing.T) {
 		Diff{DiffDelete, " and [[New"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
 
-	dmp.DiffTimeout = 100 * time.Millisecond // 100ms
+	dmp.DiffTimeout = 200 * time.Millisecond // 100ms
 	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
 	b := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"
 	// Increase the text lengths by 1024 times to ensure a timeout.
@@ -1382,8 +1437,4 @@ func readFile(filename string, b *testing.B) string {
 	}
 	return string(bytes)
 }
-	
-
-	
-	
 	

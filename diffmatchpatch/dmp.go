@@ -245,17 +245,21 @@ func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff
 	return dmp.diffMain(text1, text2, checklines, deadline)
 }
 
-// DiffMain finds the differences between two rune sequences.
 func (dmp *DiffMatchPatch) diffMain(text1, text2 string, checklines bool, deadline time.Time) []Diff {
-	diffs := []Diff{}
-	if text1 == text2 {
-		if len(text1) > 0 {
-			diffs = append(diffs, Diff{DiffEqual, text1})
-		}
-		return diffs
-	}
-	return dmp.diffMainRunes1([]rune(text1), []rune(text2), checklines, deadline)
+	return dmp.diffMainRunes([]rune(text1), []rune(text2), checklines, deadline)
 }
+
+// DiffMainRunes finds the differences between two rune sequences.
+func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
+	var deadline time.Time
+	if dmp.DiffTimeout <= 0 {
+		deadline = time.Now().Add(24 * 365 * time.Hour)
+	} else {
+		deadline = time.Now().Add(dmp.DiffTimeout)
+	}
+	return dmp.diffMainRunes(text1, text2, checklines, deadline)
+}
+
 
 func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
 	if runesEqual(text1, text2) {
@@ -265,11 +269,6 @@ func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, d
 		}
 		return diffs
 	}
-	return dmp.diffMainRunes1(text1, text2, checklines, deadline)
-}
-
-
-func (dmp *DiffMatchPatch) diffMainRunes1(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
 	// Trim off common prefix (speedup).
 	commonlength := commonPrefixLength(text1, text2)
 	commonprefix := text1[:commonlength]
@@ -418,9 +417,13 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 // and return the recursively constructed diff.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) []Diff {
+	// Unused in this code, but retained for interface compatibility.
 	return dmp.diffBisect([]rune(text1), []rune(text2), deadline)
 }
 
+// diffBisect finds the 'middle snake' of a diff, splits the problem in two
+// and returns the recursively constructed diff.
+// See Myers's 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) diffBisect(text1, text2 []rune, deadline time.Time) []Diff {
 	// Cache the text lengths to prevent multiple calls.
 	runes1_len, runes2_len := len(runes1), len(runes2)
@@ -560,8 +563,7 @@ func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string
 	return string(chars1), string(chars2), lineArray
 }
 
-// DiffLinesToChars split two texts into a list of []runes.  Reduces the texts to a string of
-// hashes where each Unicode character represents one line.
+// DiffLinesToRunes splits two texts into a list of runes.  Each rune represents one line.
 func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it.
 	// So we'll insert a junk entry to avoid generating a null character.

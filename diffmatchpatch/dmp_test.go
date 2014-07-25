@@ -670,17 +670,16 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 	dmp.DiffEditCost = 4
 }
 
-/*
 func Test_diffPrettyHtml(t *testing.T) {
-    dmp := New()
-    // Pretty print.
-    diffs := []Diff{
-        Diff{DiffEqual, "a\n"},
-        Diff{DiffDelete, "<B>b</B>"},
-        Diff{DiffInsert, "c&d"}}
-    assert.Equal(t, "<span>a&para;<br></span><del style=\"background:#ffe6e6;\">&lt;B&gt;b&lt;/B&gt;</del><ins style=\"background:#e6ffe6;\">c&amp;d</ins>",
-        dmp.DiffPrettyHtml(diffs))
-}*/
+	dmp := New()
+	// Pretty print.
+	diffs := []Diff{
+		Diff{DiffEqual, "a\n"},
+		Diff{DiffDelete, "<B>b</B>"},
+		Diff{DiffInsert, "c&d"}}
+	assert.Equal(t, "<span>a&para;<br></span><del style=\"background:#ffe6e6;\">&lt;B&gt;b&lt;/B&gt;</del><ins style=\"background:#e6ffe6;\">c&amp;d</ins>",
+		dmp.DiffPrettyHtml(diffs))
+}
 
 func Test_diffText(t *testing.T) {
 	dmp := New()

@@ -421,7 +421,7 @@ func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) [
 // diffBisect finds the 'middle snake' of a diff, splits the problem in two
 // and returns the recursively constructed diff.
 // See Myers's 1986 paper: An O(ND) Difference Algorithm and Its Variations.
-func (dmp *DiffMatchPatch) diffBisect(text1, text2 []rune, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time) []Diff {
 	// Cache the text lengths to prevent multiple calls.
 	runes1_len, runes2_len := len(runes1), len(runes2)
 
@@ -466,8 +466,8 @@ func (dmp *DiffMatchPatch) diffBisect(text1, text2 []rune, deadline time.Time) [
 			}
 
 			y1 := x1 - k1
-			for x1 < text1_len && y1 < text2_len {
-				if text1[x1] != text2[y1] {
+			for x1 < runes1_len && y1 < runes2_len {
+				if runes1[x1] != runes2[y1] {
 					break
 				}
 				x1++
@@ -502,8 +502,8 @@ func (dmp *DiffMatchPatch) diffBisect(text1, text2 []rune, deadline time.Time) [
 				x2 = v2[k2_offset-1] + 1
 			}
 			var y2 = x2 - k2
-			for x2 < text1_len && y2 < text2_len {
-				if text1[text1_len-x2-1] != text2[text2_len-y2-1] {
+			for x2 < runes1_len && y2 < runes2_len {
+				if runes1[runes1_len-x2-1] != runes2[runes2_len-y2-1] {
 					break
 				}
 				x2++
@@ -534,12 +534,12 @@ func (dmp *DiffMatchPatch) diffBisect(text1, text2 []rune, deadline time.Time) [
 	// Diff took too long and hit the deadline or
 	// number of diffs equals number of characters, no commonality at all.
 	return []Diff{
-		Diff{DiffDelete, string(text1)},
-		Diff{DiffInsert, string(text2)},
+		Diff{DiffDelete, string(runes1)},
+		Diff{DiffInsert, string(runes2)},
 	}
 }
 
-func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 []rune, x, y int,
+func (dmp *DiffMatchPatch) diffBisectSplit_(runes1, runes2 []rune, x, y int,
 	deadline time.Time) []Diff {
 	runes1a := runes1[:x]
 	runes2a := runes2[:y]
@@ -547,8 +547,8 @@ func (dmp *DiffMatchPatch) diffBisectSplit_(text1, text2 []rune, x, y int,
 	runes2b := runes2[y:]
 
 	// Compute both diffs serially.
-	diffs := dmp.diffMainRunes(text1a, text2a, false, deadline)
-	diffsb := dmp.diffMainRunes(text1b, text2b, false, deadline)
+	diffs := dmp.diffMainRunes(runes1a, runes2a, false, deadline)
+	diffsb := dmp.diffMainRunes(runes1b, runes2b, false, deadline)
 
 	return append(diffs, diffsb...)
 }

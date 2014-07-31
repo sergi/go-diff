@@ -93,7 +93,7 @@ func indexOf(str string, pattern string, i int) int {
 
 // Return the index of pattern in target, starting at target[i].
 func runesIndexOf(target, pattern []rune, i int) int {
-	if i > len(target) - 1 {
+	if i > len(target)-1 {
 		return -1
 	}
 	ind := runesIndex(target[i:], pattern)
@@ -260,7 +260,6 @@ func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) [
 	return dmp.diffMainRunes(text1, text2, checklines, deadline)
 }
 
-
 func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
 	if runesEqual(text1, text2) {
 		var diffs []Diff
@@ -294,7 +293,6 @@ func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, d
 
 	return dmp.DiffCleanupMerge(diffs)
 }
-
 
 // diffCompute finds the differences between two rune slices.  Assumes that the texts do not
 // have any common prefix or suffix.
@@ -412,7 +410,6 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 	return diffs[:len(diffs)-1] // Remove the dummy entry at the end.
 }
 
-
 // DiffBisect finds the 'middle snake' of a diff, split the problem in two
 // and return the recursively constructed diff.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
@@ -471,7 +468,7 @@ func (dmp *DiffMatchPatch) diffBisect(text1, text2 []rune, deadline time.Time) [
 			y1 := x1 - k1
 			for x1 < text1_len && y1 < text2_len {
 				if text1[x1] != text2[y1] {
- 					break
+					break
 				}
 				x1++
 				y1++
@@ -658,7 +655,7 @@ func commonPrefixLength(text1, text2 []rune) int {
 	}
 	return len(short)
 }
-		
+
 // commonSuffixLength returns the length of the common suffix of two rune slices.
 func commonSuffixLength(text1, text2 []rune) int {
 	n := min(len(text1), len(text2))
@@ -688,8 +685,7 @@ func commonSuffixLength(text1, text2 []rune) int {
 	   }
 	   return pointermid
 	*/
-}	
-
+}
 
 // DiffCommonOverlap determines if the suffix of one string is the prefix of another.
 func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
@@ -748,7 +744,7 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	return result
 }
 
-func(dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
+func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	if dmp.DiffTimeout <= 0 {
 		// Don't risk returning a non-optimal diff if we have unlimited time.
 		return nil
@@ -853,7 +849,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 }
 
 func concat(r1, r2 []rune) []rune {
-	result := make([]rune, len(r1) + len(r2))
+	result := make([]rune, len(r1)+len(r2))
 	copy(result, r1)
 	copy(result[len(r1):], r2)
 	return result

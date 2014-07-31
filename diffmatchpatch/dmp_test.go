@@ -127,10 +127,10 @@ func Test_diffCommonPrefix(t *testing.T) {
 }
 
 func Test_commonPrefixLength(t *testing.T) {
-	for _, test := range []struct{
+	for _, test := range []struct {
 		s1, s2 string
-		want int
-	} {
+		want   int
+	}{
 		{"abc", "xyz", 0},
 		{"1234abcdef", "1234xyz", 4},
 		{"1234", "1234xyz", 4},
@@ -154,10 +154,10 @@ func Test_diffCommonSuffixTest(t *testing.T) {
 }
 
 func Test_commonSuffixLength(t *testing.T) {
-	for _, test := range []struct{
+	for _, test := range []struct {
 		s1, s2 string
-		want int
-	} {
+		want   int
+	}{
 		{"abc", "xyz", 0},
 		{"abcdef1234", "xyz1234", 4},
 		{"1234", "xyz1234", 4},
@@ -170,11 +170,11 @@ func Test_commonSuffixLength(t *testing.T) {
 
 func Test_runesIndexOf(t *testing.T) {
 	target := []rune("abcde")
-	for _, test := range []struct{
+	for _, test := range []struct {
 		pattern string
-		start int
-		want int
-	} {
+		start   int
+		want    int
+	}{
 		{"abc", 0, 0},
 		{"cde", 0, 2},
 		{"e", 0, 4},
@@ -192,7 +192,6 @@ func Test_runesIndexOf(t *testing.T) {
 			fmt.Sprintf("%q, %d", test.pattern, test.start))
 	}
 }
-
 
 func Test_diffCommonOverlapTest(t *testing.T) {
 	dmp := New()
@@ -219,8 +218,8 @@ func Test_diffHalfmatchTest(t *testing.T) {
 	dmp := New()
 	dmp.DiffTimeout = 1
 	// No match.
- 	assert.True(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
- 	assert.True(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
+	assert.True(t, dmp.DiffHalfMatch("1234567890", "abcdef") == nil, "")
+	assert.True(t, dmp.DiffHalfMatch("12345", "23") == nil, "")
 
 	// Single Match.
 	assertStrEqual(t,
@@ -329,7 +328,7 @@ func Test_diffCharsToLines(t *testing.T) {
 	charList := []rune{}
 
 	for x := 1; x <= n; x++ {
-		lineList = append(lineList, strconv.Itoa(x) + "\n")
+		lineList = append(lineList, strconv.Itoa(x)+"\n")
 		charList = append(charList, rune(x))
 	}
 
@@ -477,8 +476,8 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-	Diff{DiffDelete, "a"},
-	Diff{DiffEqual, "aax"}}, diffs)
+		Diff{DiffDelete, "a"},
+		Diff{DiffEqual, "aax"}}, diffs)
 
 	// Hitting the end.
 	diffs = []Diff{
@@ -801,13 +800,13 @@ func Test_diffDelta(t *testing.T) {
 	// Generates error (%xy invalid URL escape).
 	_, err = dmp.DiffFromDelta("", "+%c3%xy")
 	if err == nil {
-		assert.Fail(t, "diff_fromDelta: expected Invalid URL escape.");
+		assert.Fail(t, "diff_fromDelta: expected Invalid URL escape.")
 	}
 
 	// Generates error (invalid utf8).
 	_, err = dmp.DiffFromDelta("", "+%c3xy")
 	if err == nil {
-		assert.Fail(t, "diff_fromDelta: expected Invalid utf8.");
+		assert.Fail(t, "diff_fromDelta: expected Invalid utf8.")
 	}
 
 	// Test deltas with special characters.
@@ -1447,4 +1446,3 @@ func readFile(filename string, b *testing.B) string {
 	}
 	return string(bytes)
 }
-	

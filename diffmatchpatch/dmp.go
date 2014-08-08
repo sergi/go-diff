@@ -91,6 +91,18 @@ func indexOf(str string, pattern string, i int) int {
 
 }
 
+// Return the index of pattern in target, starting at target[i].
+func runesIndexOf(target, pattern []rune, i int) int {
+	if i > len(target)-1 {
+		return -1
+	}
+	ind := runesIndex(target[i:], pattern)
+	if ind == -1 {
+		return -1
+	}
+	return i + ind
+}
+
 func min(x, y int) int {
 	if x < y {
 		return x
@@ -103,6 +115,29 @@ func max(x, y int) int {
 		return x
 	}
 	return y
+}
+
+func runesEqual(r1, r2 []rune) bool {
+	if len(r1) != len(r2) {
+		return false
+	}
+	for i, c := range r1 {
+		if c != r2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// The equivalent of strings.Index for rune slices.
+func runesIndex(r1, r2 []rune) int {
+	last := len(r1) - len(r2)
+	for i := 0; i <= last; i++ {
+		if runesEqual(r1[i:i+len(r2)], r2) {
+			return i
+		}
+	}
+	return -1
 }
 
 // Diff represents one diff operation
@@ -210,55 +245,68 @@ func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff
 	return dmp.diffMain(text1, text2, checklines, deadline)
 }
 
-// DiffMain finds the differences between two texts.
 func (dmp *DiffMatchPatch) diffMain(text1, text2 string, checklines bool, deadline time.Time) []Diff {
-	diffs := []Diff{}
-	if text1 == text2 {
+	return dmp.diffMainRunes([]rune(text1), []rune(text2), checklines, deadline)
+}
+
+// DiffMainRunes finds the differences between two rune sequences.
+func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
+	var deadline time.Time
+	if dmp.DiffTimeout <= 0 {
+		deadline = time.Now().Add(24 * 365 * time.Hour)
+	} else {
+		deadline = time.Now().Add(dmp.DiffTimeout)
+	}
+	return dmp.diffMainRunes(text1, text2, checklines, deadline)
+}
+
+func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
+	if runesEqual(text1, text2) {
+		var diffs []Diff
 		if len(text1) > 0 {
-			diffs = append(diffs, Diff{DiffEqual, text1})
+			diffs = append(diffs, Diff{DiffEqual, string(text1)})
 		}
 		return diffs
 	}
-
 	// Trim off common prefix (speedup).
-	commonlength := dmp.DiffCommonPrefix(text1, text2)
+	commonlength := commonPrefixLength(text1, text2)
 	commonprefix := text1[:commonlength]
 	text1 = text1[commonlength:]
 	text2 = text2[commonlength:]
 
 	// Trim off common suffix (speedup).
-	commonlength = dmp.DiffCommonSuffix(text1, text2)
+	commonlength = commonSuffixLength(text1, text2)
 	commonsuffix := text1[len(text1)-commonlength:]
 	text1 = text1[:len(text1)-commonlength]
 	text2 = text2[:len(text2)-commonlength]
 
 	// Compute the diff on the middle block.
-	diffs = dmp.diffCompute(text1, text2, checklines, deadline)
+	diffs := dmp.diffCompute(text1, text2, checklines, deadline)
 
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
-		diffs = append([]Diff{Diff{DiffEqual, commonprefix}}, diffs...)
+		diffs = append([]Diff{Diff{DiffEqual, string(commonprefix)}}, diffs...)
 	}
 	if len(commonsuffix) != 0 {
-		diffs = append(diffs, Diff{DiffEqual, commonsuffix})
+		diffs = append(diffs, Diff{DiffEqual, string(commonsuffix)})
 	}
 
 	return dmp.DiffCleanupMerge(diffs)
 }
 
-// diffCompute finds the differences between two texts.  Assumes that the texts do not
+// diffCompute finds the differences between two rune slices.  Assumes that the texts do not
 // have any common prefix or suffix.
-func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
 	diffs := []Diff{}
 	if len(text1) == 0 {
 		// Just add some text (speedup).
-		return append(diffs, Diff{DiffInsert, text2})
+		return append(diffs, Diff{DiffInsert, string(text2)})
 	} else if len(text2) == 0 {
 		// Just delete some text (speedup).
-		return append(diffs, Diff{DiffDelete, text1})
+		return append(diffs, Diff{DiffDelete, string(text1)})
 	}
 
-	var longtext, shorttext string
+	var longtext, shorttext []rune
 	if len(text1) > len(text2) {
 		longtext = text1
 		shorttext = text2
@@ -267,7 +315,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, dea
 		shorttext = text1
 	}
 
-	if i := strings.Index(longtext, shorttext); i != -1 {
+	if i := runesIndex(longtext, shorttext); i != -1 {
 		op := DiffInsert
 		// Swap insertions for deletions if diff is reversed.
 		if len(text1) > len(text2) {
@@ -275,19 +323,19 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, dea
 		}
 		// Shorter text is inside the longer text (speedup).
 		return []Diff{
-			Diff{op, longtext[:i]},
-			Diff{DiffEqual, shorttext},
-			Diff{op, longtext[i+len(shorttext):]},
+			Diff{op, string(longtext[:i])},
+			Diff{DiffEqual, string(shorttext)},
+			Diff{op, string(longtext[i+len(shorttext):])},
 		}
-	} else if utf8.RuneCountInString(shorttext) == 1 {
+	} else if len(shorttext) == 1 {
 		// Single character string.
 		// After the previous speedup, the character can't be an equality.
 		return []Diff{
-			Diff{DiffDelete, text1},
-			Diff{DiffInsert, text2},
+			Diff{DiffDelete, string(text1)},
+			Diff{DiffInsert, string(text2)},
 		}
 		// Check to see if the problem can be split in two.
-	} else if hm := dmp.DiffHalfMatch(text1, text2); hm != nil {
+	} else if hm := dmp.diffHalfMatch(text1, text2); hm != nil {
 		// A half-match was found, sort out the return data.
 		text1_a := hm[0]
 		text1_b := hm[1]
@@ -295,23 +343,23 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 string, checklines bool, dea
 		text2_b := hm[3]
 		mid_common := hm[4]
 		// Send both pairs off for separate processing.
-		diffs_a := dmp.diffMain(text1_a, text2_a, checklines, deadline)
-		diffs_b := dmp.diffMain(text1_b, text2_b, checklines, deadline)
+		diffs_a := dmp.diffMainRunes(text1_a, text2_a, checklines, deadline)
+		diffs_b := dmp.diffMainRunes(text1_b, text2_b, checklines, deadline)
 		// Merge the results.
-		return append(diffs_a, append([]Diff{Diff{DiffEqual, mid_common}}, diffs_b...)...)
+		return append(diffs_a, append([]Diff{Diff{DiffEqual, string(mid_common)}}, diffs_b...)...)
 	} else if checklines && len(text1) > 100 && len(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)
 	}
-	return dmp.DiffBisect(text1, text2, deadline)
+	return dmp.diffBisect(text1, text2, deadline)
 }
 
-// diffLineMode does a quick line-level diff on both strings, then rediff the parts for
+// diffLineMode does a quick line-level diff on both []runes, then rediff the parts for
 // greater accuracy. This speedup can produce non-minimal diffs.
-func (dmp *DiffMatchPatch) diffLineMode(text1, text2 string, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time) []Diff {
 	// Scan the text on a line-by-line basis first.
-	text1, text2, linearray := dmp.DiffLinesToChars(text1, text2)
+	text1, text2, linearray := dmp.diffLinesToRunes(text1, text2)
 
-	diffs := dmp.diffMain(text1, text2, false, deadline)
+	diffs := dmp.diffMainRunes(text1, text2, false, deadline)
 
 	// Convert the diff back to original text.
 	diffs = dmp.DiffCharsToLines(diffs, linearray)
@@ -366,9 +414,14 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 string, deadline time.Time)
 // and return the recursively constructed diff.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) []Diff {
-	// Convert to runes to avoid utf8 slicing bugs.
-	runes1 := []rune(text1)
-	runes2 := []rune(text2)
+	// Unused in this code, but retained for interface compatibility.
+	return dmp.diffBisect([]rune(text1), []rune(text2), deadline)
+}
+
+// diffBisect finds the 'middle snake' of a diff, splits the problem in two
+// and returns the recursively constructed diff.
+// See Myers's 1986 paper: An O(ND) Difference Algorithm and Its Variations.
+func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time) []Diff {
 	// Cache the text lengths to prevent multiple calls.
 	runes1_len, runes2_len := len(runes1), len(runes2)
 
@@ -481,8 +534,8 @@ func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) [
 	// Diff took too long and hit the deadline or
 	// number of diffs equals number of characters, no commonality at all.
 	return []Diff{
-		Diff{DiffDelete, text1},
-		Diff{DiffInsert, text2},
+		Diff{DiffDelete, string(runes1)},
+		Diff{DiffInsert, string(runes2)},
 	}
 }
 
@@ -494,30 +547,41 @@ func (dmp *DiffMatchPatch) diffBisectSplit_(runes1, runes2 []rune, x, y int,
 	runes2b := runes2[y:]
 
 	// Compute both diffs serially.
-	diffs := dmp.diffMain(string(runes1a), string(runes2a), false, deadline)
-	diffsb := dmp.diffMain(string(runes1b), string(runes2b), false, deadline)
+	diffs := dmp.diffMainRunes(runes1a, runes2a, false, deadline)
+	diffsb := dmp.diffMainRunes(runes1b, runes2b, false, deadline)
 
 	return append(diffs, diffsb...)
 }
 
 // DiffLinesToChars split two texts into a list of strings.  Reduces the texts to a string of
 // hashes where each Unicode character represents one line.
+// It's slightly faster to call DiffLinesToRunes first, followed by DiffMainRunes.
 func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
+	chars1, chars2, lineArray := dmp.DiffLinesToRunes(text1, text2)
+	return string(chars1), string(chars2), lineArray
+}
+
+// DiffLinesToRunes splits two texts into a list of runes.  Each rune represents one line.
+func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it.
 	// So we'll insert a junk entry to avoid generating a null character.
 	lineArray := []string{""}    // e.g. lineArray[4] == 'Hello\n'
 	lineHash := map[string]int{} // e.g. lineHash['Hello\n'] == 4
 
-	chars1 := dmp.diffLinesToCharsMunge(text1, &lineArray, lineHash)
-	chars2 := dmp.diffLinesToCharsMunge(text2, &lineArray, lineHash)
+	chars1 := dmp.diffLinesToRunesMunge(text1, &lineArray, lineHash)
+	chars2 := dmp.diffLinesToRunesMunge(text2, &lineArray, lineHash)
 
 	return chars1, chars2, lineArray
 }
 
-// diffLinesToCharsMunge splits a text into an array of strings.  Reduces the texts to a string of
-// hashes where each Unicode character represents one line.
-// Modifies linearray and linehash through being a closure.
-func (dmp *DiffMatchPatch) diffLinesToCharsMunge(text string, lineArray *[]string, lineHash map[string]int) string {
+func (dmp *DiffMatchPatch) diffLinesToRunes(text1, text2 []rune) ([]rune, []rune, []string) {
+	return dmp.DiffLinesToRunes(string(text1), string(text2))
+}
+
+// diffLinesToRunesMunge splits a text into an array of strings.  Reduces the
+// texts to a []rune where each Unicode character represents one line.
+// We use strings instead of []runes as input mainly because you can't use []rune as a map key.
+func (dmp *DiffMatchPatch) diffLinesToRunesMunge(text string, lineArray *[]string, lineHash map[string]int) []rune {
 	// Walk the text, pulling out a substring for each line.
 	// text.split('\n') would would temporarily double our memory footprint.
 	// Modifying text would create many large strings to garbage collect.
@@ -545,7 +609,7 @@ func (dmp *DiffMatchPatch) diffLinesToCharsMunge(text string, lineArray *[]strin
 		}
 	}
 
-	return string(runes)
+	return runes
 }
 
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of
@@ -568,40 +632,40 @@ func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []
 
 // DiffCommonPrefix determines the common prefix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonPrefix(text1, text2 string) int {
-	n := min(len(text1), len(text2))
-	i := 0
-	for i < n {
-		_, sz := utf8.DecodeRuneInString(text1[i:])
-		if sz > n-i {
-			return i
-		}
-		for j := 0; j < sz; j++ {
-			if text1[i+j] != text2[i+j] {
-				return i
-			}
-		}
-		i += sz
-	}
-	return i
+	// Unused in this code, but retained for interface compatibility.
+	return commonPrefixLength([]rune(text1), []rune(text2))
 }
 
 // DiffCommonSuffix determines the common suffix length of two strings.
 func (dmp *DiffMatchPatch) DiffCommonSuffix(text1, text2 string) int {
-	n := min(len(text1), len(text2))
-	i := 0
-	for i < n {
-		_, sz := utf8.DecodeLastRuneInString(text1[:len(text1)-i])
-		if sz > n-i {
+	// Unused in this code, but retained for interface compatibility.
+	return commonSuffixLength([]rune(text1), []rune(text2))
+}
+
+// commonPrefixLength returns the length of the common prefix of two rune slices.
+func commonPrefixLength(text1, text2 []rune) int {
+	short, long := text1, text2
+	if len(short) > len(long) {
+		short, long = long, short
+	}
+	for i, r := range short {
+		if r != long[i] {
 			return i
 		}
-		for j := 0; j < sz; j++ {
-			if text1[len(text1)-1-i-j] != text2[len(text2)-1-i-j] {
-				return i
-			}
-		}
-		i += sz
 	}
-	return i
+	return len(short)
+}
+
+// commonSuffixLength returns the length of the common suffix of two rune slices.
+func commonSuffixLength(text1, text2 []rune) int {
+	n := min(len(text1), len(text2))
+	for i := 0; i < n; i++ {
+		if text1[len(text1)-i-1] != text2[len(text2)-i-1] {
+			return i
+		}
+	}
+	return n
+
 	// Binary search.
 	// Performance analysis: http://neil.fraser.name/news/2007/10/09/
 	/*
@@ -667,12 +731,26 @@ func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 // DiffHalfMatch checks whether the two texts share a substring which is at
 // least half the length of the longer text. This speedup can produce non-minimal diffs.
 func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
+	// Unused in this code, but retained for interface compatibility.
+	runeSlices := dmp.diffHalfMatch([]rune(text1), []rune(text2))
+	if runeSlices == nil {
+		return nil
+	}
+
+	result := make([]string, len(runeSlices))
+	for i, r := range runeSlices {
+		result[i] = string(r)
+	}
+	return result
+}
+
+func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	if dmp.DiffTimeout <= 0 {
 		// Don't risk returning a non-optimal diff if we have unlimited time.
 		return nil
 	}
 
-	var longtext, shorttext string
+	var longtext, shorttext []rune
 	if len(text1) > len(text2) {
 		longtext = text1
 		shorttext = text2
@@ -691,7 +769,7 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	// Check again based on the third quarter.
 	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+1)/2))
 
-	hm := []string{}
+	hm := [][]rune{}
 	if hm1 == nil && hm2 == nil {
 		return nil
 	} else if hm2 == nil {
@@ -711,7 +789,7 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	if len(text1) > len(text2) {
 		return hm
 	} else {
-		return []string{hm[2], hm[3], hm[0], hm[1], hm[4]}
+		return [][]rune{hm[2], hm[3], hm[0], hm[1], hm[4]}
 	}
 
 	return nil
@@ -720,7 +798,6 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 /**
  * Does a substring of shorttext exist within longtext such that the substring
  * is at least half the length of longtext?
- * Closure, but does not reference any external variables.
  * @param {string} longtext Longer string.
  * @param {string} shorttext Shorter string.
  * @param {number} i Start index of quarter length substring within longtext.
@@ -729,40 +806,38 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
  *     of shorttext and the common middle.  Or null if there was no match.
  * @private
  */
-func (dmp *DiffMatchPatch) diffHalfMatchI(l string, s string, i int) []string {
+func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 	// Start with a 1/4 length substring at position i as a seed.
 	seed := l[i : i+len(l)/4]
 	j := -1
-	best_common := ""
-	best_longtext_a := ""
-	best_longtext_b := ""
-	best_shorttext_a := ""
-	best_shorttext_b := ""
+	best_common := []rune{}
+	best_longtext_a := []rune{}
+	best_longtext_b := []rune{}
+	best_shorttext_a := []rune{}
+	best_shorttext_b := []rune{}
 
 	if j < len(s) {
-		j = indexOf(s, seed, j+1)
+		j = runesIndexOf(s, seed, j+1)
 		for {
 			if j == -1 {
 				break
 			}
 
-			prefixLength := dmp.DiffCommonPrefix(l[i:], s[j:])
-			suffixLength := dmp.DiffCommonSuffix(l[:i], s[:j])
-
+			prefixLength := commonPrefixLength(l[i:], s[j:])
+			suffixLength := commonSuffixLength(l[:i], s[:j])
 			if len(best_common) < suffixLength+prefixLength {
-				best_common = s[j-suffixLength:j] + s[j:j+prefixLength]
+				best_common = concat(s[j-suffixLength:j], s[j:j+prefixLength])
 				best_longtext_a = l[:i-suffixLength]
 				best_longtext_b = l[i+prefixLength:]
 				best_shorttext_a = s[:j-suffixLength]
 				best_shorttext_b = s[j+prefixLength:]
 			}
-
-			j = indexOf(s, seed, j+1)
+			j = runesIndexOf(s, seed, j+1)
 		}
 	}
 
 	if len(best_common)*2 >= len(l) {
-		return []string{
+		return [][]rune{
 			best_longtext_a,
 			best_longtext_b,
 			best_shorttext_a,
@@ -771,6 +846,13 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l string, s string, i int) []string {
 		}
 	}
 	return nil
+}
+
+func concat(r1, r2 []rune) []rune {
+	result := make([]rune, len(r1)+len(r2))
+	copy(result, r1)
+	copy(result[len(r1):], r2)
+	return result
 }
 
 // Diff_cleanupSemantic reduces the number of edits by eliminating

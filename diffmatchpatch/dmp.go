@@ -70,25 +70,31 @@ func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 	return append(slice[:index], append(elements, slice[index+amount:]...)...)
 }
 
+// indexOf returns the first index of pattern in str, starting at str[i].
 func indexOf(str string, pattern string, i int) int {
 	if i > len(str)-1 {
 		return -1
 	}
-
-	if i == 0 {
+	if i <= 0 {
 		return strings.Index(str, pattern)
 	}
-
-	str1 := str[0:i]
-	str2 := str[i:]
-
-	ind := strings.Index(str2, pattern)
+	ind := strings.Index(str[i:], pattern)
 	if ind == -1 {
 		return -1
 	}
+	return ind + i
+}
 
-	return ind + len(str1)
-
+// lastIndexOf returns the last index of pattern in str, starting at str[i].
+func lastIndexOf(str string, pattern string, i int) int {
+	if i < 0 {
+		return -1
+	}
+	if i >= len(str) {
+		return strings.LastIndex(str, pattern)
+	}
+	_, size := utf8.DecodeRuneInString(str[i:])
+	return strings.LastIndex(str[:i+size], pattern)
 }
 
 // Return the index of pattern in target, starting at target[i].
@@ -96,11 +102,14 @@ func runesIndexOf(target, pattern []rune, i int) int {
 	if i > len(target)-1 {
 		return -1
 	}
+	if i <= 0 {
+		return runesIndex(target, pattern)
+	}
 	ind := runesIndex(target[i:], pattern)
 	if ind == -1 {
 		return -1
 	}
-	return i + ind
+	return ind + i
 }
 
 func min(x, y int) int {
@@ -1583,12 +1592,12 @@ func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 	// Highest score beyond which we give up.
 	var score_threshold float64 = dmp.MatchThreshold
 	// Is there a nearby exact match? (speedup)
-	best_loc := strings.Index(text, pattern)
+	best_loc := indexOf(text, pattern, loc)
 	if best_loc != -1 {
 		score_threshold = math.Min(dmp.matchBitapScore(0, best_loc, loc,
 			pattern), score_threshold)
 		// What about in the other direction? (speedup)
-		best_loc = strings.LastIndex(text, pattern)
+		best_loc = lastIndexOf(text, pattern, loc+len(pattern))
 		if best_loc != -1 {
 			score_threshold = math.Min(dmp.matchBitapScore(0, best_loc, loc,
 				pattern), score_threshold)

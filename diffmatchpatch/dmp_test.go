@@ -257,7 +257,6 @@ func Test_diffBisectSplit(t *testing.T) {
 		assert.True(t, utf8.ValidString(d.Text))
 	}
 }
-	
 
 func Test_diffLinesToChars(t *testing.T) {
 	dmp := New()
@@ -1383,6 +1382,80 @@ func Test_patchApply(t *testing.T) {
 	boolArray = results1
 	resultStr = results0 + "\t" + strconv.FormatBool(boolArray[0])
 	assert.Equal(t, "x123\ttrue", resultStr, "patch_apply: Edge partial match.")
+}
+
+func TestIndexOf(t *testing.T) {
+	type TestCase struct {
+		String   string
+		Pattern  string
+		Position int
+		Expected int
+	}
+	cases := []TestCase{
+		{"hi world", "world", -1, 3},
+		{"hi world", "world", 0, 3},
+		{"hi world", "world", 1, 3},
+		{"hi world", "world", 2, 3},
+		{"hi world", "world", 3, 3},
+		{"hi world", "world", 4, -1},
+		{"abbc", "b", -1, 1},
+		{"abbc", "b", 0, 1},
+		{"abbc", "b", 1, 1},
+		{"abbc", "b", 2, 2},
+		{"abbc", "b", 3, -1},
+		{"abbc", "b", 4, -1},
+		// The greek letter beta is the two-byte sequence of "\u03b2".
+		{"a\u03b2\u03b2c", "\u03b2", -1, 1},
+		{"a\u03b2\u03b2c", "\u03b2", 0, 1},
+		{"a\u03b2\u03b2c", "\u03b2", 1, 1},
+		{"a\u03b2\u03b2c", "\u03b2", 3, 3},
+		{"a\u03b2\u03b2c", "\u03b2", 5, -1},
+		{"a\u03b2\u03b2c", "\u03b2", 6, -1},
+	}
+	for i, c := range cases {
+		actual := indexOf(c.String, c.Pattern, c.Position)
+		assert.Equal(t, c.Expected, actual, fmt.Sprintf("TestIndex case %d", i))
+	}
+}
+
+func TestLastIndexOf(t *testing.T) {
+	type TestCase struct {
+		String   string
+		Pattern  string
+		Position int
+		Expected int
+	}
+	cases := []TestCase{
+		{"hi world", "world", -1, -1},
+		{"hi world", "world", 0, -1},
+		{"hi world", "world", 1, -1},
+		{"hi world", "world", 2, -1},
+		{"hi world", "world", 3, -1},
+		{"hi world", "world", 4, -1},
+		{"hi world", "world", 5, -1},
+		{"hi world", "world", 6, -1},
+		{"hi world", "world", 7, 3},
+		{"hi world", "world", 8, 3},
+		{"abbc", "b", -1, -1},
+		{"abbc", "b", 0, -1},
+		{"abbc", "b", 1, 1},
+		{"abbc", "b", 2, 2},
+		{"abbc", "b", 3, 2},
+		{"abbc", "b", 4, 2},
+		// The greek letter beta is the two-byte sequence of "\u03b2".
+		{"a\u03b2\u03b2c", "\u03b2", -1, -1},
+		{"a\u03b2\u03b2c", "\u03b2", 0, -1},
+		{"a\u03b2\u03b2c", "\u03b2", 1, 1},
+		{"a\u03b2\u03b2c", "\u03b2", 3, 3},
+		{"a\u03b2\u03b2c", "\u03b2", 5, 3},
+		{"a\u03b2\u03b2c", "\u03b2", 6, 3},
+	}
+
+	for i, c := range cases {
+		actual := lastIndexOf(c.String, c.Pattern, c.Position)
+		assert.Equal(t, c.Expected, actual,
+			fmt.Sprintf("TestLastIndex case %d", i))
+	}
 }
 
 func Benchmark_DiffMain(bench *testing.B) {

@@ -41,7 +41,7 @@ func pretty(diffs []Diff) string {
 	return w.String()
 }
 
-func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
+func assertIntMapEqual(t *testing.T, seq1, seq2 interface{}) {
 	v1 := reflect.ValueOf(seq1)
 	k1 := v1.Kind()
 	v2 := reflect.ValueOf(seq2)
@@ -60,14 +60,14 @@ func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
 	}
 
 	for _, key1 := range keys1 {
-		if a, b := v2.MapIndex(key1), v1.MapIndex(key1); a != b {
-			t.Fatal("%v Different key/value in Map: %v != %v", caller(), a, b)
+		if a, b := v2.MapIndex(key1), v1.MapIndex(key1); a.Int() != b.Int() {
+			t.Fatalf("%v Different key/value in Map: %v != %v", caller(), a.Int(), b.Int())
 		}
 	}
 
 	for _, key2 := range keys2 {
-		if a, b := v1.MapIndex(key2), v2.MapIndex(key2); a != b {
-			t.Fatal("%v Different key/value in Map: %v != %v", caller(), a, b)
+		if a, b := v1.MapIndex(key2), v2.MapIndex(key2); a.Int() != b.Int() {
+			t.Fatalf("%v Different key/value in Map: %v != %v", caller(), a.Int(), b.Int())
 		}
 	}
 }
@@ -1024,14 +1024,14 @@ func Test_match_alphabet(t *testing.T) {
 		'b': 2,
 		'c': 1,
 	}
-	assertMapEqual(t, bitmask, dmp.MatchAlphabet("abc"))
+	assertIntMapEqual(t, bitmask, dmp.MatchAlphabet("abc"))
 
 	bitmask = map[byte]int{
 		'a': 37,
 		'b': 18,
 		'c': 8,
 	}
-	assertMapEqual(t, bitmask, dmp.MatchAlphabet("abcaba"))
+	assertIntMapEqual(t, bitmask, dmp.MatchAlphabet("abcaba"))
 }
 
 func Test_match_bitap(t *testing.T) {

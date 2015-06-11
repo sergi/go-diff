@@ -60,14 +60,14 @@ func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
 	}
 
 	for _, key1 := range keys1 {
-		if a, b := v2.MapIndex(key1), v1.MapIndex(key1); a != b {
-			t.Fatal("%v Different key/value in Map: %v != %v", caller(), a, b)
+		if a, b := v2.MapIndex(key1).Interface(), v1.MapIndex(key1).Interface(); a != b {
+			t.Fatalf("%v Different key/value in Map: %v != %v", caller(), a, b)
 		}
 	}
 
 	for _, key2 := range keys2 {
-		if a, b := v1.MapIndex(key2), v2.MapIndex(key2); a != b {
-			t.Fatal("%v Different key/value in Map: %v != %v", caller(), a, b)
+		if a, b := v1.MapIndex(key2).Interface(), v2.MapIndex(key2).Interface(); a != b {
+			t.Fatalf("%v Different key/value in Map: %v != %v", caller(), a, b)
 		}
 	}
 }

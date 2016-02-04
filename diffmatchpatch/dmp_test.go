@@ -312,14 +312,14 @@ func Test_diffCharsToLines(t *testing.T) {
 	dmp := New()
 	// Convert chars up to lines.
 	diffs := []Diff{
-		Diff{DiffEqual, "\u0001\u0002\u0001"},
-		Diff{DiffInsert, "\u0002\u0001\u0002"}}
+		{DiffEqual, "\u0001\u0002\u0001"},
+		{DiffInsert, "\u0002\u0001\u0002"}}
 
 	tmpVector := []string{"", "alpha\n", "beta\n"}
 	actual := dmp.DiffCharsToLines(diffs, tmpVector)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "alpha\nbeta\nalpha\n"},
-		Diff{DiffInsert, "beta\nalpha\nbeta\n"}}, actual)
+		{DiffEqual, "alpha\nbeta\nalpha\n"},
+		{DiffInsert, "beta\nalpha\nbeta\n"}}, actual)
 
 	// More than 256 to reveal any 8-bit limitations.
 	n := 300
@@ -334,10 +334,10 @@ func Test_diffCharsToLines(t *testing.T) {
 	assert.Equal(t, n, len(charList))
 
 	lineList = append([]string{""}, lineList...)
-	diffs = []Diff{Diff{DiffDelete, string(charList)}}
+	diffs = []Diff{{DiffDelete, string(charList)}}
 	actual = dmp.DiffCharsToLines(diffs, lineList)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, strings.Join(lineList, "")}}, actual)
+		{DiffDelete, strings.Join(lineList, "")}}, actual)
 }
 
 func Test_diffCleanupMerge(t *testing.T) {
@@ -349,60 +349,60 @@ func Test_diffCleanupMerge(t *testing.T) {
 	assertDiffEqual(t, []Diff{}, diffs)
 
 	// No Diff case.
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffDelete, "b"}, {DiffInsert, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffInsert, "c"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffEqual, "a"}, {DiffDelete, "b"}, {DiffInsert, "c"}}, diffs)
 
 	// Merge equalities.
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffEqual, "b"}, Diff{DiffEqual, "c"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffEqual, "b"}, {DiffEqual, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffEqual, "abc"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffEqual, "abc"}}, diffs)
 
 	// Merge deletions.
-	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffDelete, "b"}, Diff{DiffDelete, "c"}}
+	diffs = []Diff{{DiffDelete, "a"}, {DiffDelete, "b"}, {DiffDelete, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffDelete, "abc"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffDelete, "abc"}}, diffs)
 
 	// Merge insertions.
-	diffs = []Diff{Diff{DiffInsert, "a"}, Diff{DiffInsert, "b"}, Diff{DiffInsert, "c"}}
+	diffs = []Diff{{DiffInsert, "a"}, {DiffInsert, "b"}, {DiffInsert, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffInsert, "abc"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffInsert, "abc"}}, diffs)
 
 	// Merge interweave.
-	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}, Diff{DiffDelete, "c"}, Diff{DiffInsert, "d"}, Diff{DiffEqual, "e"}, Diff{DiffEqual, "f"}}
+	diffs = []Diff{{DiffDelete, "a"}, {DiffInsert, "b"}, {DiffDelete, "c"}, {DiffInsert, "d"}, {DiffEqual, "e"}, {DiffEqual, "f"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffDelete, "ac"}, Diff{DiffInsert, "bd"}, Diff{DiffEqual, "ef"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffDelete, "ac"}, {DiffInsert, "bd"}, {DiffEqual, "ef"}}, diffs)
 
 	// Prefix and suffix detection.
-	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}}
+	diffs = []Diff{{DiffDelete, "a"}, {DiffInsert, "abc"}, {DiffDelete, "dc"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "c"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffEqual, "a"}, {DiffDelete, "d"}, {DiffInsert, "b"}, {DiffEqual, "c"}}, diffs)
 
 	// Prefix and suffix detection with equalities.
-	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "a"}, Diff{DiffInsert, "abc"}, Diff{DiffDelete, "dc"}, Diff{DiffEqual, "y"}}
+	diffs = []Diff{{DiffEqual, "x"}, {DiffDelete, "a"}, {DiffInsert, "abc"}, {DiffDelete, "dc"}, {DiffEqual, "y"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffEqual, "xa"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffEqual, "xa"}, {DiffDelete, "d"}, {DiffInsert, "b"}, {DiffEqual, "cy"}}, diffs)
 
 	// Slide edit left.
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "ba"}, Diff{DiffEqual, "c"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffInsert, "ba"}, {DiffEqual, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffInsert, "ab"}, Diff{DiffEqual, "ac"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffInsert, "ab"}, {DiffEqual, "ac"}}, diffs)
 
 	// Slide edit right.
-	diffs = []Diff{Diff{DiffEqual, "c"}, Diff{DiffInsert, "ab"}, Diff{DiffEqual, "a"}}
+	diffs = []Diff{{DiffEqual, "c"}, {DiffInsert, "ab"}, {DiffEqual, "a"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
 
-	assertDiffEqual(t, []Diff{Diff{DiffEqual, "ca"}, Diff{DiffInsert, "ba"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffEqual, "ca"}, {DiffInsert, "ba"}}, diffs)
 
 	// Slide edit left recursive.
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "ac"}, Diff{DiffEqual, "x"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffDelete, "b"}, {DiffEqual, "c"}, {DiffDelete, "ac"}, {DiffEqual, "x"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffDelete, "abc"}, Diff{DiffEqual, "acx"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffDelete, "abc"}, {DiffEqual, "acx"}}, diffs)
 
 	// Slide edit right recursive.
-	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "ca"}, Diff{DiffEqual, "c"}, Diff{DiffDelete, "b"}, Diff{DiffEqual, "a"}}
+	diffs = []Diff{{DiffEqual, "x"}, {DiffDelete, "ca"}, {DiffEqual, "c"}, {DiffDelete, "b"}, {DiffEqual, "a"}}
 	diffs = dmp.DiffCleanupMerge(diffs)
-	assertDiffEqual(t, []Diff{Diff{DiffEqual, "xca"}, Diff{DiffDelete, "cba"}}, diffs)
+	assertDiffEqual(t, []Diff{{DiffEqual, "xca"}, {DiffDelete, "cba"}}, diffs)
 }
 
 func Test_diffCleanupSemanticLossless(t *testing.T) {
@@ -415,118 +415,118 @@ func Test_diffCleanupSemanticLossless(t *testing.T) {
 
 	// Blank lines.
 	diffs = []Diff{
-		Diff{DiffEqual, "AAA\r\n\r\nBBB"},
-		Diff{DiffInsert, "\r\nDDD\r\n\r\nBBB"},
-		Diff{DiffEqual, "\r\nEEE"},
+		{DiffEqual, "AAA\r\n\r\nBBB"},
+		{DiffInsert, "\r\nDDD\r\n\r\nBBB"},
+		{DiffEqual, "\r\nEEE"},
 	}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "AAA\r\n\r\n"},
-		Diff{DiffInsert, "BBB\r\nDDD\r\n\r\n"},
-		Diff{DiffEqual, "BBB\r\nEEE"}}, diffs)
+		{DiffEqual, "AAA\r\n\r\n"},
+		{DiffInsert, "BBB\r\nDDD\r\n\r\n"},
+		{DiffEqual, "BBB\r\nEEE"}}, diffs)
 
 	// Line boundaries.
 	diffs = []Diff{
-		Diff{DiffEqual, "AAA\r\nBBB"},
-		Diff{DiffInsert, " DDD\r\nBBB"},
-		Diff{DiffEqual, " EEE"}}
+		{DiffEqual, "AAA\r\nBBB"},
+		{DiffInsert, " DDD\r\nBBB"},
+		{DiffEqual, " EEE"}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "AAA\r\n"},
-		Diff{DiffInsert, "BBB DDD\r\n"},
-		Diff{DiffEqual, "BBB EEE"}}, diffs)
+		{DiffEqual, "AAA\r\n"},
+		{DiffInsert, "BBB DDD\r\n"},
+		{DiffEqual, "BBB EEE"}}, diffs)
 
 	// Word boundaries.
 	diffs = []Diff{
-		Diff{DiffEqual, "The c"},
-		Diff{DiffInsert, "ow and the c"},
-		Diff{DiffEqual, "at."}}
+		{DiffEqual, "The c"},
+		{DiffInsert, "ow and the c"},
+		{DiffEqual, "at."}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "The "},
-		Diff{DiffInsert, "cow and the "},
-		Diff{DiffEqual, "cat."}}, diffs)
+		{DiffEqual, "The "},
+		{DiffInsert, "cow and the "},
+		{DiffEqual, "cat."}}, diffs)
 
 	// Alphanumeric boundaries.
 	diffs = []Diff{
-		Diff{DiffEqual, "The-c"},
-		Diff{DiffInsert, "ow-and-the-c"},
-		Diff{DiffEqual, "at."}}
+		{DiffEqual, "The-c"},
+		{DiffInsert, "ow-and-the-c"},
+		{DiffEqual, "at."}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "The-"},
-		Diff{DiffInsert, "cow-and-the-"},
-		Diff{DiffEqual, "cat."}}, diffs)
+		{DiffEqual, "The-"},
+		{DiffInsert, "cow-and-the-"},
+		{DiffEqual, "cat."}}, diffs)
 
 	// Hitting the start.
 	diffs = []Diff{
-		Diff{DiffEqual, "a"},
-		Diff{DiffDelete, "a"},
-		Diff{DiffEqual, "ax"}}
+		{DiffEqual, "a"},
+		{DiffDelete, "a"},
+		{DiffEqual, "ax"}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "a"},
-		Diff{DiffEqual, "aax"}}, diffs)
+		{DiffDelete, "a"},
+		{DiffEqual, "aax"}}, diffs)
 
 	// Hitting the end.
 	diffs = []Diff{
-		Diff{DiffEqual, "xa"},
-		Diff{DiffDelete, "a"},
-		Diff{DiffEqual, "a"}}
+		{DiffEqual, "xa"},
+		{DiffDelete, "a"},
+		{DiffEqual, "a"}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "xaa"},
-		Diff{DiffDelete, "a"}}, diffs)
+		{DiffEqual, "xaa"},
+		{DiffDelete, "a"}}, diffs)
 
 	// Sentence boundaries.
 	diffs = []Diff{
-		Diff{DiffEqual, "The xxx. The "},
-		Diff{DiffInsert, "zzz. The "},
-		Diff{DiffEqual, "yyy."}}
+		{DiffEqual, "The xxx. The "},
+		{DiffInsert, "zzz. The "},
+		{DiffEqual, "yyy."}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "The xxx."},
-		Diff{DiffInsert, " The zzz."},
-		Diff{DiffEqual, " The yyy."}}, diffs)
+		{DiffEqual, "The xxx."},
+		{DiffInsert, " The zzz."},
+		{DiffEqual, " The yyy."}}, diffs)
 
 	// UTF-8 strings.
 	diffs = []Diff{
-		Diff{DiffEqual, "The ♕. The "},
-		Diff{DiffInsert, "♔. The "},
-		Diff{DiffEqual, "♖."}}
+		{DiffEqual, "The ♕. The "},
+		{DiffInsert, "♔. The "},
+		{DiffEqual, "♖."}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "The ♕."},
-		Diff{DiffInsert, " The ♔."},
-		Diff{DiffEqual, " The ♖."}}, diffs)
+		{DiffEqual, "The ♕."},
+		{DiffInsert, " The ♔."},
+		{DiffEqual, " The ♖."}}, diffs)
 
 	// Rune boundaries.
 	diffs = []Diff{
-		Diff{DiffEqual, "♕♕"},
-		Diff{DiffInsert, "♔♔"},
-		Diff{DiffEqual, "♖♖"}}
+		{DiffEqual, "♕♕"},
+		{DiffInsert, "♔♔"},
+		{DiffEqual, "♖♖"}}
 
 	diffs = dmp.DiffCleanupSemanticLossless(diffs)
 
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "♕♕"},
-		Diff{DiffInsert, "♔♔"},
-		Diff{DiffEqual, "♖♖"}}, diffs)
+		{DiffEqual, "♕♕"},
+		{DiffInsert, "♔♔"},
+		{DiffEqual, "♖♖"}}, diffs)
 }
 
 func Test_diffCleanupSemantic(t *testing.T) {
@@ -539,124 +539,124 @@ func Test_diffCleanupSemantic(t *testing.T) {
 
 	// No elimination #1.
 	diffs = []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "cd"},
-		Diff{DiffEqual, "12"},
-		Diff{DiffDelete, "e"}}
+		{DiffDelete, "ab"},
+		{DiffInsert, "cd"},
+		{DiffEqual, "12"},
+		{DiffDelete, "e"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "cd"},
-		Diff{DiffEqual, "12"},
-		Diff{DiffDelete, "e"}}, diffs)
+		{DiffDelete, "ab"},
+		{DiffInsert, "cd"},
+		{DiffEqual, "12"},
+		{DiffDelete, "e"}}, diffs)
 
 	// No elimination #2.
 	diffs = []Diff{
-		Diff{DiffDelete, "abc"},
-		Diff{DiffInsert, "ABC"},
-		Diff{DiffEqual, "1234"},
-		Diff{DiffDelete, "wxyz"}}
+		{DiffDelete, "abc"},
+		{DiffInsert, "ABC"},
+		{DiffEqual, "1234"},
+		{DiffDelete, "wxyz"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abc"},
-		Diff{DiffInsert, "ABC"},
-		Diff{DiffEqual, "1234"},
-		Diff{DiffDelete, "wxyz"}}, diffs)
+		{DiffDelete, "abc"},
+		{DiffInsert, "ABC"},
+		{DiffEqual, "1234"},
+		{DiffDelete, "wxyz"}}, diffs)
 
 	// Simple elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "a"},
-		Diff{DiffEqual, "b"},
-		Diff{DiffDelete, "c"}}
+		{DiffDelete, "a"},
+		{DiffEqual, "b"},
+		{DiffDelete, "c"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abc"},
-		Diff{DiffInsert, "b"}}, diffs)
+		{DiffDelete, "abc"},
+		{DiffInsert, "b"}}, diffs)
 
 	// Backpass elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffEqual, "cd"},
-		Diff{DiffDelete, "e"},
-		Diff{DiffEqual, "f"},
-		Diff{DiffInsert, "g"}}
+		{DiffDelete, "ab"},
+		{DiffEqual, "cd"},
+		{DiffDelete, "e"},
+		{DiffEqual, "f"},
+		{DiffInsert, "g"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abcdef"},
-		Diff{DiffInsert, "cdfg"}}, diffs)
+		{DiffDelete, "abcdef"},
+		{DiffInsert, "cdfg"}}, diffs)
 
 	// Multiple eliminations.
 	diffs = []Diff{
-		Diff{DiffInsert, "1"},
-		Diff{DiffEqual, "A"},
-		Diff{DiffDelete, "B"},
-		Diff{DiffInsert, "2"},
-		Diff{DiffEqual, "_"},
-		Diff{DiffInsert, "1"},
-		Diff{DiffEqual, "A"},
-		Diff{DiffDelete, "B"},
-		Diff{DiffInsert, "2"}}
+		{DiffInsert, "1"},
+		{DiffEqual, "A"},
+		{DiffDelete, "B"},
+		{DiffInsert, "2"},
+		{DiffEqual, "_"},
+		{DiffInsert, "1"},
+		{DiffEqual, "A"},
+		{DiffDelete, "B"},
+		{DiffInsert, "2"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "AB_AB"},
-		Diff{DiffInsert, "1A2_1A2"}}, diffs)
+		{DiffDelete, "AB_AB"},
+		{DiffInsert, "1A2_1A2"}}, diffs)
 
 	// Word boundaries.
 	diffs = []Diff{
-		Diff{DiffEqual, "The c"},
-		Diff{DiffDelete, "ow and the c"},
-		Diff{DiffEqual, "at."}}
+		{DiffEqual, "The c"},
+		{DiffDelete, "ow and the c"},
+		{DiffEqual, "at."}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffEqual, "The "},
-		Diff{DiffDelete, "cow and the "},
-		Diff{DiffEqual, "cat."}}, diffs)
+		{DiffEqual, "The "},
+		{DiffDelete, "cow and the "},
+		{DiffEqual, "cat."}}, diffs)
 
 	// No overlap elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "abcxx"},
-		Diff{DiffInsert, "xxdef"}}
+		{DiffDelete, "abcxx"},
+		{DiffInsert, "xxdef"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abcxx"},
-		Diff{DiffInsert, "xxdef"}}, diffs)
+		{DiffDelete, "abcxx"},
+		{DiffInsert, "xxdef"}}, diffs)
 
 	// Overlap elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "abcxxx"},
-		Diff{DiffInsert, "xxxdef"}}
+		{DiffDelete, "abcxxx"},
+		{DiffInsert, "xxxdef"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abc"},
-		Diff{DiffEqual, "xxx"},
-		Diff{DiffInsert, "def"}}, diffs)
+		{DiffDelete, "abc"},
+		{DiffEqual, "xxx"},
+		{DiffInsert, "def"}}, diffs)
 
 	// Reverse overlap elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "xxxabc"},
-		Diff{DiffInsert, "defxxx"}}
+		{DiffDelete, "xxxabc"},
+		{DiffInsert, "defxxx"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffInsert, "def"},
-		Diff{DiffEqual, "xxx"},
-		Diff{DiffDelete, "abc"}}, diffs)
+		{DiffInsert, "def"},
+		{DiffEqual, "xxx"},
+		{DiffDelete, "abc"}}, diffs)
 
 	// Two overlap eliminations.
 	diffs = []Diff{
-		Diff{DiffDelete, "abcd1212"},
-		Diff{DiffInsert, "1212efghi"},
-		Diff{DiffEqual, "----"},
-		Diff{DiffDelete, "A3"},
-		Diff{DiffInsert, "3BC"}}
+		{DiffDelete, "abcd1212"},
+		{DiffInsert, "1212efghi"},
+		{DiffEqual, "----"},
+		{DiffDelete, "A3"},
+		{DiffInsert, "3BC"}}
 	diffs = dmp.DiffCleanupSemantic(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abcd"},
-		Diff{DiffEqual, "1212"},
-		Diff{DiffInsert, "efghi"},
-		Diff{DiffEqual, "----"},
-		Diff{DiffDelete, "A"},
-		Diff{DiffEqual, "3"},
-		Diff{DiffInsert, "BC"}}, diffs)
+		{DiffDelete, "abcd"},
+		{DiffEqual, "1212"},
+		{DiffInsert, "efghi"},
+		{DiffEqual, "----"},
+		{DiffDelete, "A"},
+		{DiffEqual, "3"},
+		{DiffInsert, "BC"}}, diffs)
 }
 
 func Test_diffCleanupEfficiency(t *testing.T) {
@@ -670,68 +670,68 @@ func Test_diffCleanupEfficiency(t *testing.T) {
 
 	// No elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "12"},
-		Diff{DiffEqual, "wxyz"},
-		Diff{DiffDelete, "cd"},
-		Diff{DiffInsert, "34"}}
+		{DiffDelete, "ab"},
+		{DiffInsert, "12"},
+		{DiffEqual, "wxyz"},
+		{DiffDelete, "cd"},
+		{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "12"},
-		Diff{DiffEqual, "wxyz"},
-		Diff{DiffDelete, "cd"},
-		Diff{DiffInsert, "34"}}, diffs)
+		{DiffDelete, "ab"},
+		{DiffInsert, "12"},
+		{DiffEqual, "wxyz"},
+		{DiffDelete, "cd"},
+		{DiffInsert, "34"}}, diffs)
 
 	// Four-edit elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "12"},
-		Diff{DiffEqual, "xyz"},
-		Diff{DiffDelete, "cd"},
-		Diff{DiffInsert, "34"}}
+		{DiffDelete, "ab"},
+		{DiffInsert, "12"},
+		{DiffEqual, "xyz"},
+		{DiffDelete, "cd"},
+		{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abxyzcd"},
-		Diff{DiffInsert, "12xyz34"}}, diffs)
+		{DiffDelete, "abxyzcd"},
+		{DiffInsert, "12xyz34"}}, diffs)
 
 	// Three-edit elimination.
 	diffs = []Diff{
-		Diff{DiffInsert, "12"},
-		Diff{DiffEqual, "x"},
-		Diff{DiffDelete, "cd"},
-		Diff{DiffInsert, "34"}}
+		{DiffInsert, "12"},
+		{DiffEqual, "x"},
+		{DiffDelete, "cd"},
+		{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "xcd"},
-		Diff{DiffInsert, "12x34"}}, diffs)
+		{DiffDelete, "xcd"},
+		{DiffInsert, "12x34"}}, diffs)
 
 	// Backpass elimination.
 	diffs = []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "12"},
-		Diff{DiffEqual, "xy"},
-		Diff{DiffInsert, "34"},
-		Diff{DiffEqual, "z"},
-		Diff{DiffDelete, "cd"},
-		Diff{DiffInsert, "56"}}
+		{DiffDelete, "ab"},
+		{DiffInsert, "12"},
+		{DiffEqual, "xy"},
+		{DiffInsert, "34"},
+		{DiffEqual, "z"},
+		{DiffDelete, "cd"},
+		{DiffInsert, "56"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abxyzcd"},
-		Diff{DiffInsert, "12xy34z56"}}, diffs)
+		{DiffDelete, "abxyzcd"},
+		{DiffInsert, "12xy34z56"}}, diffs)
 
 	// High cost elimination.
 	dmp.DiffEditCost = 5
 	diffs = []Diff{
-		Diff{DiffDelete, "ab"},
-		Diff{DiffInsert, "12"},
-		Diff{DiffEqual, "wxyz"},
-		Diff{DiffDelete, "cd"},
-		Diff{DiffInsert, "34"}}
+		{DiffDelete, "ab"},
+		{DiffInsert, "12"},
+		{DiffEqual, "wxyz"},
+		{DiffDelete, "cd"},
+		{DiffInsert, "34"}}
 	diffs = dmp.DiffCleanupEfficiency(diffs)
 	assertDiffEqual(t, []Diff{
-		Diff{DiffDelete, "abwxyzcd"},
-		Diff{DiffInsert, "12wxyz34"}}, diffs)
+		{DiffDelete, "abwxyzcd"},
+		{DiffInsert, "12wxyz34"}}, diffs)
 	dmp.DiffEditCost = 4
 }
 
@@ -739,9 +739,9 @@ func Test_diffPrettyHtml(t *testing.T) {
 	dmp := New()
 	// Pretty print.
 	diffs := []Diff{
-		Diff{DiffEqual, "a\n"},
-		Diff{DiffDelete, "<B>b</B>"},
-		Diff{DiffInsert, "c&d"}}
+		{DiffEqual, "a\n"},
+		{DiffDelete, "<B>b</B>"},
+		{DiffInsert, "c&d"}}
 	assert.Equal(t, "<span>a&para;<br></span><del style=\"background:#ffe6e6;\">&lt;B&gt;b&lt;/B&gt;</del><ins style=\"background:#e6ffe6;\">c&amp;d</ins>",
 		dmp.DiffPrettyHtml(diffs))
 }
@@ -750,13 +750,13 @@ func Test_diffText(t *testing.T) {
 	dmp := New()
 	// Compute the source and destination texts.
 	diffs := []Diff{
-		Diff{DiffEqual, "jump"},
-		Diff{DiffDelete, "s"},
-		Diff{DiffInsert, "ed"},
-		Diff{DiffEqual, " over "},
-		Diff{DiffDelete, "the"},
-		Diff{DiffInsert, "a"},
-		Diff{DiffEqual, " lazy"}}
+		{DiffEqual, "jump"},
+		{DiffDelete, "s"},
+		{DiffInsert, "ed"},
+		{DiffEqual, " over "},
+		{DiffDelete, "the"},
+		{DiffInsert, "a"},
+		{DiffEqual, " lazy"}}
 	assert.Equal(t, "jumps over the lazy", dmp.DiffText1(diffs))
 	assert.Equal(t, "jumped over a lazy", dmp.DiffText2(diffs))
 }
@@ -765,14 +765,14 @@ func Test_diffDelta(t *testing.T) {
 	dmp := New()
 	// Convert a diff into delta string.
 	diffs := []Diff{
-		Diff{DiffEqual, "jump"},
-		Diff{DiffDelete, "s"},
-		Diff{DiffInsert, "ed"},
-		Diff{DiffEqual, " over "},
-		Diff{DiffDelete, "the"},
-		Diff{DiffInsert, "a"},
-		Diff{DiffEqual, " lazy"},
-		Diff{DiffInsert, "old dog"}}
+		{DiffEqual, "jump"},
+		{DiffDelete, "s"},
+		{DiffInsert, "ed"},
+		{DiffEqual, " over "},
+		{DiffDelete, "the"},
+		{DiffInsert, "a"},
+		{DiffEqual, " lazy"},
+		{DiffInsert, "old dog"}}
 
 	text1 := dmp.DiffText1(diffs)
 	assert.Equal(t, "jumps over the lazy", text1)
@@ -810,9 +810,9 @@ func Test_diffDelta(t *testing.T) {
 
 	// Test deltas with special characters.
 	diffs = []Diff{
-		Diff{DiffEqual, "\u0680 \x00 \t %"},
-		Diff{DiffDelete, "\u0681 \x01 \n ^"},
-		Diff{DiffInsert, "\u0682 \x02 \\ |"}}
+		{DiffEqual, "\u0680 \x00 \t %"},
+		{DiffDelete, "\u0681 \x01 \n ^"},
+		{DiffInsert, "\u0682 \x02 \\ |"}}
 	text1 = dmp.DiffText1(diffs)
 	assert.Equal(t, "\u0680 \x00 \t %\u0681 \x01 \n ^", text1)
 
@@ -828,7 +828,7 @@ func Test_diffDelta(t *testing.T) {
 
 	// Verify pool of unchanged characters.
 	diffs = []Diff{
-		Diff{DiffInsert, "A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # "}}
+		{DiffInsert, "A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # "}}
 	text2 := dmp.DiffText2(diffs)
 	assert.Equal(t, "A-Z a-z 0-9 - _ . ! ~ * ' ( ) ; / ? : @ & = + $ , # ", text2, "diff_text2: Unchanged characters.")
 
@@ -844,36 +844,36 @@ func Test_diffXIndex(t *testing.T) {
 	dmp := New()
 	// Translate a location in text1 to text2.
 	diffs := []Diff{
-		Diff{DiffDelete, "a"},
-		Diff{DiffInsert, "1234"},
-		Diff{DiffEqual, "xyz"}}
+		{DiffDelete, "a"},
+		{DiffInsert, "1234"},
+		{DiffEqual, "xyz"}}
 	assert.Equal(t, 5, dmp.DiffXIndex(diffs, 2), "diff_xIndex: Translation on equality.")
 
 	diffs = []Diff{
-		Diff{DiffEqual, "a"},
-		Diff{DiffDelete, "1234"},
-		Diff{DiffEqual, "xyz"}}
+		{DiffEqual, "a"},
+		{DiffDelete, "1234"},
+		{DiffEqual, "xyz"}}
 	assert.Equal(t, 1, dmp.DiffXIndex(diffs, 3), "diff_xIndex: Translation on deletion.")
 }
 
 func Test_diffLevenshtein(t *testing.T) {
 	dmp := New()
 	diffs := []Diff{
-		Diff{DiffDelete, "abc"},
-		Diff{DiffInsert, "1234"},
-		Diff{DiffEqual, "xyz"}}
+		{DiffDelete, "abc"},
+		{DiffInsert, "1234"},
+		{DiffEqual, "xyz"}}
 	assert.Equal(t, 4, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with trailing equality.")
 
 	diffs = []Diff{
-		Diff{DiffEqual, "xyz"},
-		Diff{DiffDelete, "abc"},
-		Diff{DiffInsert, "1234"}}
+		{DiffEqual, "xyz"},
+		{DiffDelete, "abc"},
+		{DiffInsert, "1234"}}
 	assert.Equal(t, 4, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with leading equality.")
 
 	diffs = []Diff{
-		Diff{DiffDelete, "abc"},
-		Diff{DiffEqual, "xyz"},
-		Diff{DiffInsert, "1234"}}
+		{DiffDelete, "abc"},
+		{DiffEqual, "xyz"},
+		{DiffInsert, "1234"}}
 	assert.Equal(t, 7, dmp.DiffLevenshtein(diffs), "diff_levenshtein: Levenshtein with middle equality.")
 }
 
@@ -886,16 +886,16 @@ func Test_diffBisect(t *testing.T) {
 	// the insertion and deletion pairs are swapped.
 	// If the order changes, tweak this test as required.
 	diffs := []Diff{
-		Diff{DiffDelete, "c"},
-		Diff{DiffInsert, "m"},
-		Diff{DiffEqual, "a"},
-		Diff{DiffDelete, "t"},
-		Diff{DiffInsert, "p"}}
+		{DiffDelete, "c"},
+		{DiffInsert, "m"},
+		{DiffEqual, "a"},
+		{DiffDelete, "t"},
+		{DiffInsert, "p"}}
 
 	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC)))
 
 	// Timeout.
-	diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
+	diffs = []Diff{{DiffDelete, "cat"}, {DiffInsert, "map"}}
 	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC)))
 }
 
@@ -905,75 +905,75 @@ func Test_diffMain(t *testing.T) {
 	diffs := []Diff{}
 	assertDiffEqual(t, diffs, dmp.DiffMain("", "", false))
 
-	diffs = []Diff{Diff{DiffEqual, "abc"}}
+	diffs = []Diff{{DiffEqual, "abc"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("abc", "abc", false))
 
-	diffs = []Diff{Diff{DiffEqual, "ab"}, Diff{DiffInsert, "123"}, Diff{DiffEqual, "c"}}
+	diffs = []Diff{{DiffEqual, "ab"}, {DiffInsert, "123"}, {DiffEqual, "c"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("abc", "ab123c", false))
 
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "123"}, Diff{DiffEqual, "bc"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffDelete, "123"}, {DiffEqual, "bc"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a123bc", "abc", false))
 
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "123"}, Diff{DiffEqual, "b"}, Diff{DiffInsert, "456"}, Diff{DiffEqual, "c"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffInsert, "123"}, {DiffEqual, "b"}, {DiffInsert, "456"}, {DiffEqual, "c"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("abc", "a123b456c", false))
 
-	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffDelete, "123"}, Diff{DiffEqual, "b"}, Diff{DiffDelete, "456"}, Diff{DiffEqual, "c"}}
+	diffs = []Diff{{DiffEqual, "a"}, {DiffDelete, "123"}, {DiffEqual, "b"}, {DiffDelete, "456"}, {DiffEqual, "c"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a123b456c", "abc", false))
 
 	// Perform a real diff.
 	// Switch off the timeout.
 	dmp.DiffTimeout = 0
-	diffs = []Diff{Diff{DiffDelete, "a"}, Diff{DiffInsert, "b"}}
+	diffs = []Diff{{DiffDelete, "a"}, {DiffInsert, "b"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a", "b", false))
 
 	diffs = []Diff{
-		Diff{DiffDelete, "Apple"},
-		Diff{DiffInsert, "Banana"},
-		Diff{DiffEqual, "s are a"},
-		Diff{DiffInsert, "lso"},
-		Diff{DiffEqual, " fruit."}}
+		{DiffDelete, "Apple"},
+		{DiffInsert, "Banana"},
+		{DiffEqual, "s are a"},
+		{DiffInsert, "lso"},
+		{DiffEqual, " fruit."}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("Apples are a fruit.", "Bananas are also fruit.", false))
 
 	diffs = []Diff{
-		Diff{DiffDelete, "a"},
-		Diff{DiffInsert, "\u0680"},
-		Diff{DiffEqual, "x"},
-		Diff{DiffDelete, "\t"},
-		Diff{DiffInsert, "\u0000"}}
+		{DiffDelete, "a"},
+		{DiffInsert, "\u0680"},
+		{DiffEqual, "x"},
+		{DiffDelete, "\t"},
+		{DiffInsert, "\u0000"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("ax\t", "\u0680x\u0000", false))
 
 	diffs = []Diff{
-		Diff{DiffDelete, "1"},
-		Diff{DiffEqual, "a"},
-		Diff{DiffDelete, "y"},
-		Diff{DiffEqual, "b"},
-		Diff{DiffDelete, "2"},
-		Diff{DiffInsert, "xab"}}
+		{DiffDelete, "1"},
+		{DiffEqual, "a"},
+		{DiffDelete, "y"},
+		{DiffEqual, "b"},
+		{DiffDelete, "2"},
+		{DiffInsert, "xab"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("1ayb2", "abxab", false))
 
 	diffs = []Diff{
-		Diff{DiffInsert, "xaxcx"},
-		Diff{DiffEqual, "abc"}, Diff{DiffDelete, "y"}}
+		{DiffInsert, "xaxcx"},
+		{DiffEqual, "abc"}, {DiffDelete, "y"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("abcy", "xaxcxabc", false))
 
 	diffs = []Diff{
-		Diff{DiffDelete, "ABCD"},
-		Diff{DiffEqual, "a"},
-		Diff{DiffDelete, "="},
-		Diff{DiffInsert, "-"},
-		Diff{DiffEqual, "bcd"},
-		Diff{DiffDelete, "="},
-		Diff{DiffInsert, "-"},
-		Diff{DiffEqual, "efghijklmnopqrs"},
-		Diff{DiffDelete, "EFGHIJKLMNOefg"}}
+		{DiffDelete, "ABCD"},
+		{DiffEqual, "a"},
+		{DiffDelete, "="},
+		{DiffInsert, "-"},
+		{DiffEqual, "bcd"},
+		{DiffDelete, "="},
+		{DiffInsert, "-"},
+		{DiffEqual, "efghijklmnopqrs"},
+		{DiffDelete, "EFGHIJKLMNOefg"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", false))
 
 	diffs = []Diff{
-		Diff{DiffInsert, " "},
-		Diff{DiffEqual, "a"},
-		Diff{DiffInsert, "nd"},
-		Diff{DiffEqual, " [[Pennsylvania]]"},
-		Diff{DiffDelete, " and [[New"}}
+		{DiffInsert, " "},
+		{DiffEqual, "a"},
+		{DiffInsert, "nd"},
+		{DiffEqual, " [[Pennsylvania]]"},
+		{DiffDelete, " and [[New"}}
 	assertDiffEqual(t, diffs, dmp.DiffMain("a [[Pennsylvania]] and [[New", " and [[Pennsylvania]]", false))
 
 	dmp.DiffTimeout = 200 * time.Millisecond // 100ms
@@ -1111,13 +1111,13 @@ func Test_patch_patchObj(t *testing.T) {
 	p.length1 = 18
 	p.length2 = 17
 	p.diffs = []Diff{
-		Diff{DiffEqual, "jump"},
-		Diff{DiffDelete, "s"},
-		Diff{DiffInsert, "ed"},
-		Diff{DiffEqual, " over "},
-		Diff{DiffDelete, "the"},
-		Diff{DiffInsert, "a"},
-		Diff{DiffEqual, "\nlaz"}}
+		{DiffEqual, "jump"},
+		{DiffDelete, "s"},
+		{DiffInsert, "ed"},
+		{DiffEqual, " over "},
+		{DiffDelete, "the"},
+		{DiffInsert, "a"},
+		{DiffEqual, "\nlaz"}}
 	strp := "@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n %0Alaz\n"
 
 	assert.Equal(t, strp, p.String(), "Patch: toString.")
@@ -1218,8 +1218,8 @@ func Test_patch_make(t *testing.T) {
 		"patch_toText: Character encoding.")
 
 	diffs = []Diff{
-		Diff{DiffDelete, "`1234567890-=[]\\;',./"},
-		Diff{DiffInsert, "~!@#$%^&*()_+{}|:\"<>?"}}
+		{DiffDelete, "`1234567890-=[]\\;',./"},
+		{DiffInsert, "~!@#$%^&*()_+{}|:\"<>?"}}
 
 	_p1, _ := dmp.PatchFromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")
 	assertDiffEqual(t, diffs,

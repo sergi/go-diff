@@ -383,6 +383,11 @@ func Test_diffCleanupMerge(t *testing.T) {
 	diffs = dmp.DiffCleanupMerge(diffs)
 	assertDiffEqual(t, []Diff{Diff{DiffEqual, "xa"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
 
+	// Same test as above but with unicode (\u0101 will appear in diffs with at least 257 unique lines)
+	diffs = []Diff{Diff{DiffEqual, "x"}, Diff{DiffDelete, "\u0101"}, Diff{DiffInsert, "\u0101bc"}, Diff{DiffDelete, "dc"}, Diff{DiffEqual, "y"}}
+	diffs = dmp.DiffCleanupMerge(diffs)
+	assertDiffEqual(t, []Diff{Diff{DiffEqual, "x\u0101"}, Diff{DiffDelete, "d"}, Diff{DiffInsert, "b"}, Diff{DiffEqual, "cy"}}, diffs)
+
 	// Slide edit left.
 	diffs = []Diff{Diff{DiffEqual, "a"}, Diff{DiffInsert, "ba"}, Diff{DiffEqual, "c"}}
 	diffs = dmp.DiffCleanupMerge(diffs)

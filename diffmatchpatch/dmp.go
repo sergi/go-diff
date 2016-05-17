@@ -1230,19 +1230,19 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	countDelete := 0
 	countInsert := 0
 	commonlength := 0
-	textDelete := ""
-	textInsert := ""
+	textDelete := []rune(nil)
+	textInsert := []rune(nil)
 
 	for pointer < len(diffs) {
 		switch diffs[pointer].Type {
 		case DiffInsert:
 			countInsert++
-			textInsert += diffs[pointer].Text
+			textInsert = append(textInsert, []rune(diffs[pointer].Text)...)
 			pointer++
 			break
 		case DiffDelete:
 			countDelete++
-			textDelete += diffs[pointer].Text
+			textDelete = append(textDelete, []rune(diffs[pointer].Text)...)
 			pointer++
 			break
 		case DiffEqual:
@@ -1250,24 +1250,24 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			if countDelete+countInsert > 1 {
 				if countDelete != 0 && countInsert != 0 {
 					// Factor out any common prefixies.
-					commonlength = dmp.DiffCommonPrefix(textInsert, textDelete)
+					commonlength = commonPrefixLength(textInsert, textDelete)
 					if commonlength != 0 {
 						x := pointer - countDelete - countInsert
 						if x > 0 && diffs[x-1].Type == DiffEqual {
-							diffs[x-1].Text += textInsert[:commonlength]
+							diffs[x-1].Text += string(textInsert[:commonlength])
 						} else {
-							diffs = append([]Diff{Diff{DiffEqual, textInsert[:commonlength]}}, diffs...)
+							diffs = append([]Diff{Diff{DiffEqual, string(textInsert[:commonlength])}}, diffs...)
 							pointer++
 						}
 						textInsert = textInsert[commonlength:]
 						textDelete = textDelete[commonlength:]
 					}
 					// Factor out any common suffixies.
-					commonlength = dmp.DiffCommonSuffix(textInsert, textDelete)
+					commonlength = commonSuffixLength(textInsert, textDelete)
 					if commonlength != 0 {
 						insertIndex := len(textInsert) - commonlength
 						deleteIndex := len(textDelete) - commonlength
-						diffs[pointer].Text = textInsert[insertIndex:] + diffs[pointer].Text
+						diffs[pointer].Text = string(textInsert[insertIndex:]) + diffs[pointer].Text
 						textInsert = textInsert[:insertIndex]
 						textDelete = textDelete[:deleteIndex]
 					}
@@ -1276,16 +1276,16 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 				if countDelete == 0 {
 					diffs = splice(diffs, pointer-countInsert,
 						countDelete+countInsert,
-						Diff{DiffInsert, textInsert})
+						Diff{DiffInsert, string(textInsert)})
 				} else if countInsert == 0 {
 					diffs = splice(diffs, pointer-countDelete,
 						countDelete+countInsert,
-						Diff{DiffDelete, textDelete})
+						Diff{DiffDelete, string(textDelete)})
 				} else {
 					diffs = splice(diffs, pointer-countDelete-countInsert,
 						countDelete+countInsert,
-						Diff{DiffDelete, textDelete},
-						Diff{DiffInsert, textInsert})
+						Diff{DiffDelete, string(textDelete)},
+						Diff{DiffInsert, string(textInsert)})
 				}
 
 				pointer = pointer - countDelete - countInsert + 1
@@ -1304,8 +1304,8 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			}
 			countInsert = 0
 			countDelete = 0
-			textDelete = ""
-			textInsert = ""
+			textDelete = nil
+			textInsert = nil
 			break
 		}
 	}

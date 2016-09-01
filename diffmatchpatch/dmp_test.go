@@ -563,6 +563,29 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffEqual, "1234"},
 		Diff{DiffDelete, "wxyz"}}, diffs)
 
+	// No elimination #3.
+	diffs = []Diff{
+		Diff{DiffEqual, "2016-09-01T03:07:1"},
+		Diff{DiffInsert, "5.15"},
+		Diff{DiffEqual, "4"},
+		Diff{DiffDelete, "."},
+		Diff{DiffEqual, "80"},
+		Diff{DiffInsert, "0"},
+		Diff{DiffEqual, "78"},
+		Diff{DiffDelete, "3074"},
+		Diff{DiffEqual, "1Z"}}
+	diffs = dmp.DiffCleanupSemantic(diffs)
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "2016-09-01T03:07:1"},
+		Diff{DiffInsert, "5.15"},
+		Diff{DiffEqual, "4"},
+		Diff{DiffDelete, "."},
+		Diff{DiffEqual, "80"},
+		Diff{DiffInsert, "0"},
+		Diff{DiffEqual, "78"},
+		Diff{DiffDelete, "3074"},
+		Diff{DiffEqual, "1Z"}}, diffs)
+
 	// Simple elimination.
 	diffs = []Diff{
 		Diff{DiffDelete, "a"},

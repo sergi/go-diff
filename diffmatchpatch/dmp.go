@@ -967,7 +967,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					float64(overlapLength2) >= float64(len(insertion))/2 {
 					// Reverse overlap found.
 					// Insert an equality and swap and trim the surrounding edits.
-					overlap := Diff{DiffEqual, insertion[overlapLength2:]}
+					overlap := Diff{DiffEqual, insertion[len(insertion)-overlapLength2:]}
 					diffs = append(
 						diffs[:pointer],
 						append([]Diff{overlap}, diffs[pointer:]...)...)

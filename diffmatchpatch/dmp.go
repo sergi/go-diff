@@ -34,12 +34,16 @@ import (
 // [[DiffDelete, 'Hello'], [DiffInsert, 'Goodbye'], [DiffEqual, ' world.']]
 // which means: delete 'Hello', add 'Goodbye' and keep ' world.'
 
+// Operation defines the operation of a diff item.
 type Operation int8
 
 const (
+	// DiffDelete item represents a delete diff.
 	DiffDelete Operation = -1
+	// DiffInsert item represents an insert diff.
 	DiffInsert Operation = 1
-	DiffEqual  Operation = 0
+	// DiffEqual item represents an equal diff.
+	DiffEqual Operation = 0
 )
 
 // unescaper unescapes selected chars for compatibility with JavaScript's encodeURI.
@@ -207,6 +211,7 @@ func (p *Patch) String() string {
 	return unescaper.Replace(text.String())
 }
 
+// DiffMatchPatch holds the configuration for diff-match-patch operations.
 type DiffMatchPatch struct {
 	// Number of seconds to map a diff before giving up (0 for infinity).
 	DiffTimeout time.Duration
@@ -562,7 +567,7 @@ func (dmp *DiffMatchPatch) diffBisectSplit_(runes1, runes2 []rune, x, y int,
 	return append(diffs, diffsb...)
 }
 
-// DiffLinesToChars split two texts into a list of strings.  Reduces the texts to a string of
+// DiffLinesToChars splits two texts into a list of strings.  Reduces the texts to a string of
 // hashes where each Unicode character represents one line.
 // It's slightly faster to call DiffLinesToRunes first, followed by DiffMainRunes.
 func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
@@ -803,17 +808,13 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	}
 }
 
-/**
- * Does a substring of shorttext exist within longtext such that the substring
- * is at least half the length of longtext?
- * @param {string} longtext Longer string.
- * @param {string} shorttext Shorter string.
- * @param {number} i Start index of quarter length substring within longtext.
- * @return {Array.<string>} Five element Array, containing the prefix of
- *     longtext, the suffix of longtext, the prefix of shorttext, the suffix
- *     of shorttext and the common middle.  Or null if there was no match.
- * @private
- */
+// diffHalfMatchI checks if a substring of shorttext exist within longtext such that the substring  is at least half the length of longtext?
+// @param {string} longtext Longer string.
+// @param {string} shorttext Shorter string.
+// @param {number} i Start index of quarter length substring within longtext.
+// @return {Array.<string>} Five element Array, containing the prefix of
+//     longtext, the suffix of longtext, the prefix of shorttext, the suffix
+//     of shorttext and the common middle.  Or null if there was no match.
 func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 	// Start with a 1/4 length substring at position i as a seed.
 	seed := l[i : i+len(l)/4]
@@ -863,7 +864,7 @@ func concat(r1, r2 []rune) []rune {
 	return result
 }
 
-// Diff_cleanupSemantic reduces the number of edits by eliminating
+// DiffCleanupSemantic reduces the number of edits by eliminating
 // semantically trivial equalities.
 func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	changes := false
@@ -987,7 +988,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	return diffs
 }
 
-// Diff_cleanupSemanticLossless looks for single edits surrounded on both sides by equalities
+// DiffCleanupSemanticLossless looks for single edits surrounded on both sides by equalities
 // which can be shifted sideways to align the edit to a word boundary.
 // e.g: The c<ins>at c</ins>ame. -> The <ins>cat </ins>came.
 func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
@@ -1119,7 +1120,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 	return diffs
 }
 
-// Diff_cleanupEfficiency reduces the number of edits by eliminating
+// DiffCleanupEfficiency reduces the number of edits by eliminating
 // operationally trivial equalities.
 func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 	changes := false
@@ -1220,7 +1221,7 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 	return diffs
 }
 
-// Diff_cleanupMerge reorders and merges like edit sections.  Merge equalities.
+// DiffCleanupMerge reorders and merges like edit sections.  Merge equalities.
 // Any edit section can move as long as it doesn't cross an equality.
 func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	// Add a dummy entry at the end.
@@ -1350,7 +1351,8 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	return diffs
 }
 
-// Diff_xIndex. loc is a location in text1, comAdde and return the equivalent location in
+// DiffXIndex returns the equivalent location in s2.
+// loc is a location in text1, comAdde and return the equivalent location in
 // text2.
 // e.g. "The cat" vs "The big cat", 1->1, 5->8
 func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
@@ -1410,7 +1412,7 @@ func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
 	return buff.String()
 }
 
-// Diff_text1 computes and returns the source text (all equalities and deletions).
+// DiffText1 computes and returns the source text (all equalities and deletions).
 func (dmp *DiffMatchPatch) DiffText1(diffs []Diff) string {
 	//StringBuilder text = new StringBuilder()
 	var text bytes.Buffer
@@ -1423,7 +1425,7 @@ func (dmp *DiffMatchPatch) DiffText1(diffs []Diff) string {
 	return text.String()
 }
 
-// Diff_text2 computes and returns the destination text (all equalities and insertions).
+// DiffText2 computes and returns the destination text (all equalities and insertions).
 func (dmp *DiffMatchPatch) DiffText2(diffs []Diff) string {
 	var text bytes.Buffer
 
@@ -1435,7 +1437,7 @@ func (dmp *DiffMatchPatch) DiffText2(diffs []Diff) string {
 	return text.String()
 }
 
-// Diff_levenshtein computes the Levenshtein distance; the number of inserted, deleted or
+// DiffLevenshtein computes the Levenshtein distance; the number of inserted, deleted or
 // substituted characters.
 func (dmp *DiffMatchPatch) DiffLevenshtein(diffs []Diff) int {
 	levenshtein := 0
@@ -1460,7 +1462,7 @@ func (dmp *DiffMatchPatch) DiffLevenshtein(diffs []Diff) int {
 	return levenshtein
 }
 
-// Diff_toDelta crushes the diff into an encoded string which describes the operations
+// DiffToDelta crushes the diff into an encoded string which describes the operations
 // required to transform text1 into text2.
 // E.g. =3\t-2\t+ing  -> Keep 3 chars, delete 2 chars, insert 'ing'.
 // Operations are tab-separated.  Inserted text is escaped using %xx
@@ -1495,7 +1497,7 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 	return delta
 }
 
-// Diff_fromDelta. Given the original text1, and an encoded string which describes the
+// DiffFromDelta given the original text1, and an encoded string which describes the
 // operations required to transform text1 into text2, comAdde the full diff.
 func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err error) {
 	diffs = []Diff{}
@@ -1757,6 +1759,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	return patch
 }
 
+// PatchMake computes a list of patches.
 func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
 	if len(opt) == 1 {
 		diffs, _ := opt[0].([]Diff)
@@ -1781,7 +1784,7 @@ func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
 	return []Patch{}
 }
 
-// Compute a list of patches to turn text1 into text2.
+// patchMake2 computes a list of patches to turn text1 into text2.
 // text2 is not provided, diffs are the delta between text1 and text2.
 func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	// Check for null inputs not needed since null can't be passed in C#.

@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+// Stack represents a generic stack implementation.
 type Stack struct {
 	top  *Element
 	size int
 }
 
+// Element holds a generic stack element.
 type Element struct {
 	value interface{}
 	next  *Element

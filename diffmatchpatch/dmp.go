@@ -803,9 +803,9 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	// A half-match was found, sort out the return data.
 	if len(text1) > len(text2) {
 		return hm
-	} else {
-		return [][]rune{hm[2], hm[3], hm[0], hm[1], hm[4]}
 	}
+
+	return [][]rune{hm[2], hm[3], hm[0], hm[1], hm[4]}
 }
 
 // diffHalfMatchI checks if a substring of shorttext exist within longtext such that the substring  is at least half the length of longtext?
@@ -1236,14 +1236,14 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 	for pointer < len(diffs) {
 		switch diffs[pointer].Type {
 		case DiffInsert:
-			count_insert += 1
+			count_insert++
 			text_insert += diffs[pointer].Text
-			pointer += 1
+			pointer++
 			break
 		case DiffDelete:
-			count_delete += 1
+			count_delete++
 			text_delete += diffs[pointer].Text
-			pointer += 1
+			pointer++
 			break
 		case DiffEqual:
 			// Upon reaching an equality, check for prior redundancies.
@@ -1257,7 +1257,7 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 							diffs[x-1].Text += text_insert[:commonlength]
 						} else {
 							diffs = append([]Diff{Diff{DiffEqual, text_insert[:commonlength]}}, diffs...)
-							pointer += 1
+							pointer++
 						}
 						text_insert = text_insert[commonlength:]
 						text_delete = text_delete[commonlength:]
@@ -1290,10 +1290,10 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 
 				pointer = pointer - count_delete - count_insert + 1
 				if count_delete != 0 {
-					pointer += 1
+					pointer++
 				}
 				if count_insert != 0 {
-					pointer += 1
+					pointer++
 				}
 			} else if pointer != 0 && diffs[pointer-1].Type == DiffEqual {
 				// Merge this equality with the previous one.
@@ -1591,7 +1591,7 @@ func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 	s := dmp.MatchAlphabet(pattern)
 
 	// Highest score beyond which we give up.
-	var score_threshold float64 = dmp.MatchThreshold
+	score_threshold := dmp.MatchThreshold
 	// Is there a nearby exact match? (speedup)
 	best_loc := indexOf(text, pattern, loc)
 	if best_loc != -1 {
@@ -1681,15 +1681,15 @@ func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 
 // matchBitapScore computes and returns the score for a match with e errors and x location.
 func (dmp *DiffMatchPatch) matchBitapScore(e, x, loc int, pattern string) float64 {
-	var accuracy float64 = float64(e) / float64(len(pattern))
+	accuracy := float64(e) / float64(len(pattern))
 	proximity := math.Abs(float64(loc - x))
 	if dmp.MatchDistance == 0 {
 		// Dodge divide by zero error.
 		if proximity == 0 {
 			return accuracy
-		} else {
-			return 1.0
 		}
+
+		return 1.0
 	}
 	return accuracy + (proximity / float64(dmp.MatchDistance))
 }
@@ -1988,7 +1988,7 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 	}
 
 	// Bump all the patches forward.
-	for i, _ := range patches {
+	for i := range patches {
 		patches[i].start1 += paddingLength
 		patches[i].start2 += paddingLength
 	}
@@ -2042,7 +2042,7 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 		bigpatch := patches[x]
 		// Remove the big old patch.
 		patches = append(patches[:x], patches[x+1:]...)
-		x -= 1
+		x--
 
 		start1 := bigpatch.start1
 		start2 := bigpatch.start2
@@ -2118,7 +2118,7 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 				}
 			}
 			if !empty {
-				x += 1
+				x++
 				patches = append(patches[:x], append([]Patch{patch}, patches[x:]...)...)
 			}
 		}

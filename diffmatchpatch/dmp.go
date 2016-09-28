@@ -726,7 +726,7 @@ func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 		pattern := text1[text_length-length:]
 		found := strings.Index(text2, pattern)
 		if found == -1 {
-			return best
+			break
 		}
 		length += found
 		if found == 0 || text1[text_length-length:] == text2[0:length] {
@@ -734,7 +734,8 @@ func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 			length++
 		}
 	}
-	return 0
+
+	return best
 }
 
 // DiffHalfMatch checks whether the two texts share a substring which is at
@@ -800,8 +801,6 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	} else {
 		return [][]rune{hm[2], hm[3], hm[0], hm[1], hm[4]}
 	}
-
-	return nil
 }
 
 /**

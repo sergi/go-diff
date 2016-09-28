@@ -251,7 +251,7 @@ func Test_diffHalfmatchTest(t *testing.T) {
 func Test_diffBisectSplit(t *testing.T) {
 	// As originally written, this can produce invalid utf8 strings.
 	dmp := New()
-	diffs := dmp.diffBisectSplit_([]rune("STUV\x05WX\x05YZ\x05["),
+	diffs := dmp.diffBisectSplit([]rune("STUV\x05WX\x05YZ\x05["),
 		[]rune("WĺĻļ\x05YZ\x05ĽľĿŀZ"), 7, 6, time.Now().Add(time.Hour))
 	for _, d := range diffs {
 		assert.True(t, utf8.ValidString(d.Text))
@@ -1009,9 +1009,9 @@ func Test_diffMain(t *testing.T) {
 
 	a = "1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n"
 	b = "abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n"
-	texts_linemode := diffRebuildtexts(dmp.DiffMain(a, b, true))
-	texts_textmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
-	assertStrEqual(t, texts_textmode, texts_linemode)
+	textsLinemode := diffRebuildtexts(dmp.DiffMain(a, b, true))
+	textsTextmode := diffRebuildtexts(dmp.DiffMain(a, b, false))
+	assertStrEqual(t, textsTextmode, textsLinemode)
 
 	// Test null inputs -- not needed because nulls can't be passed in Go.
 }

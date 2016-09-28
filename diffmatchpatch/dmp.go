@@ -42,7 +42,7 @@ const (
 	DiffEqual  Operation = 0
 )
 
-// unescaper unescapes selected chars for compatability with JavaScript's encodeURI.
+// unescaper unescapes selected chars for compatibility with JavaScript's encodeURI.
 // In speed critical applications this could be dropped since the
 // receiving application will certainly decode these fine.
 // Note that this function is case-sensitive.  Thus "%3F" would not be

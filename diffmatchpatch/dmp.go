@@ -187,21 +187,21 @@ func (p *Patch) String() string {
 	}
 
 	var text bytes.Buffer
-	text.WriteString("@@ -" + coords1 + " +" + coords2 + " @@\n")
+	_, _ = text.WriteString("@@ -" + coords1 + " +" + coords2 + " @@\n")
 
 	// Escape the body of the patch with %xx notation.
 	for _, aDiff := range p.diffs {
 		switch aDiff.Type {
 		case DiffInsert:
-			text.WriteString("+")
+			_, _ = text.WriteString("+")
 		case DiffDelete:
-			text.WriteString("-")
+			_, _ = text.WriteString("-")
 		case DiffEqual:
-			text.WriteString(" ")
+			_, _ = text.WriteString(" ")
 		}
 
-		text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
-		text.WriteString("\n")
+		_, _ = text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
+		_, _ = text.WriteString("\n")
 	}
 
 	return unescaper.Replace(text.String())
@@ -1395,17 +1395,17 @@ func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
 		text := strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
 		switch diff.Type {
 		case DiffInsert:
-			buff.WriteString("<ins style=\"background:#e6ffe6;\">")
-			buff.WriteString(text)
-			buff.WriteString("</ins>")
+			_, _ = buff.WriteString("<ins style=\"background:#e6ffe6;\">")
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString("</ins>")
 		case DiffDelete:
-			buff.WriteString("<del style=\"background:#ffe6e6;\">")
-			buff.WriteString(text)
-			buff.WriteString("</del>")
+			_, _ = buff.WriteString("<del style=\"background:#ffe6e6;\">")
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString("</del>")
 		case DiffEqual:
-			buff.WriteString("<span>")
-			buff.WriteString(text)
-			buff.WriteString("</span>")
+			_, _ = buff.WriteString("<span>")
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString("</span>")
 		}
 	}
 	return buff.String()
@@ -1418,7 +1418,7 @@ func (dmp *DiffMatchPatch) DiffText1(diffs []Diff) string {
 
 	for _, aDiff := range diffs {
 		if aDiff.Type != DiffInsert {
-			text.WriteString(aDiff.Text)
+			_, _ = text.WriteString(aDiff.Text)
 		}
 	}
 	return text.String()
@@ -1430,7 +1430,7 @@ func (dmp *DiffMatchPatch) DiffText2(diffs []Diff) string {
 
 	for _, aDiff := range diffs {
 		if aDiff.Type != DiffDelete {
-			text.WriteString(aDiff.Text)
+			_, _ = text.WriteString(aDiff.Text)
 		}
 	}
 	return text.String()
@@ -1471,19 +1471,19 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 	for _, aDiff := range diffs {
 		switch aDiff.Type {
 		case DiffInsert:
-			text.WriteString("+")
-			text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
-			text.WriteString("\t")
+			_, _ = text.WriteString("+")
+			_, _ = text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
+			_, _ = text.WriteString("\t")
 			break
 		case DiffDelete:
-			text.WriteString("-")
-			text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
-			text.WriteString("\t")
+			_, _ = text.WriteString("-")
+			_, _ = text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
+			_, _ = text.WriteString("\t")
 			break
 		case DiffEqual:
-			text.WriteString("=")
-			text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
-			text.WriteString("\t")
+			_, _ = text.WriteString("=")
+			_, _ = text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
+			_, _ = text.WriteString("\t")
 			break
 		}
 	}
@@ -2128,7 +2128,7 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 func (dmp *DiffMatchPatch) PatchToText(patches []Patch) string {
 	var text bytes.Buffer
 	for _, aPatch := range patches {
-		text.WriteString(aPatch.String())
+		_, _ = text.WriteString(aPatch.String())
 	}
 	return text.String()
 }

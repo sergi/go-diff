@@ -25,18 +25,18 @@ func caller() string {
 func pretty(diffs []Diff) string {
 	var w bytes.Buffer
 	for i, diff := range diffs {
-		w.WriteString(fmt.Sprintf("%v. ", i))
+		_, _ = w.WriteString(fmt.Sprintf("%v. ", i))
 		switch diff.Type {
 		case DiffInsert:
-			w.WriteString("DiffIns")
+			_, _ = w.WriteString("DiffIns")
 		case DiffDelete:
-			w.WriteString("DiffDel")
+			_, _ = w.WriteString("DiffDel")
 		case DiffEqual:
-			w.WriteString("DiffEql")
+			_, _ = w.WriteString("DiffEql")
 		default:
-			w.WriteString("Unknown")
+			_, _ = w.WriteString("Unknown")
 		}
-		w.WriteString(fmt.Sprintf(": %v\n", diff.Text))
+		_, _ = w.WriteString(fmt.Sprintf(": %v\n", diff.Text))
 	}
 	return w.String()
 }

@@ -294,7 +294,7 @@ func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, d
 
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
-		diffs = append([]Diff{Diff{DiffEqual, string(commonprefix)}}, diffs...)
+		diffs = append([]Diff{{DiffEqual, string(commonprefix)}}, diffs...)
 	}
 	if len(commonsuffix) != 0 {
 		diffs = append(diffs, Diff{DiffEqual, string(commonsuffix)})
@@ -332,16 +332,16 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		}
 		// Shorter text is inside the longer text (speedup).
 		return []Diff{
-			Diff{op, string(longtext[:i])},
-			Diff{DiffEqual, string(shorttext)},
-			Diff{op, string(longtext[i+len(shorttext):])},
+			{op, string(longtext[:i])},
+			{DiffEqual, string(shorttext)},
+			{op, string(longtext[i+len(shorttext):])},
 		}
 	} else if len(shorttext) == 1 {
 		// Single character string.
 		// After the previous speedup, the character can't be an equality.
 		return []Diff{
-			Diff{DiffDelete, string(text1)},
-			Diff{DiffInsert, string(text2)},
+			{DiffDelete, string(text1)},
+			{DiffInsert, string(text2)},
 		}
 		// Check to see if the problem can be split in two.
 	} else if hm := dmp.diffHalfMatch(text1, text2); hm != nil {
@@ -355,7 +355,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		diffs_a := dmp.diffMainRunes(text1_a, text2_a, checklines, deadline)
 		diffs_b := dmp.diffMainRunes(text1_b, text2_b, checklines, deadline)
 		// Merge the results.
-		return append(diffs_a, append([]Diff{Diff{DiffEqual, string(mid_common)}}, diffs_b...)...)
+		return append(diffs_a, append([]Diff{{DiffEqual, string(mid_common)}}, diffs_b...)...)
 	} else if checklines && len(text1) > 100 && len(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)
 	}
@@ -543,8 +543,8 @@ func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time)
 	// Diff took too long and hit the deadline or
 	// number of diffs equals number of characters, no commonality at all.
 	return []Diff{
-		Diff{DiffDelete, string(runes1)},
-		Diff{DiffInsert, string(runes2)},
+		{DiffDelete, string(runes1)},
+		{DiffInsert, string(runes2)},
 	}
 }
 
@@ -903,7 +903,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 				insPoint := equalities.Peek().(int)
 				diffs = append(
 					diffs[:insPoint],
-					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[insPoint:]...)...)
+					append([]Diff{{DiffDelete, lastequality}}, diffs[insPoint:]...)...)
 
 				// Change second copy to insert.
 				diffs[insPoint+1].Type = DiffInsert
@@ -954,7 +954,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					// Overlap found.  Insert an equality and trim the surrounding edits.
 					diffs = append(
 						diffs[:pointer],
-						append([]Diff{Diff{DiffEqual, insertion[:overlap_length1]}}, diffs[pointer:]...)...)
+						append([]Diff{{DiffEqual, insertion[:overlap_length1]}}, diffs[pointer:]...)...)
 					//diffs.splice(pointer, 0,
 					//    [DiffEqual, insertion[0 : overlap_length1)]]
 					diffs[pointer-1].Text =
@@ -1186,7 +1186,7 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 
 				// Duplicate record.
 				diffs = append(diffs[:equalities.Peek().(int)],
-					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[equalities.Peek().(int):]...)...)
+					append([]Diff{{DiffDelete, lastequality}}, diffs[equalities.Peek().(int):]...)...)
 
 				// Change second copy to insert.
 				diffs[equalities.Peek().(int)+1].Type = DiffInsert
@@ -1256,7 +1256,7 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 						if x > 0 && diffs[x-1].Type == DiffEqual {
 							diffs[x-1].Text += text_insert[:commonlength]
 						} else {
-							diffs = append([]Diff{Diff{DiffEqual, text_insert[:commonlength]}}, diffs...)
+							diffs = append([]Diff{{DiffEqual, text_insert[:commonlength]}}, diffs...)
 							pointer += 1
 						}
 						text_insert = text_insert[commonlength:]
@@ -1740,7 +1740,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	// Add the prefix.
 	prefix := text[max(0, patch.start2-padding):patch.start2]
 	if len(prefix) != 0 {
-		patch.diffs = append([]Diff{Diff{DiffEqual, prefix}}, patch.diffs...)
+		patch.diffs = append([]Diff{{DiffEqual, prefix}}, patch.diffs...)
 	}
 	// Add the suffix.
 	suffix := text[patch.start2+patch.length1 : min(len(text), patch.start2+patch.length1+padding)]
@@ -1986,7 +1986,7 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 	}
 
 	// Bump all the patches forward.
-	for i, _ := range patches {
+	for i := range patches {
 		patches[i].start1 += paddingLength
 		patches[i].start2 += paddingLength
 	}
@@ -1994,7 +1994,7 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 	// Add some padding on start of first diff.
 	if len(patches[0].diffs) == 0 || patches[0].diffs[0].Type != DiffEqual {
 		// Add nullPadding equality.
-		patches[0].diffs = append([]Diff{Diff{DiffEqual, nullPadding}}, patches[0].diffs...)
+		patches[0].diffs = append([]Diff{{DiffEqual, nullPadding}}, patches[0].diffs...)
 		patches[0].start1 -= paddingLength // Should be 0.
 		patches[0].start2 -= paddingLength // Should be 0.
 		patches[0].length1 += paddingLength

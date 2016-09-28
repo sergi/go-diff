@@ -16,7 +16,7 @@ OUT=$(go tool vet -all=true -v=true $ROOT_DIR 2>&1 | grep --invert-match -P "(Ch
 if [ $(echo -n "$OUT" | wc -l) -ne 0 ]; then echo "$OUT"; PROBLEM=1; fi
 
 echo "golint:"
-OUT=$(golint $PKG/...)
+OUT=$(golint $PKG/... | grep --invert-match -P "(method DiffPrettyHtml should be DiffPrettyHTML)")
 if [ $(echo -n "$OUT" | wc -l) -ne 0 ]; then echo "$OUT"; PROBLEM=1; fi
 
 if [ -n "$PROBLEM" ]; then exit 1; fi

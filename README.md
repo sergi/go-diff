@@ -1,4 +1,4 @@
-# go-diff
+# go-diff [![GoDoc](https://godoc.org/github.com/sergi/go-diff?status.png)](https://godoc.org/github.com/sergi/go-diff) [![Build Status](https://travis-ci.org/sergi/go-diff.svg?branch=master)](https://travis-ci.org/sergi/go-diff) [![Coverage Status](https://coveralls.io/repos/sergi/go-diff/badge.png?branch=master)](https://coveralls.io/r/sergi/go-diff?branch=master)
 
 Go-diff is a Go language port of Neil Fraser's google-diff-match-patch code. His original code is available at:
 

@@ -1,12 +1,10 @@
-go-diff
-=======
+# go-diff
 
 Go-diff is a Go language port of Neil Fraser's google-diff-match-patch code. His original code is available at:
 
 http://code.google.com/p/google-diff-match-patch/
 
-Current state for this Go library
----------------------------------
+## Current state for this Go library
 
 In order to run the tests:
 
@@ -16,8 +14,7 @@ In order to run the tests:
 
     go get github.com/sergi/go-diff/diffmatchpatch
 
-Copyright and License
----------------------
+## Copyright and License
 
 The original Google Diff, Match and Patch Library is licensed under
 the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).

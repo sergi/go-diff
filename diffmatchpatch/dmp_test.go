@@ -746,6 +746,17 @@ func Test_diffPrettyHtml(t *testing.T) {
 		dmp.DiffPrettyHtml(diffs))
 }
 
+func Test_diffPrettyText(t *testing.T) {
+	dmp := New()
+	// Pretty print.
+	diffs := []Diff{
+		Diff{DiffEqual, "a\n"},
+		Diff{DiffDelete, "<B>b</B>"},
+		Diff{DiffInsert, "c&d"}}
+	assert.Equal(t, "a\n\x1b[31m<B>b</B>\x1b[0m\x1b[32mc&d\x1b[0m",
+		dmp.DiffPrettyText(diffs))
+}
+
 func Test_diffText(t *testing.T) {
 	dmp := New()
 	// Compute the source and destination texts.

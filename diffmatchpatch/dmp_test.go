@@ -1259,6 +1259,14 @@ func Test_patch_make(t *testing.T) {
 
 	patches = dmp.PatchMake("2016-09-01T03:07:14.807830741Z", "2016-09-01T03:07:15.154800781Z")
 	assert.Equal(t, "@@ -15,16 +15,16 @@\n 07:1\n+5.15\n 4\n-.\n 80\n+0\n 78\n-3074\n 1Z\n", dmp.PatchToText(patches), "patch_make: Corner case of #31 fixed by #32")
+
+	text1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus ut risus et enim consectetur convallis a non ipsum. Sed nec nibh cursus, interdum libero vel."
+	text2 = "Lorem a ipsum dolor sit amet, consectetur adipiscing elit. Vivamus ut risus et enim consectetur convallis a non ipsum. Sed nec nibh cursus, interdum liberovel."
+	dmp2 := New()
+	dmp2.DiffTimeout = 0
+	diffs = dmp2.DiffMain(text1, text2, true)
+	patches = dmp2.PatchMake(text1, diffs)
+	assert.Equal(t, "@@ -1,14 +1,16 @@\n Lorem \n+a \n ipsum do\n@@ -148,13 +148,12 @@\n m libero\n- \n vel.\n", dmp2.PatchToText(patches), "patch_make: Corner case of #28 wrong patch with timeout of 0")
 }
 
 func Test_PatchSplitMax(t *testing.T) {

@@ -250,17 +250,7 @@ func New() *DiffMatchPatch {
 
 // DiffMain finds the differences between two texts.
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
-	var deadline time.Time
-	if dmp.DiffTimeout <= 0 {
-		deadline = time.Now().Add(24 * 365 * time.Hour)
-	} else {
-		deadline = time.Now().Add(dmp.DiffTimeout)
-	}
-	return dmp.diffMain(text1, text2, checklines, deadline)
-}
-
-func (dmp *DiffMatchPatch) diffMain(text1, text2 string, checklines bool, deadline time.Time) []Diff {
-	return dmp.diffMainRunes([]rune(text1), []rune(text2), checklines, deadline)
+	return dmp.DiffMainRunes([]rune(text1), []rune(text2), checklines)
 }
 
 // DiffMainRunes finds the differences between two rune sequences.
@@ -406,7 +396,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 					countDelete+countInsert)
 
 				pointer = pointer - countDelete - countInsert
-				a := dmp.diffMain(textDelete, textInsert, false, deadline)
+				a := dmp.diffMainRunes([]rune(textDelete), []rune(textInsert), false, deadline)
 				for j := len(a) - 1; j >= 0; j-- {
 					diffs = splice(diffs, pointer, 0, a[j])
 				}

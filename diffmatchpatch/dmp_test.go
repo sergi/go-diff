@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -41,33 +40,13 @@ func pretty(diffs []Diff) string {
 	return w.String()
 }
 
-func assertMapEqual(t *testing.T, seq1, seq2 interface{}) {
-	v1 := reflect.ValueOf(seq1)
-	k1 := v1.Kind()
-	v2 := reflect.ValueOf(seq2)
-	k2 := v2.Kind()
-
-	if k1 != reflect.Map || k2 != reflect.Map {
-		t.Fatalf("%v Parameters are not maps", caller())
-	} else if v1.Len() != v2.Len() {
-		t.Fatalf("%v Maps of different length: %v != %v", caller(), v1.Len(), v2.Len())
+func assertMapEqual(t *testing.T, m1, m2 map[byte]int) {
+	if len(m1) != len(m2) {
+		t.Fatalf("%v Maps of different length: %v != %v", caller(), len(m1), len(m2))
 	}
-
-	keys1, keys2 := v1.MapKeys(), v2.MapKeys()
-
-	if len(keys1) != len(keys2) {
-		t.Fatalf("%v Maps of different length", caller())
-	}
-
-	for _, key1 := range keys1 {
-		if a, b := v2.MapIndex(key1).Interface(), v1.MapIndex(key1).Interface(); a != b {
-			t.Fatalf("%v Different key/value in Map: %v != %v", caller(), a, b)
-		}
-	}
-
-	for _, key2 := range keys2 {
-		if a, b := v1.MapIndex(key2).Interface(), v2.MapIndex(key2).Interface(); a != b {
-			t.Fatalf("%v Different key/value in Map: %v != %v", caller(), a, b)
+	for b, i1 := range m1 {
+		if i2, ok := m2[b]; !ok || i2 != i1 {
+			t.Fatalf("%v Maps have different value for key %v: %v vs %v", caller(), b, i1, i2)
 		}
 	}
 }

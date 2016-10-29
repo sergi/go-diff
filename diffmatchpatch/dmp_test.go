@@ -907,18 +907,21 @@ func Test_diffBisect(t *testing.T) {
 	// Since the resulting diff hasn't been normalized, it would be ok if
 	// the insertion and deletion pairs are swapped.
 	// If the order changes, tweak this test as required.
-	diffs := []Diff{
+	correctDiffs := []Diff{
 		Diff{DiffDelete, "c"},
 		Diff{DiffInsert, "m"},
 		Diff{DiffEqual, "a"},
 		Diff{DiffDelete, "t"},
 		Diff{DiffInsert, "p"}}
 
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC)))
+	assertDiffEqual(t, correctDiffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC)))
 
 	// Timeout.
-	diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC)))
+	diffs := []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
+	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Now().Add(time.Nanosecond)))
+
+	// Negative deadlines count as having infinite time.
+	assertDiffEqual(t, correctDiffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC)))
 }
 
 func Test_diffMain(t *testing.T) {
@@ -1259,6 +1262,14 @@ func Test_patch_make(t *testing.T) {
 
 	patches = dmp.PatchMake("2016-09-01T03:07:14.807830741Z", "2016-09-01T03:07:15.154800781Z")
 	assert.Equal(t, "@@ -15,16 +15,16 @@\n 07:1\n+5.15\n 4\n-.\n 80\n+0\n 78\n-3074\n 1Z\n", dmp.PatchToText(patches), "patch_make: Corner case of #31 fixed by #32")
+
+	text1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus ut risus et enim consectetur convallis a non ipsum. Sed nec nibh cursus, interdum libero vel."
+	text2 = "Lorem a ipsum dolor sit amet, consectetur adipiscing elit. Vivamus ut risus et enim consectetur convallis a non ipsum. Sed nec nibh cursus, interdum liberovel."
+	dmp2 := New()
+	dmp2.DiffTimeout = 0
+	diffs = dmp2.DiffMain(text1, text2, true)
+	patches = dmp2.PatchMake(text1, diffs)
+	assert.Equal(t, "@@ -1,14 +1,16 @@\n Lorem \n+a \n ipsum do\n@@ -148,13 +148,12 @@\n m libero\n- \n vel.\n", dmp2.PatchToText(patches), "patch_make: Corner case of #28 wrong patch with timeout of 0")
 }
 
 func Test_PatchSplitMax(t *testing.T) {

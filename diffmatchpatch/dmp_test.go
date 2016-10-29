@@ -680,6 +680,21 @@ func Test_diffCleanupSemantic(t *testing.T) {
 		Diff{DiffDelete, "A"},
 		Diff{DiffEqual, "3"},
 		Diff{DiffInsert, "BC"}}, diffs)
+
+	// Test case for adapting DiffCleanupSemantic to be equal to the Python version #19
+	diffs = dmp.DiffMain("James McCarthy close to signing new Everton deal", "James McCarthy signs new five-year deal at Everton", false)
+	diffs = dmp.DiffCleanupSemantic(diffs)
+	assertDiffEqual(t, []Diff{
+		Diff{DiffEqual, "James McCarthy "},
+		Diff{DiffDelete, "close to "},
+		Diff{DiffEqual, "sign"},
+		Diff{DiffDelete, "ing"},
+		Diff{DiffInsert, "s"},
+		Diff{DiffEqual, " new "},
+		Diff{DiffInsert, "five-year deal at "},
+		Diff{DiffEqual, "Everton"},
+		Diff{DiffDelete, " deal"},
+	}, diffs)
 }
 
 func Test_diffCleanupEfficiency(t *testing.T) {

@@ -256,9 +256,7 @@ func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff
 // DiffMainRunes finds the differences between two rune sequences.
 func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
 	var deadline time.Time
-	if dmp.DiffTimeout <= 0 {
-		deadline = time.Now().Add(24 * 365 * time.Hour)
-	} else {
+	if dmp.DiffTimeout > 0 {
 		deadline = time.Now().Add(dmp.DiffTimeout)
 	}
 	return dmp.diffMainRunes(text1, text2, checklines, deadline)
@@ -456,7 +454,7 @@ func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time)
 	k2end := 0
 	for d := 0; d < maxD; d++ {
 		// Bail out if deadline is reached.
-		if time.Now().After(deadline) {
+		if !deadline.IsZero() && time.Now().After(deadline) {
 			break
 		}
 

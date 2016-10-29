@@ -907,18 +907,21 @@ func Test_diffBisect(t *testing.T) {
 	// Since the resulting diff hasn't been normalized, it would be ok if
 	// the insertion and deletion pairs are swapped.
 	// If the order changes, tweak this test as required.
-	diffs := []Diff{
+	correctDiffs := []Diff{
 		Diff{DiffDelete, "c"},
 		Diff{DiffInsert, "m"},
 		Diff{DiffEqual, "a"},
 		Diff{DiffDelete, "t"},
 		Diff{DiffInsert, "p"}}
 
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC)))
+	assertDiffEqual(t, correctDiffs, dmp.DiffBisect(a, b, time.Date(9999, time.December, 31, 23, 59, 59, 59, time.UTC)))
 
 	// Timeout.
-	diffs = []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
-	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC)))
+	diffs := []Diff{Diff{DiffDelete, "cat"}, Diff{DiffInsert, "map"}}
+	assertDiffEqual(t, diffs, dmp.DiffBisect(a, b, time.Now().Add(time.Nanosecond)))
+
+	// Negative deadlines count as having infinite time.
+	assertDiffEqual(t, correctDiffs, dmp.DiffBisect(a, b, time.Date(0001, time.January, 01, 00, 00, 00, 00, time.UTC)))
 }
 
 func Test_diffMain(t *testing.T) {

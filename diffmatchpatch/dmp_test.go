@@ -11,7 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/stretchrcom/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func caller() string {

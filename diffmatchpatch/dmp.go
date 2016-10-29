@@ -377,6 +377,8 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 	pointer := 0
 	countDelete := 0
 	countInsert := 0
+
+	// NOTE: Rune slices are slower than using strings in this case.
 	textDelete := ""
 	textInsert := ""
 

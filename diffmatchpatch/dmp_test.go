@@ -1268,6 +1268,9 @@ func Test_patch_make(t *testing.T) {
 	expectedPatch = "@@ -573,28 +573,31 @@\n cdefabcdefabcdefabcdefabcdef\n+123\n"
 	patches = dmp.PatchMake(text1, text2)
 	assert.Equal(t, expectedPatch, dmp.PatchToText(patches), "patch_make: Long string with repeats.")
+
+	patches = dmp.PatchMake("2016-09-01T03:07:14.807830741Z", "2016-09-01T03:07:15.154800781Z")
+	assert.Equal(t, "@@ -15,16 +15,16 @@\n 07:1\n+5.15\n 4\n-.\n 80\n+0\n 78\n-3074\n 1Z\n", dmp.PatchToText(patches), "patch_make: Corner case of #31 fixed by #32")
 }
 
 func Test_PatchSplitMax(t *testing.T) {

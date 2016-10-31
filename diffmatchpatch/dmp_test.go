@@ -1270,6 +1270,10 @@ func Test_patch_make(t *testing.T) {
 	diffs = dmp2.DiffMain(text1, text2, true)
 	patches = dmp2.PatchMake(text1, diffs)
 	assert.Equal(t, "@@ -1,14 +1,16 @@\n Lorem \n+a \n ipsum do\n@@ -148,13 +148,12 @@\n m libero\n- \n vel.\n", dmp2.PatchToText(patches), "patch_make: Corner case of #28 wrong patch with timeout of 0")
+
+	// Additional check that the diff texts are equal to the originals even if we are using DiffMain with checklines=true #29
+	assert.Equal(t, text1, dmp2.DiffText1(diffs))
+	assert.Equal(t, text2, dmp2.DiffText2(diffs))
 }
 
 func Test_PatchSplitMax(t *testing.T) {

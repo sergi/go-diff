@@ -1562,6 +1562,21 @@ func Benchmark_DiffHalfMatch(b *testing.B) {
 	}
 }
 
+func Benchmark_DiffCleanupSemantic(b *testing.B) {
+	s1 := readFile("speedtest1.txt", b)
+	s2 := readFile("speedtest2.txt", b)
+
+	dmp := New()
+
+	diffs := dmp.DiffMain(s1, s2, false)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCleanupSemantic(diffs)
+	}
+}
+
 func readFile(filename string, b *testing.B) string {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {

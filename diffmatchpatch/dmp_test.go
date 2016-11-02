@@ -1531,8 +1531,8 @@ func Benchmark_DiffCommonSuffix(b *testing.B) {
 }
 
 func Benchmark_DiffMainLarge(b *testing.B) {
-	s1 := readFile("speedtest1.txt", b)
-	s2 := readFile("speedtest2.txt", b)
+	s1 := readFile("../testdata/speedtest1.txt", b)
+	s2 := readFile("../testdata/speedtest2.txt", b)
 	dmp := New()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -1541,8 +1541,8 @@ func Benchmark_DiffMainLarge(b *testing.B) {
 }
 
 func Benchmark_DiffMainLargeLines(b *testing.B) {
-	s1 := readFile("speedtest1.txt", b)
-	s2 := readFile("speedtest2.txt", b)
+	s1 := readFile("../testdata/speedtest1.txt", b)
+	s2 := readFile("../testdata/speedtest2.txt", b)
 	dmp := New()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -1553,8 +1553,8 @@ func Benchmark_DiffMainLargeLines(b *testing.B) {
 }
 
 func Benchmark_DiffHalfMatch(b *testing.B) {
-	s1 := readFile("speedtest1.txt", b)
-	s2 := readFile("speedtest2.txt", b)
+	s1 := readFile("../testdata/speedtest1.txt", b)
+	s2 := readFile("../testdata/speedtest2.txt", b)
 	dmp := New()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -1563,8 +1563,8 @@ func Benchmark_DiffHalfMatch(b *testing.B) {
 }
 
 func Benchmark_DiffCleanupSemantic(b *testing.B) {
-	s1 := readFile("speedtest1.txt", b)
-	s2 := readFile("speedtest2.txt", b)
+	s1 := readFile("../testdata/speedtest1.txt", b)
+	s2 := readFile("../testdata/speedtest2.txt", b)
 
 	dmp := New()
 

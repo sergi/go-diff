@@ -798,7 +798,7 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	return [][]rune{hm[2], hm[3], hm[0], hm[1], hm[4]}
 }
 
-// diffHalfMatchI checks if a substring of shorttext exist within longtext such that the substring  is at least half the length of longtext?
+// diffHalfMatchI checks if a substring of shorttext exist within longtext such that the substring is at least half the length of longtext?
 // @param {string} longtext Longer string.
 // @param {string} shorttext Shorter string.
 // @param {number} i Start index of quarter length substring within longtext.
@@ -806,52 +806,43 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 //     longtext, the suffix of longtext, the prefix of shorttext, the suffix
 //     of shorttext and the common middle.  Or null if there was no match.
 func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
+	var bestCommonA []rune
+	var bestCommonB []rune
+	var bestCommonLen int
+	var bestLongtextA []rune
+	var bestLongtextB []rune
+	var bestShorttextA []rune
+	var bestShorttextB []rune
+
 	// Start with a 1/4 length substring at position i as a seed.
 	seed := l[i : i+len(l)/4]
-	j := -1
-	bestCommon := []rune{}
-	bestLongtextA := []rune{}
-	bestLongtextB := []rune{}
-	bestShorttextA := []rune{}
-	bestShorttextB := []rune{}
 
-	if j < len(s) {
-		j = runesIndexOf(s, seed, j+1)
-		for {
-			if j == -1 {
-				break
-			}
+	for j := runesIndexOf(s, seed, 0); j != -1; j = runesIndexOf(s, seed, j+1) {
+		prefixLength := commonPrefixLength(l[i:], s[j:])
+		suffixLength := commonSuffixLength(l[:i], s[:j])
 
-			prefixLength := commonPrefixLength(l[i:], s[j:])
-			suffixLength := commonSuffixLength(l[:i], s[:j])
-			if len(bestCommon) < suffixLength+prefixLength {
-				bestCommon = concat(s[j-suffixLength:j], s[j:j+prefixLength])
-				bestLongtextA = l[:i-suffixLength]
-				bestLongtextB = l[i+prefixLength:]
-				bestShorttextA = s[:j-suffixLength]
-				bestShorttextB = s[j+prefixLength:]
-			}
-			j = runesIndexOf(s, seed, j+1)
+		if bestCommonLen < suffixLength+prefixLength {
+			bestCommonA = s[j-suffixLength : j]
+			bestCommonB = s[j : j+prefixLength]
+			bestCommonLen = len(bestCommonA) + len(bestCommonB)
+			bestLongtextA = l[:i-suffixLength]
+			bestLongtextB = l[i+prefixLength:]
+			bestShorttextA = s[:j-suffixLength]
+			bestShorttextB = s[j+prefixLength:]
 		}
 	}
 
-	if len(bestCommon)*2 >= len(l) {
-		return [][]rune{
-			bestLongtextA,
-			bestLongtextB,
-			bestShorttextA,
-			bestShorttextB,
-			bestCommon,
-		}
+	if bestCommonLen*2 < len(l) {
+		return nil
 	}
-	return nil
-}
 
-func concat(r1, r2 []rune) []rune {
-	result := make([]rune, len(r1)+len(r2))
-	copy(result, r1)
-	copy(result[len(r1):], r2)
-	return result
+	return [][]rune{
+		bestLongtextA,
+		bestLongtextB,
+		bestShorttextA,
+		bestShorttextB,
+		append(bestCommonA, bestCommonB...),
+	}
 }
 
 // DiffCleanupSemantic reduces the number of edits by eliminating

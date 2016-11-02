@@ -849,7 +849,12 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 // semantically trivial equalities.
 func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	changes := false
-	equalities := new(Stack) // Stack of indices where equalities are found.
+	// Stack of indices where equalities are found.
+	type equality struct {
+		data int
+		next *equality
+	}
+	var equalities *equality
 
 	var lastequality string
 	// Always equal to diffs[equalities[equalitiesLength - 1]][1]
@@ -861,7 +866,10 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 
 	for pointer < len(diffs) {
 		if diffs[pointer].Type == DiffEqual { // Equality found.
-			equalities.Push(pointer)
+			equalities = &equality{
+				data: pointer,
+				next: equalities,
+			}
 			lengthInsertions1 = lengthInsertions2
 			lengthDeletions1 = lengthDeletions2
 			lengthInsertions2 = 0
@@ -881,7 +889,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 				(len(lastequality) <= difference1) &&
 				(len(lastequality) <= difference2) {
 				// Duplicate record.
-				insPoint := equalities.Peek().(int)
+				insPoint := equalities.data
 				diffs = append(
 					diffs[:insPoint],
 					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[insPoint:]...)...)
@@ -889,11 +897,13 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 				// Change second copy to insert.
 				diffs[insPoint+1].Type = DiffInsert
 				// Throw away the equality we just deleted.
-				equalities.Pop()
+				equalities = equalities.next
 
-				if equalities.Len() > 0 {
-					equalities.Pop()
-					pointer = equalities.Peek().(int)
+				if equalities != nil {
+					equalities = equalities.next
+				}
+				if equalities != nil {
+					pointer = equalities.data
 				} else {
 					pointer = -1
 				}
@@ -1106,7 +1116,11 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 	changes := false
 	// Stack of indices where equalities are found.
-	equalities := new(Stack)
+	type equality struct {
+		data int
+		next *equality
+	}
+	var equalities *equality
 	// Always equal to equalities[equalitiesLength-1][1]
 	lastequality := ""
 	pointer := 0 // Index of current position.
@@ -1123,13 +1137,16 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 			if len(diffs[pointer].Text) < dmp.DiffEditCost &&
 				(postIns || postDel) {
 				// Candidate found.
-				equalities.Push(pointer)
+				equalities = &equality{
+					data: pointer,
+					next: equalities,
+				}
 				preIns = postIns
 				preDel = postDel
 				lastequality = diffs[pointer].Text
 			} else {
 				// Not a candidate, and can never become one.
-				equalities.Clear()
+				equalities = nil
 				lastequality = ""
 			}
 			postIns = false
@@ -1165,24 +1182,29 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 				((preIns && preDel && postIns && postDel) ||
 					((len(lastequality) < dmp.DiffEditCost/2) && sumPres == 3)) {
 
+				insPoint := equalities.data
+
 				// Duplicate record.
-				diffs = append(diffs[:equalities.Peek().(int)],
-					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[equalities.Peek().(int):]...)...)
+				diffs = append(diffs[:insPoint],
+					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[insPoint:]...)...)
 
 				// Change second copy to insert.
-				diffs[equalities.Peek().(int)+1].Type = DiffInsert
-				equalities.Pop() // Throw away the equality we just deleted.
+				diffs[insPoint+1].Type = DiffInsert
+				// Throw away the equality we just deleted.
+				equalities = equalities.next
 				lastequality = ""
 
 				if preIns && preDel {
 					// No changes made which could affect previous entry, keep going.
 					postIns = true
 					postDel = true
-					equalities.Clear()
+					equalities = nil
 				} else {
-					if equalities.Len() > 0 {
-						equalities.Pop()
-						pointer = equalities.Peek().(int)
+					if equalities != nil {
+						equalities = equalities.next
+					}
+					if equalities != nil {
+						pointer = equalities.data
 					} else {
 						pointer = -1
 					}

@@ -15,11 +15,34 @@ import (
 	"html"
 	"math"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 )
+
+// Operation defines the operation of a diff item.
+type Operation int8
+
+const (
+	// DiffDelete item represents a delete diff.
+	DiffDelete Operation = -1
+	// DiffInsert item represents an insert diff.
+	DiffInsert Operation = 1
+	// DiffEqual item represents an equal diff.
+	DiffEqual Operation = 0
+)
+
+// Diff represents one diff operation
+type Diff struct {
+	Type Operation
+	Text string
+}
+
+func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
+	return append(slice[:index], append(elements, slice[index+amount:]...)...)
+}
 
 // DiffMain finds the differences between two texts.
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
@@ -751,6 +774,15 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 
 	return diffs
 }
+
+// Define some regex patterns for matching boundaries.
+var (
+	nonAlphaNumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]`)
+	whitespaceRegex      = regexp.MustCompile(`\s`)
+	linebreakRegex       = regexp.MustCompile(`[\r\n]`)
+	blanklineEndRegex    = regexp.MustCompile(`\n\r?\n$`)
+	blanklineStartRegex  = regexp.MustCompile(`^\r?\n\r?\n`)
+)
 
 // DiffCleanupSemanticLossless looks for single edits surrounded on both sides by equalities
 // which can be shifted sideways to align the edit to a word boundary.

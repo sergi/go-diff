@@ -11,26 +11,9 @@
 package diffmatchpatch
 
 import (
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
-)
-
-// The data structure representing a diff is an array of tuples:
-// [[DiffDelete, 'Hello'], [DiffInsert, 'Goodbye'], [DiffEqual, ' world.']]
-// which means: delete 'Hello', add 'Goodbye' and keep ' world.'
-
-// Operation defines the operation of a diff item.
-type Operation int8
-
-const (
-	// DiffDelete item represents a delete diff.
-	DiffDelete Operation = -1
-	// DiffInsert item represents an insert diff.
-	DiffInsert Operation = 1
-	// DiffEqual item represents an equal diff.
-	DiffEqual Operation = 0
 )
 
 // unescaper unescapes selected chars for compatibility with JavaScript's encodeURI.
@@ -47,19 +30,6 @@ var unescaper = strings.NewReplacer(
 	"%2F", "/", "%3F", "?", "%3A", ":",
 	"%40", "@", "%26", "&", "%3D", "=",
 	"%2B", "+", "%24", "$", "%2C", ",", "%23", "#", "%2A", "*")
-
-// Define some regex patterns for matching boundaries.
-var (
-	nonAlphaNumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]`)
-	whitespaceRegex      = regexp.MustCompile(`\s`)
-	linebreakRegex       = regexp.MustCompile(`[\r\n]`)
-	blanklineEndRegex    = regexp.MustCompile(`\n\r?\n$`)
-	blanklineStartRegex  = regexp.MustCompile(`^\r?\n\r?\n`)
-)
-
-func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
-	return append(slice[:index], append(elements, slice[index+amount:]...)...)
-}
 
 // indexOf returns the first index of pattern in str, starting at str[i].
 func indexOf(str string, pattern string, i int) int {
@@ -138,12 +108,6 @@ func runesIndex(r1, r2 []rune) int {
 		}
 	}
 	return -1
-}
-
-// Diff represents one diff operation
-type Diff struct {
-	Type Operation
-	Text string
 }
 
 // DiffMatchPatch holds the configuration for diff-match-patch operations.

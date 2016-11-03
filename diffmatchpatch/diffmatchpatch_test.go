@@ -9,7 +9,6 @@
 package diffmatchpatch
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"runtime"
@@ -25,44 +24,6 @@ func caller() string {
 	}
 
 	return fmt.Sprintf("at line %d ", line)
-}
-
-func pretty(diffs []Diff) string {
-	var w bytes.Buffer
-
-	for i, diff := range diffs {
-		_, _ = w.WriteString(fmt.Sprintf("%v. ", i))
-
-		switch diff.Type {
-		case DiffInsert:
-			_, _ = w.WriteString("DiffIns")
-		case DiffDelete:
-			_, _ = w.WriteString("DiffDel")
-		case DiffEqual:
-			_, _ = w.WriteString("DiffEql")
-		default:
-			_, _ = w.WriteString("Unknown")
-		}
-
-		_, _ = w.WriteString(fmt.Sprintf(": %v\n", diff.Text))
-	}
-
-	return w.String()
-}
-
-func diffRebuildTexts(diffs []Diff) []string {
-	texts := []string{"", ""}
-
-	for _, d := range diffs {
-		if d.Type != DiffInsert {
-			texts[0] += d.Text
-		}
-		if d.Type != DiffDelete {
-			texts[1] += d.Text
-		}
-	}
-
-	return texts
 }
 
 func readFile(filepath string) string {

@@ -1,16 +1,10 @@
-/**
- * dmp.go
- *
- * Go language implementation of Google Diff, Match, and Patch library
- *
- * Original library is Copyright (c) 2006 Google Inc.
- * http://code.google.com/p/google-diff-match-patch/
- *
- * Copyright (c) 2012 Sergi Mansilla <sergi.mansilla@gmail.com>
- * https://github.com/sergi/go-diff
- *
- * See included LICENSE file for license details.
- */
+// Copyright (c) 2012-2016 The go-diff authors. All rights reserved.
+// https://github.com/sergi/go-diff
+// See the included LICENSE file for license details.
+//
+// go-diff is a Go implementation of Google's Diff, Match, and Patch library
+// Original library is Copyright (c) 2006 Google Inc.
+// http://code.google.com/p/google-diff-match-patch/
 
 // Package diffmatchpatch offers robust algorithms to perform the
 // operations required for synchronizing plain text.

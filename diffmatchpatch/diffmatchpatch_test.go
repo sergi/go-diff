@@ -81,6 +81,22 @@ func diffRebuildtexts(diffs []Diff) []string {
 	return text
 }
 
+func readFile(b *testing.B, filename string) string {
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	return string(bytes)
+}
+
+func speedtestTexts(b *testing.B) (s1 string, s2 string) {
+	s1 = readFile(b, "../testdata/speedtest1.txt")
+	s2 = readFile(b, "../testdata/speedtest2.txt")
+
+	return s1, s2
+}
+
 func Test_diffCommonPrefix(t *testing.T) {
 	dmp := New()
 	// Detect any common suffix.
@@ -1498,73 +1514,89 @@ func TestLastIndexOf(t *testing.T) {
 	}
 }
 
-func Benchmark_DiffMain(bench *testing.B) {
-	dmp := New()
-	dmp.DiffTimeout = time.Second
-	a := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
-	b := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"
+func BenchmarkDiffMain(bench *testing.B) {
+	s1 := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
+	s2 := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"
+
 	// Increase the text lengths by 1024 times to ensure a timeout.
 	for x := 0; x < 10; x++ {
-		a = a + a
-		b = b + b
+		s1 = s1 + s1
+		s2 = s2 + s2
 	}
+
+	dmp := New()
+	dmp.DiffTimeout = time.Second
+
 	bench.ResetTimer()
+
 	for i := 0; i < bench.N; i++ {
-		dmp.DiffMain(a, b, true)
+		dmp.DiffMain(s1, s2, true)
 	}
 }
 
-func Benchmark_DiffCommonPrefix(b *testing.B) {
+func BenchmarkDiffCommonPrefix(b *testing.B) {
+	s := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
+
 	dmp := New()
-	a := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
+
 	for i := 0; i < b.N; i++ {
-		dmp.DiffCommonPrefix(a, a)
+		dmp.DiffCommonPrefix(s, s)
 	}
 }
 
-func Benchmark_DiffCommonSuffix(b *testing.B) {
-	dmp := New()
-	a := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
-	for i := 0; i < b.N; i++ {
-		dmp.DiffCommonSuffix(a, a)
-	}
-}
+func BenchmarkDiffCommonSuffix(b *testing.B) {
+	s := "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
 
-func Benchmark_DiffMainLarge(b *testing.B) {
-	s1 := readFile("../testdata/speedtest1.txt", b)
-	s2 := readFile("../testdata/speedtest2.txt", b)
 	dmp := New()
+
 	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCommonSuffix(s, s)
+	}
+}
+
+func BenchmarkDiffMainLarge(b *testing.B) {
+	s1, s2 := speedtestTexts(b)
+
+	dmp := New()
+
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		dmp.DiffMain(s1, s2, true)
 	}
 }
 
-func Benchmark_DiffMainLargeLines(b *testing.B) {
-	s1 := readFile("../testdata/speedtest1.txt", b)
-	s2 := readFile("../testdata/speedtest2.txt", b)
+func BenchmarkDiffMainRunesLargeLines(b *testing.B) {
+	s1, s2 := speedtestTexts(b)
+
 	dmp := New()
+
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		text1, text2, linearray := dmp.DiffLinesToRunes(s1, s2)
+
 		diffs := dmp.DiffMainRunes(text1, text2, false)
 		diffs = dmp.DiffCharsToLines(diffs, linearray)
 	}
 }
 
-func Benchmark_DiffHalfMatch(b *testing.B) {
-	s1 := readFile("../testdata/speedtest1.txt", b)
-	s2 := readFile("../testdata/speedtest2.txt", b)
+func BenchmarkDiffHalfMatch(b *testing.B) {
+	s1, s2 := speedtestTexts(b)
+
 	dmp := New()
+
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		dmp.DiffHalfMatch(s1, s2)
 	}
 }
 
-func Benchmark_DiffCleanupSemantic(b *testing.B) {
-	s1 := readFile("../testdata/speedtest1.txt", b)
-	s2 := readFile("../testdata/speedtest2.txt", b)
+func BenchmarkDiffCleanupSemantic(b *testing.B) {
+	s1, s2 := speedtestTexts(b)
 
 	dmp := New()
 
@@ -1575,12 +1607,4 @@ func Benchmark_DiffCleanupSemantic(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		dmp.DiffCleanupSemantic(diffs)
 	}
-}
-
-func readFile(filename string, b *testing.B) string {
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		b.Fatal(err)
-	}
-	return string(bytes)
 }

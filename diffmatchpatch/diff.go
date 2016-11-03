@@ -1280,19 +1280,10 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 }
 
 // DiffFromDelta given the original text1, and an encoded string which describes the operations required to transform text1 into text2, comAdde the full diff.
-func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err error) {
-	diffs = []Diff{}
+func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Diff, err error) {
+	i := 0
 
-	defer func() {
-		if r := recover(); r != nil {
-			err = r.(error)
-		}
-	}()
-
-	pointer := 0 // Cursor in text1
-	tokens := strings.Split(delta, "\t")
-
-	for _, token := range tokens {
+	for _, token := range strings.Split(delta, "\t") {
 		if len(token) == 0 {
 			// Blank tokens are ok (from a trailing \t).
 			continue
@@ -1312,18 +1303,19 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 			if !utf8.ValidString(param) {
 				return nil, fmt.Errorf("invalid UTF-8 token: %q", param)
 			}
+
 			diffs = append(diffs, Diff{DiffInsert, param})
 		case '=', '-':
 			n, err := strconv.ParseInt(param, 10, 0)
 			if err != nil {
-				return diffs, err
+				return nil, err
 			} else if n < 0 {
-				return diffs, errors.New("Negative number in DiffFromDelta: " + param)
+				return nil, errors.New("Negative number in DiffFromDelta: " + param)
 			}
 
 			// Remember that string slicing is by byte - we want by rune here.
-			text := string([]rune(text1)[pointer : pointer+int(n)])
-			pointer += int(n)
+			text := string([]rune(text1)[i : i+int(n)])
+			i += int(n)
 
 			if op == '=' {
 				diffs = append(diffs, Diff{DiffEqual, text})
@@ -1332,12 +1324,13 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1, delta string) (diffs []Diff, err
 			}
 		default:
 			// Anything else is an error.
-			return diffs, errors.New("Invalid diff operation in DiffFromDelta: " + string(token[0]))
+			return nil, errors.New("Invalid diff operation in DiffFromDelta: " + string(token[0]))
 		}
 	}
 
-	if pointer != len([]rune(text1)) {
-		return diffs, fmt.Errorf("Delta length (%v) smaller than source text length (%v)", pointer, len(text1))
+	if i != len([]rune(text1)) {
+		return nil, fmt.Errorf("Delta length (%v) smaller than source text length (%v)", i, len(text1))
 	}
-	return diffs, err
+
+	return diffs, nil
 }

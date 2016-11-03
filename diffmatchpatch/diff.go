@@ -466,6 +466,7 @@ func commonSuffixLength(text1, text2 []rune) int {
 	}
 	return n
 
+	// TODO research and benchmark this, why is it not activated? https://github.com/sergi/go-diff/issues/54
 	// Binary search.
 	// Performance analysis: http://neil.fraser.name/news/2007/10/09/
 	/*
@@ -962,14 +963,13 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 			} else {
 				postIns = true
 			}
-			/*
-			 * Five types to be split:
-			 * <ins>A</ins><del>B</del>XY<ins>C</ins><del>D</del>
-			 * <ins>A</ins>X<ins>C</ins><del>D</del>
-			 * <ins>A</ins><del>B</del>X<ins>C</ins>
-			 * <ins>A</del>X<ins>C</ins><del>D</del>
-			 * <ins>A</ins><del>B</del>X<del>C</del>
-			 */
+
+			// Five types to be split:
+			// <ins>A</ins><del>B</del>XY<ins>C</ins><del>D</del>
+			// <ins>A</ins>X<ins>C</ins><del>D</del>
+			// <ins>A</ins><del>B</del>X<ins>C</ins>
+			// <ins>A</del>X<ins>C</ins><del>D</del>
+			// <ins>A</ins><del>B</del>X<del>C</del>
 			var sumPres int
 			if preIns {
 				sumPres++

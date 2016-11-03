@@ -785,65 +785,55 @@ var (
 	blanklineStartRegex  = regexp.MustCompile(`^\r?\n\r?\n`)
 )
 
+// diffCleanupSemanticScore computes a score representing whether the internal boundary falls on logical boundaries. Scores range from 6 (best) to 0 (worst). Closure, but does not reference any external variables.
+func diffCleanupSemanticScore(one, two string) int {
+	if len(one) == 0 || len(two) == 0 {
+		// Edges are the best.
+		return 6
+	}
+
+	// Each port of this function behaves slightly differently due to
+	// subtle differences in each language's definition of things like
+	// 'whitespace'.  Since this function's purpose is largely cosmetic,
+	// the choice has been made to use each language's native features
+	// rather than force total conformity.
+	rune1, _ := utf8.DecodeLastRuneInString(one)
+	rune2, _ := utf8.DecodeRuneInString(two)
+	char1 := string(rune1)
+	char2 := string(rune2)
+
+	nonAlphaNumeric1 := nonAlphaNumericRegex.MatchString(char1)
+	nonAlphaNumeric2 := nonAlphaNumericRegex.MatchString(char2)
+	whitespace1 := nonAlphaNumeric1 && whitespaceRegex.MatchString(char1)
+	whitespace2 := nonAlphaNumeric2 && whitespaceRegex.MatchString(char2)
+	lineBreak1 := whitespace1 && linebreakRegex.MatchString(char1)
+	lineBreak2 := whitespace2 && linebreakRegex.MatchString(char2)
+	blankLine1 := lineBreak1 && blanklineEndRegex.MatchString(one)
+	blankLine2 := lineBreak2 && blanklineEndRegex.MatchString(two)
+
+	if blankLine1 || blankLine2 {
+		// Five points for blank lines.
+		return 5
+	} else if lineBreak1 || lineBreak2 {
+		// Four points for line breaks.
+		return 4
+	} else if nonAlphaNumeric1 && !whitespace1 && whitespace2 {
+		// Three points for end of sentences.
+		return 3
+	} else if whitespace1 || whitespace2 {
+		// Two points for whitespace.
+		return 2
+	} else if nonAlphaNumeric1 || nonAlphaNumeric2 {
+		// One point for non-alphanumeric.
+		return 1
+	}
+	return 0
+}
+
 // DiffCleanupSemanticLossless looks for single edits surrounded on both sides by equalities
 // which can be shifted sideways to align the edit to a word boundary.
 // e.g: The c<ins>at c</ins>ame. -> The <ins>cat </ins>came.
 func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
-
-	/**
-	 * Given two strings, compute a score representing whether the internal
-	 * boundary falls on logical boundaries.
-	 * Scores range from 6 (best) to 0 (worst).
-	 * Closure, but does not reference any external variables.
-	 * @param {string} one First string.
-	 * @param {string} two Second string.
-	 * @return {number} The score.
-	 * @private
-	 */
-	diffCleanupSemanticScore := func(one, two string) int {
-		if len(one) == 0 || len(two) == 0 {
-			// Edges are the best.
-			return 6
-		}
-
-		// Each port of this function behaves slightly differently due to
-		// subtle differences in each language's definition of things like
-		// 'whitespace'.  Since this function's purpose is largely cosmetic,
-		// the choice has been made to use each language's native features
-		// rather than force total conformity.
-		rune1, _ := utf8.DecodeLastRuneInString(one)
-		rune2, _ := utf8.DecodeRuneInString(two)
-		char1 := string(rune1)
-		char2 := string(rune2)
-
-		nonAlphaNumeric1 := nonAlphaNumericRegex.MatchString(char1)
-		nonAlphaNumeric2 := nonAlphaNumericRegex.MatchString(char2)
-		whitespace1 := nonAlphaNumeric1 && whitespaceRegex.MatchString(char1)
-		whitespace2 := nonAlphaNumeric2 && whitespaceRegex.MatchString(char2)
-		lineBreak1 := whitespace1 && linebreakRegex.MatchString(char1)
-		lineBreak2 := whitespace2 && linebreakRegex.MatchString(char2)
-		blankLine1 := lineBreak1 && blanklineEndRegex.MatchString(one)
-		blankLine2 := lineBreak2 && blanklineEndRegex.MatchString(two)
-
-		if blankLine1 || blankLine2 {
-			// Five points for blank lines.
-			return 5
-		} else if lineBreak1 || lineBreak2 {
-			// Four points for line breaks.
-			return 4
-		} else if nonAlphaNumeric1 && !whitespace1 && whitespace2 {
-			// Three points for end of sentences.
-			return 3
-		} else if whitespace1 || whitespace2 {
-			// Two points for whitespace.
-			return 2
-		} else if nonAlphaNumeric1 || nonAlphaNumeric2 {
-			// One point for non-alphanumeric.
-			return 1
-		}
-		return 0
-	}
-
 	pointer := 1
 
 	// Intentionally ignore the first and last element (don't need checking).

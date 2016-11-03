@@ -10,37 +10,10 @@ package diffmatchpatch
 
 import (
 	"fmt"
-	"io/ioutil"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func caller() string {
-	_, _, line, ok := runtime.Caller(2)
-	if !ok {
-		return ""
-	}
-
-	return fmt.Sprintf("at line %d ", line)
-}
-
-func readFile(filepath string) string {
-	data, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		panic(err)
-	}
-
-	return string(data)
-}
-
-func speedtestTexts() (s1 string, s2 string) {
-	s1 = readFile("../testdata/speedtest1.txt")
-	s2 = readFile("../testdata/speedtest2.txt")
-
-	return s1, s2
-}
 
 func TestRunesIndexOf(t *testing.T) {
 	type TestCase struct {

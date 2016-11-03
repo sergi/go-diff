@@ -32,8 +32,8 @@ func (dmp *DiffMatchPatch) MatchMain(text, pattern string, loc int) int {
 	return dmp.MatchBitap(text, pattern, loc)
 }
 
-// MatchBitap locates the best instance of 'pattern' in 'text' near 'loc' using the
-// Bitap algorithm.  Returns -1 if no match found.
+// MatchBitap locates the best instance of 'pattern' in 'text' near 'loc' using the Bitap algorithm.
+// Returns -1 if no match was found.
 func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 	// Initialise the alphabet.
 	s := dmp.MatchAlphabet(pattern)
@@ -61,9 +61,7 @@ func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 	binMax := len(pattern) + len(text)
 	lastRd := []int{}
 	for d := 0; d < len(pattern); d++ {
-		// Scan for the best match; each iteration allows for one more error.
-		// Run a binary search to determine how far from 'loc' we can stray at
-		// this error level.
+		// Scan for the best match; each iteration allows for one more error. Run a binary search to determine how far from 'loc' we can stray at this error level.
 		binMin = 0
 		binMid = binMax
 		for binMin < binMid {
@@ -102,8 +100,7 @@ func (dmp *DiffMatchPatch) MatchBitap(text, pattern string, loc int) int {
 			}
 			if (rd[j] & matchmask) != 0 {
 				score := dmp.matchBitapScore(d, j-1, loc, pattern)
-				// This match will almost certainly be better than any existing
-				// match.  But check anyway.
+				// This match will almost certainly be better than any existing match.  But check anyway.
 				if score <= scoreThreshold {
 					// Told you so.
 					scoreThreshold = score

@@ -70,8 +70,7 @@ func (p *Patch) String() string {
 	return unescaper.Replace(text.String())
 }
 
-// PatchAddContext increases the context until it is unique,
-// but doesn't let the pattern expand beyond MatchMaxBits.
+// PatchAddContext increases the context until it is unique, but doesn't let the pattern expand beyond MatchMaxBits.
 func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	if len(text) == 0 {
 		return patch
@@ -80,8 +79,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	pattern := text[patch.start2 : patch.start2+patch.length1]
 	padding := 0
 
-	// Look for the first and last matches of pattern in text.  If two
-	// different matches are found, increase the pattern length.
+	// Look for the first and last matches of pattern in text.  If two different matches are found, increase the pattern length.
 	for strings.Index(text, pattern) != strings.LastIndex(text, pattern) &&
 		len(pattern) < dmp.MatchMaxBits-2*dmp.PatchMargin {
 		padding += dmp.PatchMargin
@@ -150,9 +148,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	patch := Patch{}
 	charCount1 := 0 // Number of characters into the text1 string.
 	charCount2 := 0 // Number of characters into the text2 string.
-	// Start with text1 (prepatchText) and apply the diffs until we arrive at
-	// text2 (postpatchText). We recreate the patches one by one to determine
-	// context info.
+	// Start with text1 (prepatchText) and apply the diffs until we arrive at text2 (postpatchText). We recreate the patches one by one to determine context info.
 	prepatchText := text1
 	postpatchText := text1
 
@@ -187,10 +183,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 					patch = dmp.PatchAddContext(patch, prepatchText)
 					patches = append(patches, patch)
 					patch = Patch{}
-					// Unlike Unidiff, our patch lists have a rolling context.
-					// http://code.google.com/p/google-diff-match-patch/wiki/Unidiff
-					// Update prepatch text & pos to reflect the application of the
-					// just completed patch.
+					// Unlike Unidiff, our patch lists have a rolling context. http://code.google.com/p/google-diff-match-patch/wiki/Unidiff Update prepatch text & pos to reflect the application of the just completed patch.
 					prepatchText = postpatchText
 					charCount1 = charCount2
 				}
@@ -215,8 +208,7 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	return patches
 }
 
-// PatchDeepCopy returns an array that is identical to a
-// given an array of patches.
+// PatchDeepCopy returns an array that is identical to a given an array of patches.
 func (dmp *DiffMatchPatch) PatchDeepCopy(patches []Patch) []Patch {
 	patchesCopy := []Patch{}
 	for _, aPatch := range patches {
@@ -236,8 +228,7 @@ func (dmp *DiffMatchPatch) PatchDeepCopy(patches []Patch) []Patch {
 	return patchesCopy
 }
 
-// PatchApply merges a set of patches onto the text.  Returns a patched text, as well
-// as an array of true/false values indicating which patches were applied.
+// PatchApply merges a set of patches onto the text.  Returns a patched text, as well as an array of true/false values indicating which patches were applied.
 func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []bool) {
 	if len(patches) == 0 {
 		return text, []bool{}
@@ -251,10 +242,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 	patches = dmp.PatchSplitMax(patches)
 
 	x := 0
-	// delta keeps track of the offset between the expected and actual
-	// location of the previous patch.  If there are patches expected at
-	// positions 10 and 20, but the first patch was found at 12, delta is 2
-	// and the second patch has an effective expected position of 22.
+	// delta keeps track of the offset between the expected and actual location of the previous patch.  If there are patches expected at positions 10 and 20, but the first patch was found at 12, delta is 2 and the second patch has an effective expected position of 22.
 	delta := 0
 	results := make([]bool, len(patches))
 	for _, aPatch := range patches {
@@ -263,8 +251,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 		var startLoc int
 		endLoc := -1
 		if len(text1) > dmp.MatchMaxBits {
-			// PatchSplitMax will only provide an oversized pattern
-			// in the case of a monster delete.
+			// PatchSplitMax will only provide an oversized pattern in the case of a monster delete.
 			startLoc = dmp.MatchMain(text, text1[:dmp.MatchMaxBits], expectedLoc)
 			if startLoc != -1 {
 				endLoc = dmp.MatchMain(text,
@@ -296,8 +283,7 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 				// Perfect match, just shove the Replacement text in.
 				text = text[:startLoc] + dmp.DiffText2(aPatch.diffs) + text[startLoc+len(text1):]
 			} else {
-				// Imperfect match.  Run a diff to get a framework of equivalent
-				// indices.
+				// Imperfect match.  Run a diff to get a framework of equivalent indices.
 				diffs := dmp.DiffMain(text1, text2, false)
 				if len(text1) > dmp.MatchMaxBits && float64(dmp.DiffLevenshtein(diffs))/float64(len(text1)) > dmp.PatchDeleteThreshold {
 					// The end points match, but the content is unacceptably bad.
@@ -384,8 +370,7 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 	return nullPadding
 }
 
-// PatchSplitMax looks through the patches and breaks up any which are longer than the
-// maximum limit of the match algorithm.
+// PatchSplitMax looks through the patches and breaks up any which are longer than the maximum limit of the match algorithm.
 // Intended to be called only from within patchApply.
 func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 	patchSize := dmp.MatchMaxBits
@@ -489,8 +474,7 @@ func (dmp *DiffMatchPatch) PatchToText(patches []Patch) string {
 	return text.String()
 }
 
-// PatchFromText parses a textual representation of patches and returns a List of Patch
-// objects.
+// PatchFromText parses a textual representation of patches and returns a List of Patch objects.
 func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	patches := []Patch{}
 	if len(textline) == 0 {

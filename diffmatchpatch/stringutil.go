@@ -14,13 +14,7 @@ import (
 )
 
 // unescaper unescapes selected chars for compatibility with JavaScript's encodeURI.
-// In speed critical applications this could be dropped since the
-// receiving application will certainly decode these fine.
-// Note that this function is case-sensitive.  Thus "%3F" would not be
-// unescaped.  But this is ok because it is only called with the output of
-// HttpUtility.UrlEncode which returns lowercase hex.
-//
-// Example: "%3f" -> "?", "%24" -> "$", etc.
+// In speed critical applications this could be dropped since the receiving application will certainly decode these fine. Note that this function is case-sensitive.  Thus "%3F" would not be unescaped.  But this is ok because it is only called with the output of HttpUtility.UrlEncode which returns lowercase hex. Example: "%3f" -> "?", "%24" -> "$", etc.
 var unescaper = strings.NewReplacer(
 	"%21", "!", "%7E", "~", "%27", "'",
 	"%28", "(", "%29", ")", "%3B", ";",
@@ -55,7 +49,7 @@ func lastIndexOf(str string, pattern string, i int) int {
 	return strings.LastIndex(str[:i+size], pattern)
 }
 
-// Return the index of pattern in target, starting at target[i].
+// runesIndexOf returns the index of pattern in target, starting at target[i].
 func runesIndexOf(target, pattern []rune, i int) int {
 	if i > len(target)-1 {
 		return -1
@@ -82,7 +76,7 @@ func runesEqual(r1, r2 []rune) bool {
 	return true
 }
 
-// The equivalent of strings.Index for rune slices.
+// runesIndex is the equivalent of strings.Index for rune slices.
 func runesIndex(r1, r2 []rune) int {
 	last := len(r1) - len(r2)
 	for i := 0; i <= last; i++ {

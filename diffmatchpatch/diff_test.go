@@ -1323,9 +1323,7 @@ func TestDiffMainWithTimeout(t *testing.T) {
 	// Test that we took at least the timeout period.
 	assert.True(t, delta >= dmp.DiffTimeout, fmt.Sprintf("%v !>= %v", delta, dmp.DiffTimeout))
 
-	// Test that we didn't take forever (be very forgiving).
-	// Theoretically this test could fail very occasionally if the
-	// OS task swaps or locks up for a second at the wrong moment.
+	// Test that we didn't take forever (be very forgiving). Theoretically this test could fail very occasionally if the OS task swaps or locks up for a second at the wrong moment.
 	assert.True(t, delta < (dmp.DiffTimeout*100), fmt.Sprintf("%v !< %v", delta, dmp.DiffTimeout*100))
 }
 

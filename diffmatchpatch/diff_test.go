@@ -1129,9 +1129,6 @@ func TestDiffBisect(t *testing.T) {
 
 	dmp := New()
 
-	text1 := "cat"
-	text2 := "map"
-
 	for i, tc := range []TestCase{
 		{
 			Name: "normal",
@@ -1167,7 +1164,7 @@ func TestDiffBisect(t *testing.T) {
 			},
 		},
 	} {
-		actual := dmp.DiffBisect(text1, text2, tc.Time)
+		actual := dmp.DiffBisect("cat", "map", tc.Time)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
 	}
 }

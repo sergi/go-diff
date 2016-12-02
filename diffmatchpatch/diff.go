@@ -45,11 +45,13 @@ func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 }
 
 // DiffMain finds the differences between two texts.
+// If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
 	return dmp.DiffMainRunes([]rune(text1), []rune(text2), checklines)
 }
 
 // DiffMainRunes finds the differences between two rune sequences.
+// If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
 	var deadline time.Time
 	if dmp.DiffTimeout > 0 {
@@ -209,6 +211,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 }
 
 // DiffBisect finds the 'middle snake' of a diff, split the problem in two and return the recursively constructed diff.
+// If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 // See Myers 1986 paper: An O(ND) Difference Algorithm and Its Variations.
 func (dmp *DiffMatchPatch) DiffBisect(text1, text2 string, deadline time.Time) []Diff {
 	// Unused in this code, but retained for interface compatibility.
@@ -353,7 +356,7 @@ func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string
 	return string(chars1), string(chars2), lineArray
 }
 
-// DiffLinesToRunes splits two texts into a list of runes.  Each rune represents one line.
+// DiffLinesToRunes splits two texts into a list of runes. Each rune represents one line.
 func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it. So we'll insert a junk entry to avoid generating a null character.
 	lineArray := []string{""}    // e.g. lineArray[4] == 'Hello\n'

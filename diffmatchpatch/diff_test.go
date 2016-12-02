@@ -1167,6 +1167,11 @@ func TestDiffBisect(t *testing.T) {
 		actual := dmp.DiffBisect("cat", "map", tc.Time)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
 	}
+
+	// Test for invalid UTF-8 sequences
+	assert.Equal(t, []Diff{
+		Diff{DiffEqual, "��"},
+	}, dmp.DiffBisect("\xe0\xe5", "\xe0\xe5", time.Now().Add(time.Minute)))
 }
 
 func TestDiffMain(t *testing.T) {
@@ -1297,6 +1302,11 @@ func TestDiffMain(t *testing.T) {
 		actual := dmp.DiffMain(tc.Text1, tc.Text2, false)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))
 	}
+
+	// Test for invalid UTF-8 sequences
+	assert.Equal(t, []Diff{
+		Diff{DiffDelete, "��"},
+	}, dmp.DiffMain("\xe0\xe5", "", false))
 }
 
 func TestDiffMainWithTimeout(t *testing.T) {

@@ -12,11 +12,11 @@ OUT=$(errcheck $PKG/...)
 if [ $(echo "$OUT\c" | wc -l) -ne 0 ]; then echo "$OUT"; PROBLEM=1; fi
 
 echo "go vet:"
-OUT=$(go tool vet -all=true -v=true $ROOT_DIR 2>&1 | /usr/bin/grep --invert-match -E "(Checking file|\%p of wrong type|can't check non-constant format)")
+OUT=$(go tool vet -all=true -v=true $ROOT_DIR 2>&1 | grep --invert-match -E "(Checking file|\%p of wrong type|can't check non-constant format)")
 if [ $(echo "$OUT\c" | wc -l) -ne 0 ]; then echo "$OUT"; PROBLEM=1; fi
 
 echo "golint:"
-OUT=$(golint $PKG/... | /usr/bin/grep --invert-match -E "(method DiffPrettyHtml should be DiffPrettyHTML)")
+OUT=$(golint $PKG/... | grep --invert-match -E "(method DiffPrettyHtml should be DiffPrettyHTML)")
 if [ $(echo "$OUT\c" | wc -l) -ne 0 ]; then echo "$OUT"; PROBLEM=1; fi
 
 if [ -n "$PROBLEM" ]; then exit 1; fi

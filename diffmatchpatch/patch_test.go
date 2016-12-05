@@ -65,6 +65,7 @@ func TestPatchFromText(t *testing.T) {
 		{"@@ -1 +1 @@\n-a\n+b\n", ""},
 		{"@@ -1,3 +0,0 @@\n-abc\n", ""},
 		{"@@ -0,0 +1,3 @@\n+abc\n", ""},
+		{"@@ _0,0 +0,0 @@\n+abc\n", "Invalid patch string: @@ _0,0 +0,0 @@"},
 		{"Bad\nPatch\n", "Invalid patch string"},
 	} {
 		patches, err := dmp.PatchFromText(tc.Patch)
@@ -201,6 +202,10 @@ func TestPatchMakeAndPatchToText(t *testing.T) {
 
 	actual := dmp.PatchToText(patches)
 	assert.Equal(t, "@@ -1,14 +1,16 @@\n Lorem \n+a \n ipsum do\n@@ -148,13 +148,12 @@\n m libero\n- \n vel.\n", actual)
+
+	// Check that empty Patch array is returned for no parameter call
+	patches = dmp.PatchMake()
+	assert.Equal(t, []Patch{}, patches)
 }
 
 func TestPatchSplitMax(t *testing.T) {

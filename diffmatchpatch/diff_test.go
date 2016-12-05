@@ -1074,6 +1074,29 @@ func TestDiffDelta(t *testing.T) {
 	deltaDiffs, err = dmp.DiffFromDelta("", delta)
 	assert.Equal(t, diffs, deltaDiffs)
 	assert.Nil(t, err)
+
+	// Test blank tokens.
+	_, err = dmp.DiffFromDelta("", "")
+	assert.Nil(t, err)
+
+	// Test invalid diff operation "a"
+	_, err = dmp.DiffFromDelta("", "a")
+	if err == nil {
+		assert.Fail(t, "expected Invalid diff operation.")
+	}
+
+	// Test non-numeric parameter
+	_, err = dmp.DiffFromDelta("", "-")
+	if err == nil {
+		assert.Fail(t, "expected Invalid syntax.")
+	}
+
+	// Test negative parameter
+	_, err = dmp.DiffFromDelta("", "--1")
+	if err == nil {
+		assert.Fail(t, "expected Negative number.")
+	}
+
 }
 
 func TestDiffXIndex(t *testing.T) {

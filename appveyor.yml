@@ -20,5 +20,5 @@ install:
 
 build_script:
   - cd c:\gopath\src\github.com\silvergasp\go-diff
-  - mingw32-make lint
-  - mingw32-make test 
+  - C:\MinGW\bin\mingw32-make lint
+  - C:\MinGW\bin\mingw32-make test

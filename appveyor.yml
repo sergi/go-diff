@@ -17,9 +17,9 @@ install:
   - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
   - go version
   - go env
-  - C:\MinGW\bin\mingw32-make install-tools
-  - C:\MinGW\bin\mingw32-make install-dependencies
 
 build_script:
+  - C:\MinGW\bin\mingw32-make install-tools
+  - C:\MinGW\bin\mingw32-make install-dependencies
   - cd c:\gopath\src\github.com\silvergasp\go-diff\
   - C:\MinGW\bin\mingw32-make test

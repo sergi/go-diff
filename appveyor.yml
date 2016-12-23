@@ -18,8 +18,9 @@ install:
   - go version
   - go env
   - C:\MinGW\bin\mingw32-make install-tools
+  - C:\MinGW\bin\mingw32-make install-dependencies
 
 build_script:
-  - cd c:\gopath\src\github.com\silvergasp\go-diff
+  - cd c:\gopath\src\github.com\silvergasp\go-diff\
   - C:\MinGW\bin\mingw32-make lint
   - C:\MinGW\bin\mingw32-make test

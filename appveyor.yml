@@ -1,0 +1,24 @@
+version: 1.0.0.{build}
+
+platform: x64
+
+branches:
+  only:
+    - master
+
+clone_folder: c:\gopath\src\github.com\silvergasp\go-diff
+
+environment:
+  GOPATH: c:\gopath
+
+install:
+  - echo %PATH%
+  - echo %GOPATH%
+  - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
+  - go version
+  - go env
+
+build_script:
+  - cd c:\gopath\src\github.com\silvergasp\go-diff
+  - mingw32-make lint
+  - mingw32-make test 

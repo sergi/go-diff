@@ -63,9 +63,6 @@ go-diff is a Go language implementation of google-diff-match-patch of Neil Frase
 ## Copyright and License
 
 go-diff is licensed under the [MIT License](http://www.opensource.org/licenses/MIT) (a.k.a. the Expat License) which is included here in the [LICENSE](/LICENSE) file.
-Diff, Match and Patch Library
-
-This Go version of Diff, Match and Patch Library is licensed under 
 
 Go version of Diff, Match and Patch Library
 

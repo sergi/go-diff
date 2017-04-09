@@ -998,7 +998,41 @@ func TestDiffText(t *testing.T) {
 }
 
 func TestDiffDelta(t *testing.T) {
+	type TestCase struct {
+		Name string
+
+		Text  string
+		Delta string
+
+		ErrorMessagePrefix string
+	}
+
 	dmp := New()
+
+	for i, tc := range []TestCase{
+		{"Delta shorter than text", "jumps over the lazyx", "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", "Delta length (19) is different from source text length (20)"},
+		{"Delta longer than text", "umps over the lazy", "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", "Delta length (19) is different from source text length (18)"},
+		{"Invalid URL escaping", "", "+%c3%xy", "invalid URL escape \"%xy\""},
+		{"Invalid UTF-8 sequence", "", "+%c3xy", "invalid UTF-8 token: \"\\xc3xy\""},
+		{"Invalid diff operation", "", "a", "Invalid diff operation in DiffFromDelta: a"},
+		{"Invalid diff syntax", "", "-", "strconv.ParseInt: parsing \"\": invalid syntax"},
+		{"Negative number in delta", "", "--1", "Negative number in DiffFromDelta: -1"},
+		{"Empty case", "", "", ""},
+	} {
+		diffs, err := dmp.DiffFromDelta(tc.Text, tc.Delta)
+		msg := fmt.Sprintf("Test case #%d, %s", i, tc.Name)
+		if tc.ErrorMessagePrefix == "" {
+			assert.Nil(t, err, msg)
+			assert.Nil(t, diffs, msg)
+		} else {
+			e := err.Error()
+			if strings.HasPrefix(e, tc.ErrorMessagePrefix) {
+				e = tc.ErrorMessagePrefix
+			}
+			assert.Nil(t, diffs, msg)
+			assert.Equal(t, tc.ErrorMessagePrefix, e, msg)
+		}
+	}
 
 	// Convert a diff into delta string.
 	diffs := []Diff{
@@ -1020,30 +1054,6 @@ func TestDiffDelta(t *testing.T) {
 	// Convert delta string into a diff.
 	deltaDiffs, err := dmp.DiffFromDelta(text1, delta)
 	assert.Equal(t, diffs, deltaDiffs)
-
-	// Generates error (19 < 20).
-	_, err = dmp.DiffFromDelta(text1+"x", delta)
-	if err == nil {
-		t.Fatal("Too long.")
-	}
-
-	// Generates error (19 > 18).
-	_, err = dmp.DiffFromDelta(text1[1:], delta)
-	if err == nil {
-		t.Fatal("Too short.")
-	}
-
-	// Generates error (%xy invalid URL escape).
-	_, err = dmp.DiffFromDelta("", "+%c3%xy")
-	if err == nil {
-		assert.Fail(t, "expected Invalid URL escape.")
-	}
-
-	// Generates error (invalid utf8).
-	_, err = dmp.DiffFromDelta("", "+%c3xy")
-	if err == nil {
-		assert.Fail(t, "expected Invalid utf8.")
-	}
 
 	// Test deltas with special characters.
 	diffs = []Diff{
@@ -1074,29 +1084,6 @@ func TestDiffDelta(t *testing.T) {
 	deltaDiffs, err = dmp.DiffFromDelta("", delta)
 	assert.Equal(t, diffs, deltaDiffs)
 	assert.Nil(t, err)
-
-	// Test blank tokens.
-	_, err = dmp.DiffFromDelta("", "")
-	assert.Nil(t, err)
-
-	// Test invalid diff operation "a"
-	_, err = dmp.DiffFromDelta("", "a")
-	if err == nil {
-		assert.Fail(t, "expected Invalid diff operation.")
-	}
-
-	// Test non-numeric parameter
-	_, err = dmp.DiffFromDelta("", "-")
-	if err == nil {
-		assert.Fail(t, "expected Invalid syntax.")
-	}
-
-	// Test negative parameter
-	_, err = dmp.DiffFromDelta("", "--1")
-	if err == nil {
-		assert.Fail(t, "expected Negative number.")
-	}
-
 }
 
 func TestDiffXIndex(t *testing.T) {

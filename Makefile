@@ -29,7 +29,6 @@ install-tools:
 	# Install linting tools
 	go get -u -v github.com/golang/lint/...
 	go get -u -v github.com/kisielk/errcheck/...
-	go get -u -v github.com/GeertJohan/fgt
 
 	# Install code coverage tools
 	go get -u -v github.com/onsi/ginkgo/ginkgo/...
@@ -37,15 +36,7 @@ install-tools:
 	go get -u -v github.com/mattn/goveralls/...
 
 lint:
-	@echo "gofmt:";
-	fgt gofmt -l $(ROOT_DIR)
-	@echo "errcheck:"
-	fgt errcheck $(PKG)/...
-	@echo "go vet:"
-	fgt go tool vet -all=true $(ROOT_DIR)
-	@echo "golint:"
-	fgt golint $(PKG)/... 
-
+	$(ROOT_DIR)/scripts/lint.sh
 test:
 	go test -race -test.timeout 120s $(PKG_TEST)
 test-verbose:

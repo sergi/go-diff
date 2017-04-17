@@ -2,10 +2,6 @@ version: 1.0.0.{build}
 
 platform: x64
 
-branches:
-  only:
-    - master
-
 clone_folder: c:\gopath\src\github.com\sergi\go-diff
 
 environment:
@@ -22,5 +18,5 @@ build_script:
   - cd c:\gopath\src\github.com\sergi\go-diff\
   - C:\MinGW\bin\mingw32-make install-tools
   - C:\MinGW\bin\mingw32-make install-dependencies
+  - C:\MinGW\bin\mingw32-make install
   - C:\MinGW\bin\mingw32-make test
-  - C:\MinGW\bin\mingw32-make lint

@@ -25,6 +25,8 @@ import (
 // Operation defines the operation of a diff item.
 type Operation int8
 
+//go:generate stringer -type=Operation -trimprefix=Diff
+
 const (
 	// DiffDelete item represents a delete diff.
 	DiffDelete Operation = -1

@@ -29,7 +29,7 @@ type Patch struct {
 
 // String emulates GNU diff's format.
 // Header: @@ -382,8 +481,9 @@
-// Indicies are printed as 1-based, not 0-based.
+// Indices are printed as 1-based, not 0-based.
 func (p *Patch) String() string {
 	var coords1, coords2 string
 

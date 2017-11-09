@@ -435,29 +435,28 @@ func (dmp *DiffMatchPatch) DiffCommonSuffix(text1, text2 string) int {
 // commonPrefixLength returns the length of the common prefix of two rune slices.
 func commonPrefixLength(text1, text2 []rune) int {
 	// Linear search. See comment in commonSuffixLength.
-	short, long := text1, text2
-	if len(short) > len(long) {
-		short, long = long, short
-	}
-	for i, r := range short {
-		if r != long[i] {
-			return i
+	n := 0
+	for ; n < len(text1) && n < len(text2); n++ {
+		if text1[n] != text2[n] {
+			return n
 		}
 	}
-	return len(short)
+	return n
 }
 
 // commonSuffixLength returns the length of the common suffix of two rune slices.
 func commonSuffixLength(text1, text2 []rune) int {
 	// Use linear search rather than the binary search discussed at https://neil.fraser.name/news/2007/10/09/.
 	// See discussion at https://github.com/sergi/go-diff/issues/54.
-	n := min(len(text1), len(text2))
-	for i := 0; i < n; i++ {
-		if text1[len(text1)-i-1] != text2[len(text2)-i-1] {
-			return i
+	i1 := len(text1)
+	i2 := len(text2)
+	for n := 0; ; n++ {
+		i1--
+		i2--
+		if i1 < 0 || i2 < 0 || text1[i1] != text2[i2] {
+			return n
 		}
 	}
-	return n
 }
 
 // DiffCommonOverlap determines if the suffix of one string is the prefix of another.

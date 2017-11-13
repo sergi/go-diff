@@ -178,7 +178,10 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		diffsA := dmp.diffMainRunes(text1A, text2A, checklines, deadline)
 		diffsB := dmp.diffMainRunes(text1B, text2B, checklines, deadline)
 		// Merge the results.
-		return append(diffsA, append([]Diff{Diff{DiffEqual, string(midCommon)}}, diffsB...)...)
+		diffs := diffsA
+		diffs = append(diffs, Diff{DiffEqual, string(midCommon)})
+		diffs = append(diffs, diffsB...)
+		return diffs
 	} else if checklines && len(text1) > 100 && len(text2) > 100 {
 		return dmp.diffLineMode(text1, text2, deadline)
 	}
@@ -685,9 +688,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 				(len(lastequality) <= difference2) {
 				// Duplicate record.
 				insPoint := equalities.data
-				diffs = append(
-					diffs[:insPoint],
-					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[insPoint:]...)...)
+				diffs = splice(diffs, insPoint, 0, Diff{DiffDelete, lastequality})
 
 				// Change second copy to insert.
 				diffs[insPoint+1].Type = DiffInsert
@@ -738,10 +739,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					float64(overlapLength1) >= float64(len(insertion))/2 {
 
 					// Overlap found. Insert an equality and trim the surrounding edits.
-					diffs = append(
-						diffs[:pointer],
-						append([]Diff{Diff{DiffEqual, insertion[:overlapLength1]}}, diffs[pointer:]...)...)
-
+					diffs = splice(diffs, pointer, 0, Diff{DiffEqual, insertion[:overlapLength1]})
 					diffs[pointer-1].Text =
 						deletion[0 : len(deletion)-overlapLength1]
 					diffs[pointer+1].Text = insertion[overlapLength1:]
@@ -752,10 +750,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					float64(overlapLength2) >= float64(len(insertion))/2 {
 					// Reverse overlap found. Insert an equality and swap and trim the surrounding edits.
 					overlap := Diff{DiffEqual, deletion[:overlapLength2]}
-					diffs = append(
-						diffs[:pointer],
-						append([]Diff{overlap}, diffs[pointer:]...)...)
-
+					diffs = splice(diffs, pointer, 0, overlap)
 					diffs[pointer-1].Type = DiffInsert
 					diffs[pointer-1].Text = insertion[0 : len(insertion)-overlapLength2]
 					diffs[pointer+1].Type = DiffDelete
@@ -968,8 +963,7 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 				insPoint := equalities.data
 
 				// Duplicate record.
-				diffs = append(diffs[:insPoint],
-					append([]Diff{Diff{DiffDelete, lastequality}}, diffs[insPoint:]...)...)
+				diffs = splice(diffs, insPoint, 0, Diff{DiffDelete, lastequality})
 
 				// Change second copy to insert.
 				diffs[insPoint+1].Type = DiffInsert

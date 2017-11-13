@@ -283,7 +283,7 @@ func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time)
 	k2end := 0
 	for d := 0; d < maxD; d++ {
 		// Bail out if deadline is reached.
-		if !deadline.IsZero() && time.Now().After(deadline) {
+		if !deadline.IsZero() && d%16 == 0 && time.Now().After(deadline) {
 			break
 		}
 

@@ -40,8 +40,41 @@ type Diff struct {
 	Text string
 }
 
+// splice removes amount elements from slice at index index, replacing them with elements.
 func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
-	return append(slice[:index], append(elements, slice[index+amount:]...)...)
+	if len(elements) == amount {
+		// Easy case: overwrite the relevant items.
+		copy(slice[index:], elements)
+		return slice
+	}
+	if len(elements) < amount {
+		// Fewer new items than old.
+		// Copy in the new items.
+		copy(slice[index:], elements)
+		// Shift the remaining items left.
+		copy(slice[index+len(elements):], slice[index+amount:])
+		// Calculate the new end of the slice.
+		end := len(slice) - amount + len(elements)
+		// Zero stranded elements at end so that they can be garbage collected.
+		tail := slice[end:]
+		for i := range tail {
+			tail[i] = Diff{}
+		}
+		return slice[:end]
+	}
+	// More new items than old.
+	// Make room in slice for new elements.
+	// There's probably an even more efficient way to do this,
+	// but this is simple and clear.
+	need := len(slice) - amount + len(elements)
+	for len(slice) < need {
+		slice = append(slice, Diff{})
+	}
+	// Shift slice elements right to make room for new elements.
+	copy(slice[index+len(elements):], slice[index+amount:])
+	// Copy in new elements.
+	copy(slice[index:], elements)
+	return slice
 }
 
 // DiffMain finds the differences between two texts.

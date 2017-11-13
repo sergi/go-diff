@@ -645,11 +645,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	changes := false
 	// Stack of indices where equalities are found.
-	type equality struct {
-		data int
-		next *equality
-	}
-	var equalities *equality
+	equalities := make([]int, 0, len(diffs))
 
 	var lastequality string
 	// Always equal to diffs[equalities[equalitiesLength - 1]][1]
@@ -662,11 +658,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 	for pointer < len(diffs) {
 		if diffs[pointer].Type == DiffEqual {
 			// Equality found.
-
-			equalities = &equality{
-				data: pointer,
-				next: equalities,
-			}
+			equalities = append(equalities, pointer)
 			lengthInsertions1 = lengthInsertions2
 			lengthDeletions1 = lengthDeletions2
 			lengthInsertions2 = 0
@@ -687,21 +679,20 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 				(len(lastequality) <= difference1) &&
 				(len(lastequality) <= difference2) {
 				// Duplicate record.
-				insPoint := equalities.data
+				insPoint := equalities[len(equalities)-1]
 				diffs = splice(diffs, insPoint, 0, Diff{DiffDelete, lastequality})
 
 				// Change second copy to insert.
 				diffs[insPoint+1].Type = DiffInsert
 				// Throw away the equality we just deleted.
-				equalities = equalities.next
+				equalities = equalities[:len(equalities)-1]
 
-				if equalities != nil {
-					equalities = equalities.next
+				if len(equalities) > 0 {
+					equalities = equalities[:len(equalities)-1]
 				}
-				if equalities != nil {
-					pointer = equalities.data
-				} else {
-					pointer = -1
+				pointer = -1
+				if len(equalities) > 0 {
+					pointer = equalities[len(equalities)-1]
 				}
 
 				lengthInsertions1 = 0 // Reset the counters.

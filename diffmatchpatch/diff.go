@@ -1155,6 +1155,38 @@ func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
 	return lastChars2 + (loc - lastChars1)
 }
 
+func (dmp *DiffMatchPatch) DiffXRuneIndex(diffs []Diff, loc int) int {
+	chars1 := 0
+	chars2 := 0
+	lastChars1 := 0
+	lastChars2 := 0
+	lastDiff := Diff{}
+	for i := 0; i < len(diffs); i++ {
+		aDiff := diffs[i]
+		if aDiff.Type != DiffInsert {
+			// Equality or deletion.
+			chars1 += len([]rune(aDiff.Text))
+		}
+		if aDiff.Type != DiffDelete {
+			// Equality or insertion.
+			chars2 += len([]rune(aDiff.Text))
+		}
+		if chars1 > loc {
+			// Overshot the location.
+			lastDiff = aDiff
+			break
+		}
+		lastChars1 = chars1
+		lastChars2 = chars2
+	}
+	if lastDiff.Type == DiffDelete {
+		// The location was deleted.
+		return lastChars2
+	}
+	// Add the remaining character length.
+	return lastChars2 + (loc - lastChars1)
+}
+
 // DiffPrettyHtml converts a []Diff into a pretty HTML report.
 // It is intended as an example from which to write one's own display functions.
 func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {

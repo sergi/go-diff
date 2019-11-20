@@ -11,6 +11,8 @@ package diffmatchpatch
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -312,10 +314,10 @@ func TestDiffLinesToChars(t *testing.T) {
 	dmp := New()
 
 	for i, tc := range []TestCase{
-		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "\u0001\u0002\u0003\u0003", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
-		{"a", "b", "\u0001", "\u0002", []string{"", "a", "b"}},
+		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "1,2,3,3", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
+		{"a", "b", "1", "2", []string{"", "a", "b"}},
 		// Omit final newline.
-		{"alpha\nbeta\nalpha", "", "\u0001\u0002\u0003", "", []string{"", "alpha\n", "beta\n", "alpha"}},
+		{"alpha\nbeta\nalpha", "", "1,2,3", "", []string{"", "alpha\n", "beta\n", "alpha"}},
 	} {
 		actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(tc.Text1, tc.Text2)
 		assert.Equal(t, tc.ExpectedChars1, actualChars1, fmt.Sprintf("Test case #%d, %#v", i, tc))
@@ -328,14 +330,14 @@ func TestDiffLinesToChars(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	var charList []rune
+	var charList []string
 	for x := 1; x < n+1; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, rune(x))
+		charList = append(charList, strconv.Itoa(x))
 	}
 	lines := strings.Join(lineList, "")
-	chars := string(charList)
-	assert.Equal(t, n, utf8.RuneCountInString(chars))
+	chars := strings.Join(charList[:], ",")
+	assert.Equal(t, n, len(strings.Split(chars, ",")))
 
 	actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(lines, "")
 	assert.Equal(t, chars, actualChars1)
@@ -356,8 +358,8 @@ func TestDiffCharsToLines(t *testing.T) {
 	for i, tc := range []TestCase{
 		{
 			Diffs: []Diff{
-				{DiffEqual, "\u0001\u0002\u0001"},
-				{DiffInsert, "\u0002\u0001\u0002"},
+				{DiffEqual, "1,2,1"},
+				{DiffInsert, "2,1,2"},
 			},
 			Lines: []string{"", "alpha\n", "beta\n"},
 
@@ -376,14 +378,15 @@ func TestDiffCharsToLines(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	charList := []rune{}
+	charList := []string{}
 	for x := 1; x <= n; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, rune(x))
+		charList = append(charList, strconv.Itoa(x))
 	}
 	assert.Equal(t, n, len(charList))
+	chars := strings.Join(charList[:], ",")
 
-	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, string(charList)}}, lineList)
+	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, chars}}, lineList)
 	assert.Equal(t, []Diff{Diff{DiffDelete, strings.Join(lineList, "")}}, actual)
 }
 
@@ -1454,6 +1457,38 @@ func BenchmarkDiffMainRunesLargeLines(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		text1, text2, linearray := dmp.DiffLinesToRunes(s1, s2)
+
+		diffs := dmp.DiffMainRunes(text1, text2, false)
+		diffs = dmp.DiffCharsToLines(diffs, linearray)
+	}
+}
+
+func BenchmarkDiffMainStringsLargeLines(b *testing.B) {
+	s1, s2 := speedtestTexts()
+
+	dmp := New()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		text1, text2, linearray := dmp.DiffLinesToStrings(s1, s2)
+
+		diffs := dmp.DiffMain(text1, text2, false)
+		diffs = dmp.DiffStringsToLines(diffs, linearray)
+	}
+}
+
+func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
+	fp, _ := os.Open("../testdata/diff10klinestest.txt")
+	defer fp.Close()
+	data, _ := ioutil.ReadAll(fp)
+
+	dmp := New()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		text1, text2, linearray := dmp.DiffLinesToRunes(string(data), "")
 
 		diffs := dmp.DiffMainRunes(text1, text2, false)
 		diffs = dmp.DiffCharsToLines(diffs, linearray)

@@ -1474,7 +1474,7 @@ func BenchmarkDiffMainStringsLargeLines(b *testing.B) {
 		text1, text2, linearray := dmp.DiffLinesToStrings(s1, s2)
 
 		diffs := dmp.DiffMain(text1, text2, false)
-		diffs = dmp.DiffStringsToLines(diffs, linearray)
+		diffs = dmp.DiffCharsToLines(diffs, linearray)
 	}
 }
 

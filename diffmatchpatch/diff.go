@@ -195,7 +195,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 // diffLineMode does a quick line-level diff on both []runes, then rediff the parts for greater accuracy. This speedup can produce non-minimal diffs.
 func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time) []Diff {
 	// Scan the text on a line-by-line basis first.
-	text1, text2, linearray := dmp.diffLinesToRunes(text1, text2)
+	text1, text2, linearray := dmp.DiffLinesToRunes(string(text1), string(text2))
 
 	diffs := dmp.diffMainRunes(text1, text2, false, deadline)
 
@@ -402,13 +402,23 @@ func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune
 	return []rune(chars1), []rune(chars2), lineArray
 }
 
-func (dmp *DiffMatchPatch) diffLinesToRunes(text1, text2 []rune) ([]rune, []rune, []string) {
-	return dmp.DiffLinesToRunes(string(text1), string(text2))
-}
-
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of text.
 func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
-	hydrated := dmp.DiffStringsToLines(diffs, lineArray)
+	hydrated := make([]Diff, 0, len(diffs))
+	for _, aDiff := range diffs {
+		chars := strings.Split(aDiff.Text, IndexSeperator)
+		text := make([]string, len(chars))
+
+		for i, r := range chars {
+			i1, err := strconv.Atoi(r)
+			if err == nil {
+				text[i] = lineArray[i1]
+			}
+		}
+
+		aDiff.Text = strings.Join(text, "")
+		hydrated = append(hydrated, aDiff)
+	}
 	return hydrated
 }
 
@@ -1344,24 +1354,4 @@ func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]str
 	}
 
 	return strings
-}
-
-// DiffStringsToLines rehydrates the text in a diff from a string of line hashes to real lines of text.
-func (dmp *DiffMatchPatch) DiffStringsToLines(diffs []Diff, lineArray []string) []Diff {
-	hydrated := make([]Diff, 0, len(diffs))
-	for _, aDiff := range diffs {
-		chars := strings.Split(aDiff.Text, IndexSeperator)
-		text := make([]string, len(chars))
-
-		for i, r := range chars {
-			i1, err := strconv.Atoi(r)
-			if err == nil {
-				text[i] = lineArray[i1]
-			}
-		}
-
-		aDiff.Text = strings.Join(text, "")
-		hydrated = append(hydrated, aDiff)
-	}
-	return hydrated
 }

@@ -1500,21 +1500,6 @@ func BenchmarkDiffMainRunesLargeLines(b *testing.B) {
 	}
 }
 
-func BenchmarkDiffMainStringsLargeLines(b *testing.B) {
-	s1, s2 := speedtestTexts()
-
-	dmp := New()
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		text1, text2, linearray := dmp.DiffLinesToStrings(s1, s2)
-
-		diffs := dmp.DiffMain(text1, text2, false)
-		diffs = dmp.DiffCharsToLines(diffs, linearray)
-	}
-}
-
 func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
 	fp, _ := os.Open("../testdata/diff10klinestest.txt")
 	defer fp.Close()

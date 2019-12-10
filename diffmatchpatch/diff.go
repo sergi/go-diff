@@ -500,8 +500,8 @@ func commonSuffixLength(text1, text2 []rune) int {
 // DiffCommonOverlap determines if the suffix of one string is the prefix of another.
 func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 	// Cache the text lengths to prevent multiple calls.
-	text1Length := len(text1)
-	text2Length := len(text2)
+	text1Length := len([]rune(text1))
+	text2Length := len([]rune(text2))
 	// Eliminate the null case.
 	if text1Length == 0 || text2Length == 0 {
 		return 0

@@ -845,6 +845,18 @@ func TestDiffCleanupSemantic(t *testing.T) {
 				{DiffInsert, "a new hope"},
 			},
 		},
+		{
+			"panic",
+			[]Diff{
+				{DiffInsert, "킬러 인 "},
+				{DiffEqual, "리커버리"},
+				{DiffDelete, " 보이즈"},
+			},
+			[]Diff{
+				{DiffDelete, "리커버리 보이즈"},
+				{DiffInsert, "킬러 인 리커버리"},
+			},
+		},
 	} {
 		actual := dmp.DiffCleanupSemantic(tc.Diffs)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))

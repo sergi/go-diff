@@ -670,16 +670,16 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 			// An insertion or deletion.
 
 			if diffs[pointer].Type == DiffInsert {
-				lengthInsertions2 += len(diffs[pointer].Text)
+				lengthInsertions2 += len([]rune(diffs[pointer].Text))
 			} else {
-				lengthDeletions2 += len(diffs[pointer].Text)
+				lengthDeletions2 += len([]rune(diffs[pointer].Text))
 			}
 			// Eliminate an equality that is smaller or equal to the edits on both sides of it.
 			difference1 := int(math.Max(float64(lengthInsertions1), float64(lengthDeletions1)))
 			difference2 := int(math.Max(float64(lengthInsertions2), float64(lengthDeletions2)))
-			if len(lastequality) > 0 &&
-				(len(lastequality) <= difference1) &&
-				(len(lastequality) <= difference2) {
+			if len([]rune(lastequality)) > 0 &&
+				(len([]rune(lastequality)) <= difference1) &&
+				(len([]rune(lastequality)) <= difference2) {
 				// Duplicate record.
 				insPoint := equalities[len(equalities)-1]
 				diffs = splice(diffs, insPoint, 0, Diff{DiffDelete, lastequality})
@@ -728,24 +728,24 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 			overlapLength1 := dmp.DiffCommonOverlap(deletion, insertion)
 			overlapLength2 := dmp.DiffCommonOverlap(insertion, deletion)
 			if overlapLength1 >= overlapLength2 {
-				if float64(overlapLength1) >= float64(len(deletion))/2 ||
-					float64(overlapLength1) >= float64(len(insertion))/2 {
+				if float64(overlapLength1) >= float64(len([]rune(deletion)))/2 ||
+					float64(overlapLength1) >= float64(len([]rune(insertion)))/2 {
 
 					// Overlap found. Insert an equality and trim the surrounding edits.
 					diffs = splice(diffs, pointer, 0, Diff{DiffEqual, insertion[:overlapLength1]})
 					diffs[pointer-1].Text =
-						deletion[0 : len(deletion)-overlapLength1]
+						deletion[0 : len([]rune(deletion))-overlapLength1]
 					diffs[pointer+1].Text = insertion[overlapLength1:]
 					pointer++
 				}
 			} else {
-				if float64(overlapLength2) >= float64(len(deletion))/2 ||
-					float64(overlapLength2) >= float64(len(insertion))/2 {
+				if float64(overlapLength2) >= float64(len([]rune(deletion)))/2 ||
+					float64(overlapLength2) >= float64(len([]rune(insertion)))/2 {
 					// Reverse overlap found. Insert an equality and swap and trim the surrounding edits.
 					overlap := Diff{DiffEqual, deletion[:overlapLength2]}
 					diffs = splice(diffs, pointer, 0, overlap)
 					diffs[pointer-1].Type = DiffInsert
-					diffs[pointer-1].Text = insertion[0 : len(insertion)-overlapLength2]
+					diffs[pointer-1].Text = insertion[0 : len([]rune(insertion))-overlapLength2]
 					diffs[pointer+1].Type = DiffDelete
 					diffs[pointer+1].Text = deletion[overlapLength2:]
 					pointer++

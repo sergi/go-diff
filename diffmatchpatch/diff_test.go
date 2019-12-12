@@ -853,8 +853,9 @@ func TestDiffCleanupSemantic(t *testing.T) {
 				{DiffDelete, " 보이즈"},
 			},
 			[]Diff{
-				{DiffDelete, "리커버리 보이즈"},
-				{DiffInsert, "킬러 인 리커버리"},
+				{DiffInsert, "킬러 인 "},
+				{DiffEqual, "리커버리"},
+				{DiffDelete, " 보이즈"},
 			},
 		},
 	} {

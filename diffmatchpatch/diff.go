@@ -739,8 +739,8 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 					pointer++
 				}
 			} else {
-				if float64(overlapLength2) >= float64(len(deletion))/2 ||
-					float64(overlapLength2) >= float64(len(insertion))/2 {
+				if float64(overlapLength2) >= float64(len([]rune(deletion)))/2 ||
+					float64(overlapLength2) >= float64(len([]rune(insertion)))/2 {
 					// Reverse overlap found. Insert an equality and swap and trim the surrounding edits.
 					overlap := Diff{DiffEqual, deletion[:overlapLength2]}
 					diffs = splice(diffs, pointer, 0, overlap)

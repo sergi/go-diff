@@ -728,8 +728,8 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 			overlapLength1 := dmp.DiffCommonOverlap(deletion, insertion)
 			overlapLength2 := dmp.DiffCommonOverlap(insertion, deletion)
 			if overlapLength1 >= overlapLength2 {
-				if float64(overlapLength1) >= float64(len(deletion))/2 ||
-					float64(overlapLength1) >= float64(len(insertion))/2 {
+				if float64(overlapLength1) >= float64(len([]rune(deletion)))/2 ||
+					float64(overlapLength1) >= float64(len([]rune(insertion)))/2 {
 
 					// Overlap found. Insert an equality and trim the surrounding edits.
 					diffs = splice(diffs, pointer, 0, Diff{DiffEqual, insertion[:overlapLength1]})

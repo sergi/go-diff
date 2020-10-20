@@ -821,6 +821,43 @@ func TestDiffCleanupSemantic(t *testing.T) {
 				{DiffDelete, " deal"},
 			},
 		},
+		{
+			"Taken from python / CPP library",
+			[]Diff{
+				{DiffInsert, "星球大戰：新的希望 "},
+				{DiffEqual, "star wars: "},
+				{DiffDelete, "episodio iv - un"},
+				{DiffEqual, "a n"},
+				{DiffDelete, "u"},
+				{DiffEqual, "e"},
+				{DiffDelete, "va"},
+				{DiffInsert, "w"},
+				{DiffEqual, " "},
+				{DiffDelete, "es"},
+				{DiffInsert, "ho"},
+				{DiffEqual, "pe"},
+				{DiffDelete, "ranza"},
+			},
+			[]Diff{
+				{DiffInsert, "星球大戰：新的希望 "},
+				{DiffEqual, "star wars: "},
+				{DiffDelete, "episodio iv - una nueva esperanza"},
+				{DiffInsert, "a new hope"},
+			},
+		},
+		{
+			"panic",
+			[]Diff{
+				{DiffInsert, "킬러 인 "},
+				{DiffEqual, "리커버리"},
+				{DiffDelete, " 보이즈"},
+			},
+			[]Diff{
+				{DiffInsert, "킬러 인 "},
+				{DiffEqual, "리커버리"},
+				{DiffDelete, " 보이즈"},
+			},
+		},
 	} {
 		actual := dmp.DiffCleanupSemantic(tc.Diffs)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))

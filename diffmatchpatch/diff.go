@@ -34,8 +34,8 @@ const (
 	DiffInsert Operation = 1
 	// DiffEqual item represents an equal diff.
 	DiffEqual Operation = 0
-	//IndexSeperator is used to seperate the array indexes in an index string
-	IndexSeperator = ","
+	//IndexSeparator is used to seperate the array indexes in an index string
+	IndexSeparator = ","
 )
 
 // Diff represents one diff operation
@@ -122,7 +122,7 @@ func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, d
 
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
-		diffs = append([]Diff{Diff{DiffEqual, string(commonprefix)}}, diffs...)
+		diffs = append([]Diff{{DiffEqual, string(commonprefix)}}, diffs...)
 	}
 	if len(commonsuffix) != 0 {
 		diffs = append(diffs, Diff{DiffEqual, string(commonsuffix)})
@@ -167,8 +167,8 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		// Single character string.
 		// After the previous speedup, the character can't be an equality.
 		return []Diff{
-			Diff{DiffDelete, string(text1)},
-			Diff{DiffInsert, string(text2)},
+			{DiffDelete, string(text1)},
+			{DiffInsert, string(text2)},
 		}
 		// Check to see if the problem can be split in two.
 	} else if hm := dmp.diffHalfMatch(text1, text2); hm != nil {
@@ -370,8 +370,8 @@ func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time)
 	}
 	// Diff took too long and hit the deadline or number of diffs equals number of characters, no commonality at all.
 	return []Diff{
-		Diff{DiffDelete, string(runes1)},
-		Diff{DiffInsert, string(runes2)},
+		{DiffDelete, string(runes1)},
+		{DiffInsert, string(runes2)},
 	}
 }
 
@@ -406,7 +406,7 @@ func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune
 func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
 	hydrated := make([]Diff, 0, len(diffs))
 	for _, aDiff := range diffs {
-		chars := strings.Split(aDiff.Text, IndexSeperator)
+		chars := strings.Split(aDiff.Text, IndexSeparator)
 		text := make([]string, len(chars))
 
 		for i, r := range chars {
@@ -993,7 +993,7 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 						if x > 0 && diffs[x-1].Type == DiffEqual {
 							diffs[x-1].Text += string(textInsert[:commonlength])
 						} else {
-							diffs = append([]Diff{Diff{DiffEqual, string(textInsert[:commonlength])}}, diffs...)
+							diffs = append([]Diff{{DiffEqual, string(textInsert[:commonlength])}}, diffs...)
 							pointer++
 						}
 						textInsert = textInsert[commonlength:]
@@ -1317,20 +1317,16 @@ func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, stri
 	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray)
 	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray)
 
-	//Adding a delimter to later get the strings as array
-	str1 := strings.Join(strIndexArray1[:], IndexSeperator)
-	str2 := strings.Join(strIndexArray2[:], IndexSeperator)
-
-	return str1, str2, lineArray
+	return intArrayToString(strIndexArray1), intArrayToString(strIndexArray2), lineArray
 }
 
 // diffLinesToStringsMunge splits a text into an array of strings, and reduces the texts to a []string.
-func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string) []string {
+func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string) []uint32 {
 	// Walk the text, pulling out a substring for each line. text.split('\n') would would temporarily double our memory footprint. Modifying text would create many large strings to garbage collect.
 	lineHash := map[string]int{} // e.g. lineHash['Hello\n'] == 4
 	lineStart := 0
 	lineEnd := -1
-	strs := []string{}
+	strs := []uint32{}
 
 	for lineEnd < len(text)-1 {
 		lineEnd = indexOf(text, "\n", lineStart)
@@ -1344,11 +1340,11 @@ func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]str
 		lineValue, ok := lineHash[line]
 
 		if ok {
-			strs = append(strs, strconv.Itoa(lineValue))
+			strs = append(strs, uint32(lineValue))
 		} else {
 			*lineArray = append(*lineArray, line)
 			lineHash[line] = len(*lineArray) - 1
-			strs = append(strs, strconv.Itoa(len(*lineArray)-1))
+			strs = append(strs, uint32(len(*lineArray)-1))
 		}
 	}
 

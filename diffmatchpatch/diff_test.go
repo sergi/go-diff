@@ -1453,6 +1453,19 @@ func TestDiffMainWithCheckLines(t *testing.T) {
 	}
 }
 
+func TestMassiveRuneDiffConversion(t *testing.T) {
+	sNew, err := ioutil.ReadFile("../testdata/fixture.go")
+	if err != nil {
+		panic(err)
+	}
+
+	dmp := New()
+	t1, t2, tt := dmp.DiffLinesToChars("", string(sNew))
+	diffs := dmp.DiffMain(t1, t2, false)
+	diffs = dmp.DiffCharsToLines(diffs, tt)
+	assert.NotEmpty(t, diffs)
+}
+
 func BenchmarkDiffMain(bench *testing.B) {
 	s1 := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
 	s2 := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"

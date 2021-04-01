@@ -31,7 +31,7 @@ func TestPatchString(t *testing.T) {
 				Length1: 18,
 				Length2: 17,
 
-				diffs: []Diff{
+				Diffs: []Diff{
 					{DiffEqual, "jump"},
 					{DiffDelete, "s"},
 					{DiffInsert, "ed"},
@@ -94,7 +94,7 @@ func TestPatchFromText(t *testing.T) {
 	patches, err := dmp.PatchFromText("@@ -1,21 +1,21 @@\n-%601234567890-=%5B%5D%5C;',./\n+~!@#$%25%5E&*()_+%7B%7D%7C:%22%3C%3E?\n")
 	assert.Len(t, patches, 1)
 	assert.Equal(t, diffs,
-		patches[0].diffs,
+		patches[0].Diffs,
 	)
 	assert.Nil(t, err)
 }

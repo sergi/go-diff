@@ -314,10 +314,10 @@ func TestDiffLinesToChars(t *testing.T) {
 	dmp := New()
 
 	for i, tc := range []TestCase{
-		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "1,2,3,3", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
-		{"a", "b", "1", "2", []string{"", "a", "b"}},
+		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "\u0001\u0002\u0003\u0003", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
+		{"a", "b", "\u0001", "\u0002", []string{"", "a", "b"}},
 		// Omit final newline.
-		{"alpha\nbeta\nalpha", "", "1,2,3", "", []string{"", "alpha\n", "beta\n", "alpha"}},
+		{"alpha\nbeta\nalpha", "", "\u0001\u0002\u0003", "", []string{"", "alpha\n", "beta\n", "alpha"}},
 	} {
 		actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(tc.Text1, tc.Text2)
 		assert.Equal(t, tc.ExpectedChars1, actualChars1, fmt.Sprintf("Test case #%d, %#v", i, tc))
@@ -330,14 +330,14 @@ func TestDiffLinesToChars(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	var charList []string
+	var charList []rune
 	for x := 1; x < n+1; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, strconv.Itoa(x))
+		charList = append(charList, rune(x))
 	}
 	lines := strings.Join(lineList, "")
-	chars := strings.Join(charList[:], ",")
-	assert.Equal(t, n, len(strings.Split(chars, ",")))
+	chars := string(charList)
+	assert.Equal(t, n, utf8.RuneCountInString(chars))
 
 	actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(lines, "")
 	assert.Equal(t, chars, actualChars1)
@@ -358,8 +358,8 @@ func TestDiffCharsToLines(t *testing.T) {
 	for i, tc := range []TestCase{
 		{
 			Diffs: []Diff{
-				{DiffEqual, "1,2,1"},
-				{DiffInsert, "2,1,2"},
+				{DiffEqual, "\u0001\u0002\u0001"},
+				{DiffInsert, "\u0002\u0001\u0002"},
 			},
 			Lines: []string{"", "alpha\n", "beta\n"},
 
@@ -378,15 +378,14 @@ func TestDiffCharsToLines(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	charList := []string{}
+	charList := []rune{}
 	for x := 1; x <= n; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, strconv.Itoa(x))
+		charList = append(charList, rune(x))
 	}
 	assert.Equal(t, n, len(charList))
-	chars := strings.Join(charList[:], ",")
 
-	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, chars}}, lineList)
+	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, string(charList)}}, lineList)
 	assert.Equal(t, []Diff{Diff{DiffDelete, strings.Join(lineList, "")}}, actual)
 }
 
@@ -1419,16 +1418,12 @@ func TestDiffMainWithTimeout(t *testing.T) {
 }
 
 func TestDiffMainWithCheckLines(t *testing.T) {
+	// Test cases must be at least 100 chars long to pass the cutoff.
 	type TestCase struct {
 		Text1 string
 		Text2 string
 	}
-
-	dmp := New()
-	dmp.DiffTimeout = 0
-
-	// Test cases must be at least 100 chars long to pass the cutoff.
-	for i, tc := range []TestCase{
+	tests := []TestCase{
 		{
 			"1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n",
 			"abcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\n",
@@ -1441,7 +1436,39 @@ func TestDiffMainWithCheckLines(t *testing.T) {
 			"1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n",
 			"abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n",
 		},
-	} {
+	}
+	// Add test case for the issue #115
+	func() {
+		const before = `package main
+
+import (
+	"fmt"
+)
+
+/*
+func upload(c echo.Context) error {
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "ParseForm() err: %v", err)
+		return
+	}
+	fmt.Fprintf(w, "POST request successful")
+	path_ver := r.FormValue("path_ver")
+	ukclin_ver := r.FormValue("ukclin_ver")
+
+	fmt.Fprintf(w, "Name = %s\n", path_ver)
+	fmt.Fprintf(w, "Address = %s\n", ukclin_ver)
+}
+*/
+`
+		after := strings.ReplaceAll(before, "\n", "\r\n")
+
+		tests = append(tests, TestCase{Text1: before, Text2: after})
+	}()
+
+	dmp := New()
+	dmp.DiffTimeout = 0
+
+	for i, tc := range tests {
 		resultWithoutCheckLines := dmp.DiffMain(tc.Text1, tc.Text2, false)
 		resultWithCheckLines := dmp.DiffMain(tc.Text1, tc.Text2, true)
 

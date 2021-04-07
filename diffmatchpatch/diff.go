@@ -428,17 +428,39 @@ func (dmp *DiffMatchPatch) diffLinesToRunesMunge(text string, lineArray *[]strin
 		line := text[lineStart : lineEnd+1]
 		lineStart = lineEnd + 1
 		lineValue, ok := lineHash[line]
+		if !ok {
+			checkLineArray(lineArray)
 
-		if ok {
-			runes = append(runes, rune(lineValue))
-		} else {
 			*lineArray = append(*lineArray, line)
-			lineHash[line] = len(*lineArray) - 1
-			runes = append(runes, rune(len(*lineArray)-1))
+			lineValue = len(*lineArray) - 1
+			lineHash[line] = lineValue
 		}
+		runes = append(runes, rune(lineValue))
 	}
 
 	return runes
+}
+
+// checkLineArray checks the size of the slice and ensures that the index of the next element
+// will be the valid rune.
+func checkLineArray(a *[]string) {
+	// Runes in this range are invalid, utf8.ValidRune() returns false.
+	const (
+		surrogateMin = 0xD800
+		surrogateMax = 0xDFFF
+	)
+
+	// Check the index of the next element
+	switch len(*a) {
+	case surrogateMin:
+		// Skip invalid runes.
+		padding := [surrogateMax - surrogateMin + 1]string{}
+		*a = append(*a, padding[:]...)
+
+	case utf8.MaxRune + 1:
+		// We can't do anything about it.
+		panic(fmt.Sprintf("rune can't be more than %d", utf8.MaxRune))
+	}
 }
 
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of text.

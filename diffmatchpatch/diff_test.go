@@ -1419,16 +1419,12 @@ func TestDiffMainWithTimeout(t *testing.T) {
 }
 
 func TestDiffMainWithCheckLines(t *testing.T) {
+	// Test cases must be at least 100 chars long to pass the cutoff.
 	type TestCase struct {
 		Text1 string
 		Text2 string
 	}
-
-	dmp := New()
-	dmp.DiffTimeout = 0
-
-	// Test cases must be at least 100 chars long to pass the cutoff.
-	for i, tc := range []TestCase{
+	tests := []TestCase{
 		{
 			"1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n",
 			"abcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\nabcdefghij\n",
@@ -1441,7 +1437,39 @@ func TestDiffMainWithCheckLines(t *testing.T) {
 			"1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n",
 			"abcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n1234567890\n1234567890\n1234567890\nabcdefghij\n",
 		},
-	} {
+	}
+	// Add test case for the issue #115
+	func() {
+		const before = `package main
+
+import (
+	"fmt"
+)
+
+/*
+func upload(c echo.Context) error {
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "ParseForm() err: %v", err)
+		return
+	}
+	fmt.Fprintf(w, "POST request successful")
+	path_ver := r.FormValue("path_ver")
+	ukclin_ver := r.FormValue("ukclin_ver")
+
+	fmt.Fprintf(w, "Name = %s\n", path_ver)
+	fmt.Fprintf(w, "Address = %s\n", ukclin_ver)
+}
+*/
+`
+		after := strings.ReplaceAll(before, "\n", "\r\n")
+
+		tests = append(tests, TestCase{Text1: before, Text2: after})
+	}()
+
+	dmp := New()
+	dmp.DiffTimeout = 0
+
+	for i, tc := range tests {
 		resultWithoutCheckLines := dmp.DiffMain(tc.Text1, tc.Text2, false)
 		resultWithCheckLines := dmp.DiffMain(tc.Text1, tc.Text2, true)
 

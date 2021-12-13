@@ -9,7 +9,6 @@
 package diffmatchpatch
 
 import (
-	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -89,18 +88,9 @@ func runesIndex(r1, r2 []rune) int {
 }
 
 func intArrayToString(ns []uint32) string {
-	if len(ns) == 0 {
-		return ""
+	runes := make([]rune, len(ns))
+	for i := 0; i < len(ns); i++ {
+		runes[i] = rune(ns[i])
 	}
-
-	indexSeparator := IndexSeparator[0]
-
-	// Appr. 3 chars per num plus the comma.
-	b := []byte{}
-	for _, n := range ns {
-		b = strconv.AppendInt(b, int64(n), 10)
-		b = append(b, indexSeparator)
-	}
-	b = b[:len(b)-1]
-	return string(b)
+	return string(runes)
 }

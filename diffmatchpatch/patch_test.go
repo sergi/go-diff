@@ -337,3 +337,28 @@ func TestPatchApply(t *testing.T) {
 		assert.Equal(t, tc.ExpectedApplies, actualApplies, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
 	}
 }
+
+func TestPatchMakeOutOfRangePanic(t *testing.T) {
+	text1 := `
+  1111111111111 000000
+  ------------- ------
+  xxxxxxxxxxxxx ------
+  xxxxxxxxxxxxx ------
+  xxxxxxxxxxxxx xxxxxx
+  xxxxxxxxxxxxx ......
+  xxxxxxxxxxxxx 111111
+  xxxxxxxxxxxxx ??????
+  xxxxxxxxxxxxx 333333
+  xxxxxxxxxxxxx 555555
+  xxxxxxxxxx xxxxx
+  xxxxxxxxxx xxxxx
+  xxxxxxxxxx xxxxx
+  xxxxxxxxxx xxxxx
+`
+	text2 := `
+  2222222222222 000000
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+	dmp := New()
+	patches := dmp.PatchMake(text1, text2)
+	assert.Equal(t, 6, len(patches), "TestPatchMakeOutOfRangePanic")
+}

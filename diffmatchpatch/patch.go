@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Patch represents one patch operation.
@@ -99,6 +100,47 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	suffix := text[patch.Start2+patch.Length1 : min(len(text), patch.Start2+patch.Length1+padding)]
 	if len(suffix) != 0 {
 		patch.diffs = append(patch.diffs, Diff{DiffEqual, suffix})
+	}
+
+	// Roll back the start points.
+	patch.Start1 -= len(prefix)
+	patch.Start2 -= len(prefix)
+	// Extend the lengths.
+	patch.Length1 += len(prefix) + len(suffix)
+	patch.Length2 += len(prefix) + len(suffix)
+
+	return patch
+}
+
+// PatchAddContextRunes is equivalent to PatchAddContext, but uses runes to calculate the length
+func (dmp *DiffMatchPatch) PatchAddContextRunes(patch Patch, text []rune) Patch {
+	if len(text) == 0 {
+		return patch
+	}
+
+	pattern := text[patch.Start2 : patch.Start2+patch.Length1]
+	padding := 0
+
+	// Look for the first and last matches of pattern in text.  If two different matches are found, increase the pattern length.
+	for runesIndex(text, pattern) != runesLastIndex(text, pattern) &&
+		len(pattern) < dmp.MatchMaxBits-2*dmp.PatchMargin {
+		padding += dmp.PatchMargin
+		maxStart := max(0, patch.Start2-padding)
+		minEnd := min(len(text), patch.Start2+patch.Length1+padding)
+		pattern = text[maxStart:minEnd]
+	}
+	// Add one chunk for good luck.
+	padding += dmp.PatchMargin
+
+	// Add the prefix.
+	prefix := text[max(0, patch.Start2-padding):patch.Start2]
+	if len(prefix) != 0 {
+		patch.diffs = append([]Diff{Diff{DiffEqual, string(prefix)}}, patch.diffs...)
+	}
+	// Add the suffix.
+	suffix := text[patch.Start2+patch.Length1 : min(len(text), patch.Start2+patch.Length1+padding)]
+	if len(suffix) != 0 {
+		patch.diffs = append(patch.diffs, Diff{DiffEqual, string(suffix)})
 	}
 
 	// Roll back the start points.
@@ -202,6 +244,111 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	// Pick up the leftover patch if not empty.
 	if len(patch.diffs) != 0 {
 		patch = dmp.PatchAddContext(patch, prepatchText)
+		patches = append(patches, patch)
+	}
+
+	return patches
+}
+
+// PatchMakeRunes is equivalent to PatchMake, but uses runes to calculate the length
+func (dmp *DiffMatchPatch) PatchMakeRunes(opt ...interface{}) []Patch {
+	if len(opt) == 1 {
+		diffs, _ := opt[0].([]Diff)
+		text1 := dmp.DiffText1(diffs)
+		return dmp.PatchMakeRunes(text1, diffs)
+	} else if len(opt) == 2 {
+		text1 := opt[0].([]rune)
+		switch t := opt[1].(type) {
+		case []rune:
+			diffs := dmp.DiffMainRunes(text1, t, true)
+			if len(diffs) > 2 {
+				diffs = dmp.DiffCleanupSemantic(diffs)
+				diffs = dmp.DiffCleanupEfficiency(diffs)
+			}
+			return dmp.PatchMakeRunes(text1, diffs)
+		case []Diff:
+			return dmp.patchMakeRunes2(text1, t)
+		}
+	} else if len(opt) == 3 {
+		return dmp.PatchMakeRunes(opt[0], opt[2])
+	}
+	return []Patch{}
+}
+
+// patchMake2 computes a list of patches to turn text1 into text2.
+// text2 is not provided, diffs are the delta between text1 and text2.
+func (dmp *DiffMatchPatch) patchMakeRunes2(text1 []rune, diffs []Diff) []Patch {
+	// Check for null inputs not needed since null can't be passed in C#.
+	patches := []Patch{}
+	if len(diffs) == 0 {
+		return patches // Get rid of the null case.
+	}
+
+	patch := Patch{}
+	runeCount1 := 0 // Number of rune into the text1 string.
+	runeCount2 := 0 // Number of rune into the text2 string.
+	// Start with text1 (prepatchText) and apply the diffs until we arrive at text2 (postpatchText). We recreate the patches one by one to determine context info.
+	prepatchText := text1
+	postpatchText := text1
+
+	for i, aDiff := range diffs {
+		aDiffTextLength := utf8.RuneCountInString(aDiff.Text)
+
+		if len(patch.diffs) == 0 && aDiff.Type != DiffEqual {
+			// A new patch starts here.
+			patch.Start1 = runeCount1
+			patch.Start2 = runeCount2
+		}
+
+		switch aDiff.Type {
+		case DiffInsert:
+			patch.diffs = append(patch.diffs, aDiff)
+			patch.Length2 += aDiffTextLength
+			postpatchTextTemp := postpatchText
+			postpatchText = make([]rune, len(postpatchTextTemp)+aDiffTextLength)
+			copy(postpatchText, postpatchTextTemp[:runeCount2])
+			copy(postpatchText[runeCount2:], []rune(aDiff.Text))
+			copy(postpatchText[runeCount2+aDiffTextLength:], postpatchTextTemp[runeCount2:])
+		case DiffDelete:
+			patch.Length1 += aDiffTextLength
+			patch.diffs = append(patch.diffs, aDiff)
+			postpatchTextTemp := postpatchText
+			postpatchText = make([]rune, len(postpatchTextTemp)-aDiffTextLength)
+			copy(postpatchText, postpatchTextTemp[:runeCount2])
+			copy(postpatchText[runeCount2:], postpatchTextTemp[runeCount2+aDiffTextLength:])
+		case DiffEqual:
+			if aDiffTextLength <= 2*dmp.PatchMargin &&
+				len(patch.diffs) != 0 && i != len(diffs)-1 {
+				// Small equality inside a patch.
+				patch.diffs = append(patch.diffs, aDiff)
+				patch.Length1 += aDiffTextLength
+				patch.Length2 += aDiffTextLength
+			}
+			if aDiffTextLength >= 2*dmp.PatchMargin {
+				// Time for a new patch.
+				if len(patch.diffs) != 0 {
+					patch = dmp.PatchAddContextRunes(patch, prepatchText)
+					patches = append(patches, patch)
+					patch = Patch{}
+					// Unlike Unidiff, our patch lists have a rolling context. http://code.google.com/p/google-diff-match-patch/wiki/Unidiff Update prepatch text & pos to reflect the application of the just completed patch.
+					prepatchText = postpatchText
+					runeCount1 = runeCount2
+				}
+			}
+		}
+
+		// Update the current character count.
+		if aDiff.Type != DiffInsert {
+			runeCount1 += aDiffTextLength
+		}
+		if aDiff.Type != DiffDelete {
+			runeCount2 += aDiffTextLength
+		}
+	}
+
+	// Pick up the leftover patch if not empty.
+	if len(patch.diffs) != 0 {
+		patch = dmp.PatchAddContextRunes(patch, prepatchText)
 		patches = append(patches, patch)
 	}
 

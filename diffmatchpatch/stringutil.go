@@ -88,6 +88,16 @@ func runesIndex(r1, r2 []rune) int {
 	return -1
 }
 
+// runesLastIndex is the equivalent of strings.LastIndex for rune slices.
+func runesLastIndex(r1, r2 []rune) int {
+	for i := len(r1) - len(r2); i >= 0; i-- {
+		if runesEqual(r1[i:i+len(r2)], r2) {
+			return i
+		}
+	}
+	return -1
+}
+
 func intArrayToString(ns []uint32) string {
 	if len(ns) == 0 {
 		return ""

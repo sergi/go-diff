@@ -1196,7 +1196,7 @@ func (dmp *DiffMatchPatch) DiffPrettyMarkdownAll(diffs []Diff) (old, new string)
 	prettyInfo := PrettyInfo{
 		PrefixInsert: "<font color=\"#00ff00\">",
 		SuffixInsert: "</font>",
-		PrefixDelete: "<font color=\"#ffaa00\">",
+		PrefixDelete: "<font color=\"#ff0000\">",
 		SuffixDelete: "</font>",
 		PrefixEqual:  "",
 		SuffixEqual:  "",

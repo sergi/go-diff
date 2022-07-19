@@ -1133,7 +1133,7 @@ func TestDiffPrettyMarkdownAll(t *testing.T) {
 				{DiffDelete, "<B>b</B>"},
 				{DiffInsert, "c&d"},
 			},
-			ExpectedOld: "a\n<font color=\"#ffaa00\"><B>b</B></font>",
+			ExpectedOld: "a\n<font color=\"#ff0000\"><B>b</B></font>",
 			ExpectedNew: "a\n<font color=\"#00ff00\">c&d</font>",
 		},
 	} {

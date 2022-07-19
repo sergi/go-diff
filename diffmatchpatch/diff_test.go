@@ -1037,6 +1037,112 @@ func TestDiffPrettyText(t *testing.T) {
 	}
 }
 
+func TestDiffPrettyMarkdown(t *testing.T) {
+	type TestCase struct {
+		Diffs []Diff
+
+		Expected string
+	}
+
+	dmp := New()
+
+	for i, tc := range []TestCase{
+		{
+			Diffs: []Diff{
+				{DiffEqual, "a\n"},
+				{DiffDelete, "<B>b</B>"},
+				{DiffInsert, "c&d"},
+			},
+
+			Expected: "a\n<font color=\"#ff0000\"><B>b</B></font><font color=\"#00ff00\">c&d</font>",
+		},
+	} {
+		actual := dmp.DiffPrettyMarkdown(tc.Diffs)
+		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))
+	}
+}
+
+func TestDiffPrettyHtmlAll(t *testing.T) {
+	type TestCase struct {
+		Diffs []Diff
+
+		ExpectedOld string
+		ExpectedNew string
+	}
+
+	dmp := New()
+
+	for i, tc := range []TestCase{
+		{
+			Diffs: []Diff{
+				{DiffEqual, "a\n"},
+				{DiffDelete, "<B>b</B>"},
+				{DiffInsert, "c&d"},
+			},
+			ExpectedOld: "<span>a&para;<br></span><del style=\"background:#ffe6e6;\">&lt;B&gt;b&lt;/B&gt;</del>",
+			ExpectedNew: "<span>a&para;<br></span><ins style=\"background:#e6ffe6;\">c&amp;d</ins>",
+		},
+	} {
+		actualOld, actualNew := dmp.DiffPrettyHtmlAll(tc.Diffs)
+		assert.Equal(t, tc.ExpectedOld, actualOld, fmt.Sprintf("Test case #%d, %#v", i, tc))
+		assert.Equal(t, tc.ExpectedNew, actualNew, fmt.Sprintf("Test case #%d, %#v", i, tc))
+	}
+}
+
+func TestDiffPrettyTextAll(t *testing.T) {
+	type TestCase struct {
+		Diffs []Diff
+
+		ExpectedOld string
+		ExpectedNew string
+	}
+
+	dmp := New()
+
+	for i, tc := range []TestCase{
+		{
+			Diffs: []Diff{
+				{DiffEqual, "a\n"},
+				{DiffDelete, "<B>b</B>"},
+				{DiffInsert, "c&d"},
+			},
+			ExpectedOld: "a\n\x1b[31m<B>b</B>\x1b[0m",
+			ExpectedNew: "a\n\x1b[32mc&d\x1b[0m",
+		},
+	} {
+		actualOld, actualNew := dmp.DiffPrettyTextAll(tc.Diffs)
+		assert.Equal(t, tc.ExpectedOld, actualOld, fmt.Sprintf("Test case #%d, %#v", i, tc))
+		assert.Equal(t, tc.ExpectedNew, actualNew, fmt.Sprintf("Test case #%d, %#v", i, tc))
+	}
+}
+
+func TestDiffPrettyMarkdownAll(t *testing.T) {
+	type TestCase struct {
+		Diffs []Diff
+
+		ExpectedOld string
+		ExpectedNew string
+	}
+
+	dmp := New()
+
+	for i, tc := range []TestCase{
+		{
+			Diffs: []Diff{
+				{DiffEqual, "a\n"},
+				{DiffDelete, "<B>b</B>"},
+				{DiffInsert, "c&d"},
+			},
+			ExpectedOld: "a\n<font color=\"#ffaa00\"><B>b</B></font>",
+			ExpectedNew: "a\n<font color=\"#00ff00\">c&d</font>",
+		},
+	} {
+		actualOld, actualNew := dmp.DiffPrettyMarkdownAll(tc.Diffs)
+		assert.Equal(t, tc.ExpectedOld, actualOld, fmt.Sprintf("Test case #%d, %#v", i, tc))
+		assert.Equal(t, tc.ExpectedNew, actualNew, fmt.Sprintf("Test case #%d, %#v", i, tc))
+	}
+}
+
 func TestDiffText(t *testing.T) {
 	type TestCase struct {
 		Diffs []Diff

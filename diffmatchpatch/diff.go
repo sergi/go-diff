@@ -44,6 +44,16 @@ type Diff struct {
 	Text string
 }
 
+type PrettyInfo struct {
+	PrefixInsert string
+	SuffixInsert string
+	PrefixDelete string
+	SuffixDelete string
+	PrefixEqual  string
+	SuffixEqual  string
+	Escape       bool
+}
+
 // splice removes amount elements from slice at index index, replacing them with elements.
 func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 	if len(elements) == amount {
@@ -1122,44 +1132,142 @@ func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
 // DiffPrettyHtml converts a []Diff into a pretty HTML report.
 // It is intended as an example from which to write one's own display functions.
 func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
-	var buff bytes.Buffer
-	for _, diff := range diffs {
-		text := strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
-		switch diff.Type {
-		case DiffInsert:
-			_, _ = buff.WriteString("<ins style=\"background:#e6ffe6;\">")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("</ins>")
-		case DiffDelete:
-			_, _ = buff.WriteString("<del style=\"background:#ffe6e6;\">")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("</del>")
-		case DiffEqual:
-			_, _ = buff.WriteString("<span>")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("</span>")
-		}
-	}
-	return buff.String()
+	return dmp.DiffPretty(diffs, PrettyInfo{
+		PrefixInsert: "<ins style=\"background:#e6ffe6;\">",
+		SuffixInsert: "</ins>",
+		PrefixDelete: "<del style=\"background:#ffe6e6;\">",
+		SuffixDelete: "</del>",
+		PrefixEqual:  "<span>",
+		SuffixEqual:  "</span>",
+		Escape:       true,
+	})
 }
 
 // DiffPrettyText converts a []Diff into a colored text report.
 func (dmp *DiffMatchPatch) DiffPrettyText(diffs []Diff) string {
+	return dmp.DiffPretty(diffs, PrettyInfo{
+		PrefixInsert: "\x1b[32m",
+		SuffixInsert: "\x1b[0m",
+		PrefixDelete: "\x1b[31m",
+		SuffixDelete: "\x1b[0m",
+		PrefixEqual:  "",
+		SuffixEqual:  "",
+	})
+}
+
+// DiffPrettyMarkdown converts a []Diff into a colored makdown report.
+func (dmp *DiffMatchPatch) DiffPrettyMarkdown(diffs []Diff) string {
+	return dmp.DiffPretty(diffs, PrettyInfo{
+		PrefixInsert: "<font color=\"#00ff00\">",
+		SuffixInsert: "</font>",
+		PrefixDelete: "<font color=\"#ff0000\">",
+		SuffixDelete: "</font>",
+		PrefixEqual:  "",
+		SuffixEqual:  "",
+	})
+}
+
+func (dmp *DiffMatchPatch) DiffPrettyHtmlAll(diffs []Diff) (old, new string) {
+	prettyInfo := PrettyInfo{
+		PrefixInsert: "<ins style=\"background:#e6ffe6;\">",
+		SuffixInsert: "</ins>",
+		PrefixDelete: "<del style=\"background:#ffe6e6;\">",
+		SuffixDelete: "</del>",
+		PrefixEqual:  "<span>",
+		SuffixEqual:  "</span>",
+		Escape:       true,
+	}
+	return dmp.DiffPrettyOld(diffs, prettyInfo), dmp.DiffPrettyNew(diffs, prettyInfo)
+}
+
+func (dmp *DiffMatchPatch) DiffPrettyTextAll(diffs []Diff) (old, new string) {
+	prettyInfo := PrettyInfo{
+		PrefixInsert: "\x1b[32m",
+		SuffixInsert: "\x1b[0m",
+		PrefixDelete: "\x1b[31m",
+		SuffixDelete: "\x1b[0m",
+		PrefixEqual:  "",
+		SuffixEqual:  "",
+	}
+	return dmp.DiffPrettyOld(diffs, prettyInfo), dmp.DiffPrettyNew(diffs, prettyInfo)
+}
+
+func (dmp *DiffMatchPatch) DiffPrettyMarkdownAll(diffs []Diff) (old, new string) {
+	prettyInfo := PrettyInfo{
+		PrefixInsert: "<font color=\"#00ff00\">",
+		SuffixInsert: "</font>",
+		PrefixDelete: "<font color=\"#ffaa00\">",
+		SuffixDelete: "</font>",
+		PrefixEqual:  "",
+		SuffixEqual:  "",
+	}
+	return dmp.DiffPrettyOld(diffs, prettyInfo), dmp.DiffPrettyNew(diffs, prettyInfo)
+}
+
+func (dmp *DiffMatchPatch) DiffPretty(diffs []Diff, PrettyInfo PrettyInfo) string {
 	var buff bytes.Buffer
 	for _, diff := range diffs {
 		text := diff.Text
-
+		if PrettyInfo.Escape {
+			text = strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
+		}
 		switch diff.Type {
 		case DiffInsert:
-			_, _ = buff.WriteString("\x1b[32m")
+			_, _ = buff.WriteString(PrettyInfo.PrefixInsert)
 			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("\x1b[0m")
+			_, _ = buff.WriteString(PrettyInfo.SuffixInsert)
 		case DiffDelete:
-			_, _ = buff.WriteString("\x1b[31m")
+			_, _ = buff.WriteString(PrettyInfo.PrefixDelete)
 			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("\x1b[0m")
+			_, _ = buff.WriteString(PrettyInfo.SuffixDelete)
 		case DiffEqual:
+			_, _ = buff.WriteString(PrettyInfo.PrefixEqual)
 			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString(PrettyInfo.SuffixEqual)
+		}
+	}
+
+	return buff.String()
+}
+
+func (dmp *DiffMatchPatch) DiffPrettyOld(diffs []Diff, PrettyInfo PrettyInfo) string {
+	var buff bytes.Buffer
+	for _, diff := range diffs {
+		text := diff.Text
+		if PrettyInfo.Escape {
+			text = strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
+		}
+		switch diff.Type {
+		case DiffDelete:
+			_, _ = buff.WriteString(PrettyInfo.PrefixDelete)
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString(PrettyInfo.SuffixDelete)
+		case DiffEqual:
+			_, _ = buff.WriteString(PrettyInfo.PrefixEqual)
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString(PrettyInfo.SuffixEqual)
+		}
+	}
+
+	return buff.String()
+}
+
+func (dmp *DiffMatchPatch) DiffPrettyNew(diffs []Diff, PrettyInfo PrettyInfo) string {
+	var buff bytes.Buffer
+	for _, diff := range diffs {
+		text := diff.Text
+		if PrettyInfo.Escape {
+			text = strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
+		}
+		switch diff.Type {
+		case DiffInsert:
+			_, _ = buff.WriteString(PrettyInfo.PrefixInsert)
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString(PrettyInfo.SuffixInsert)
+		case DiffEqual:
+			_, _ = buff.WriteString(PrettyInfo.PrefixEqual)
+			_, _ = buff.WriteString(text)
+			_, _ = buff.WriteString(PrettyInfo.SuffixEqual)
 		}
 	}
 

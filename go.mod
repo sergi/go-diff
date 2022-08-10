@@ -1,4 +1,4 @@
-module github.com/sergi/go-diff
+module github.com/katbyte/sergi-go-diff
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -8,4 +8,4 @@ require (
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )
 
-go 1.12
+go 1.18

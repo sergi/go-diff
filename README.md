@@ -1,4 +1,4 @@
-# go-diff [![GoDoc](https://godoc.org/github.com/sergi/go-diff?status.png)](https://godoc.org/github.com/sergi/go-diff/diffmatchpatch) [![Build Status](https://travis-ci.org/sergi/go-diff.svg?branch=master)](https://travis-ci.org/sergi/go-diff) [![Coverage Status](https://coveralls.io/repos/sergi/go-diff/badge.png?branch=master)](https://coveralls.io/r/sergi/go-diff?branch=master)
+# go-diff [![GoDoc](https://godoc.org/github.com/katbyte/sergi-go-diff?status.png)](https://godoc.org/github.com/katbyte/sergi-go-diff/diffmatchpatch) [![Build Status](https://travis-ci.org/katbyte/sergi-go-diff.svg?branch=master)](https://travis-ci.org/katbyte/sergi-go-diff) [![Coverage Status](https://coveralls.io/repos/katbyte/sergi-go-diff/badge.png?branch=master)](https://coveralls.io/r/katbyte/sergi-go-diff?branch=master)
 
 go-diff offers algorithms to perform operations required for synchronizing plain text:
 
@@ -9,7 +9,7 @@ go-diff offers algorithms to perform operations required for synchronizing plain
 ## Installation
 
 ```bash
-go get -u github.com/sergi/go-diff/...
+go get -u github.com/katbyte/sergi-go-diff/...
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/katbyte/sergi-go-diff/diffmatchpatch"
 )
 
 const (
@@ -41,11 +41,11 @@ func main() {
 
 ## Found a bug or are you missing a feature in go-diff?
 
-Please make sure to have the latest version of go-diff. If the problem still persists go through the [open issues](https://github.com/sergi/go-diff/issues) in the tracker first. If you cannot find your request just open up a [new issue](https://github.com/sergi/go-diff/issues/new).
+Please make sure to have the latest version of go-diff. If the problem still persists go through the [open issues](https://github.com/katbyte/sergi-go-diff/issues) in the tracker first. If you cannot find your request just open up a [new issue](https://github.com/katbyte/sergi-go-diff/issues/new).
 
 ## How to contribute?
 
-You want to contribute to go-diff? GREAT! If you are here because of a bug you want to fix or a feature you want to add, you can just read on. Otherwise we have a list of [open issues in the tracker](https://github.com/sergi/go-diff/issues). Just choose something you think you can work on and discuss your plans in the issue by commenting on it.
+You want to contribute to go-diff? GREAT! If you are here because of a bug you want to fix or a feature you want to add, you can just read on. Otherwise we have a list of [open issues in the tracker](https://github.com/katbyte/sergi-go-diff/issues). Just choose something you think you can work on and discuss your plans in the issue by commenting on it.
 
 Please make sure that every behavioral change is accompanied by test cases. Additionally, every contribution must pass the `lint` and `test` Makefile targets which can be run using the following commands in the repository root directory.
 

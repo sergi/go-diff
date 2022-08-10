@@ -1,7 +1,7 @@
 .PHONY: all clean clean-coverage install install-dependencies install-tools lint test test-verbose test-with-coverage
 
 export ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-export PKG := github.com/sergi/go-diff
+export PKG := github.com/katbyte/sergi-go-diff
 export ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 $(eval $(ARGS):;@:) # turn arguments into do-nothing targets

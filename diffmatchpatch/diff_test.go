@@ -314,10 +314,10 @@ func TestDiffLinesToChars(t *testing.T) {
 	dmp := New()
 
 	for i, tc := range []TestCase{
-		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "1,2,3,3", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
-		{"a", "b", "1", "2", []string{"", "a", "b"}},
+		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "\x01\x02\x03\x03", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
+		{"a", "b", "\x01", "\x02", []string{"", "a", "b"}},
 		// Omit final newline.
-		{"alpha\nbeta\nalpha", "", "1,2,3", "", []string{"", "alpha\n", "beta\n", "alpha"}},
+		{"alpha\nbeta\nalpha", "", "\x01\x02\x03", "", []string{"", "alpha\n", "beta\n", "alpha"}},
 	} {
 		actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(tc.Text1, tc.Text2)
 		assert.Equal(t, tc.ExpectedChars1, actualChars1, fmt.Sprintf("Test case #%d, %#v", i, tc))
@@ -330,14 +330,14 @@ func TestDiffLinesToChars(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	var charList []string
+	var charList []rune
 	for x := 1; x < n+1; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, strconv.Itoa(x))
+		charList = append(charList, rune(x))
 	}
 	lines := strings.Join(lineList, "")
-	chars := strings.Join(charList[:], ",")
-	assert.Equal(t, n, len(strings.Split(chars, ",")))
+	chars := string(charList)
+	assert.Equal(t, n, len(charList))
 
 	actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(lines, "")
 	assert.Equal(t, chars, actualChars1)
@@ -358,8 +358,8 @@ func TestDiffCharsToLines(t *testing.T) {
 	for i, tc := range []TestCase{
 		{
 			Diffs: []Diff{
-				{DiffEqual, "1,2,1"},
-				{DiffInsert, "2,1,2"},
+				{DiffEqual, "\x01\x02\x01"},
+				{DiffInsert, "\x02\x01\x02"},
 			},
 			Lines: []string{"", "alpha\n", "beta\n"},
 
@@ -378,13 +378,13 @@ func TestDiffCharsToLines(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	charList := []string{}
+	charList := []rune{}
 	for x := 1; x <= n; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, strconv.Itoa(x))
+		charList = append(charList, rune(x))
 	}
 	assert.Equal(t, n, len(charList))
-	chars := strings.Join(charList[:], ",")
+	chars := string(charList)
 
 	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, chars}}, lineList)
 	assert.Equal(t, []Diff{Diff{DiffDelete, strings.Join(lineList, "")}}, actual)

@@ -330,13 +330,13 @@ func TestDiffLinesToChars(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	var charList []rune
+	var charList []index
 	for x := 1; x < n+1; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, rune(x))
+		charList = append(charList, index(x))
 	}
 	lines := strings.Join(lineList, "")
-	chars := string(charList)
+	chars := indexesToString(charList)
 	assert.Equal(t, n, len(charList))
 
 	actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(lines, "")
@@ -378,13 +378,13 @@ func TestDiffCharsToLines(t *testing.T) {
 	lineList := []string{
 		"", // Account for the initial empty element of the lines array.
 	}
-	charList := []rune{}
+	charList := []index{}
 	for x := 1; x <= n; x++ {
 		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, rune(x))
+		charList = append(charList, index(x))
 	}
 	assert.Equal(t, n, len(charList))
-	chars := string(charList)
+	chars := indexesToString(charList)
 
 	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, chars}}, lineList)
 	assert.Equal(t, []Diff{Diff{DiffDelete, strings.Join(lineList, "")}}, actual)

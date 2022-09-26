@@ -86,11 +86,3 @@ func runesIndex(r1, r2 []rune) int {
 	}
 	return -1
 }
-
-func intArrayToString(ns []uint32) string {
-	runes := make([]rune, len(ns))
-	for i := 0; i < len(ns); i++ {
-		runes[i] = rune(ns[i])
-	}
-	return string(runes)
-}

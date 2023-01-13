@@ -317,7 +317,9 @@ func TestDiffLinesToChars(t *testing.T) {
 		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "\x01\x02\x03\x03", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
 		{"a", "b", "\x01", "\x02", []string{"", "a", "b"}},
 		// Omit final newline.
-		{"alpha\nbeta\nalpha", "", "\x01\x02\x03", "", []string{"", "alpha\n", "beta\n", "alpha"}},
+		{"alpha\nbeta\nalpha", "", "1,2,3", "", []string{"", "alpha\n", "beta\n", "alpha"}},
+		// Same lines in Text1 and Text2
+		{"abc\ndefg\n12345\n", "abc\ndef\n12345\n678", "1,2,3", "1,4,3,5", []string{"", "abc\n", "defg\n", "12345\n", "def\n", "678"}},
 	} {
 		actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(tc.Text1, tc.Text2)
 		assert.Equal(t, tc.ExpectedChars1, actualChars1, fmt.Sprintf("Test case #%d, %#v", i, tc))

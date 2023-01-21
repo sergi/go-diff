@@ -114,3 +114,21 @@ func TestLastIndexOf(t *testing.T) {
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))
 	}
 }
+
+// Exhaustive check for all ints from 0 to 1112060 for correctness of implementation
+// of `intToRune() -> runeToInt()`.
+// This test is slow and runs longer than 5 seconds but it does provide a safety
+// guarantee that these 2 functions are correct for the ranges we support.
+func TestRuneToInt(t *testing.T) {
+
+	for i := uint32(0); i <= UNICODE_RANGE_MAX-UNICODE_INVALID_RANGE_DELTA-3; i += 1 {
+		r := intToRune(i)
+		ic := runeToInt(r)
+
+		assert.Equal(t, i, ic, fmt.Sprintf("intToRune(%d)=%d and runeToInt(%d)=%d", i, r, r, ic))
+	}
+
+	assert.Panics(t, func() {
+		intToRune(UNICODE_RANGE_MAX - UNICODE_INVALID_RANGE_DELTA - 2)
+	})
+}

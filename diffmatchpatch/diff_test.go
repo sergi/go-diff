@@ -1468,6 +1468,38 @@ func TestMassiveRuneDiffConversion(t *testing.T) {
 	assert.NotEmpty(t, diffs)
 }
 
+func TestDiffPartialLineIndex(t *testing.T) {
+	dmp := New()
+	t1, t2, tt := dmp.DiffLinesToChars(
+`line 1
+line 2
+line 3
+line 4
+line 5
+line 6
+line 7
+line 8
+line 9
+line 10 text1`,
+`line 1
+line 2
+line 3
+line 4
+line 5
+line 6
+line 7
+line 8
+line 9
+line 10 text2`)
+	diffs := dmp.DiffMain(t1, t2, false)
+	diffs = dmp.DiffCharsToLines(diffs, tt)
+	assert.Equal(t, []Diff{
+				Diff{DiffEqual, "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\n"},
+				Diff{DiffDelete, "line 10 text1"},
+				Diff{DiffInsert, "line 10 text2"},
+			}, diffs)
+}
+
 func BenchmarkDiffMain(bench *testing.B) {
 	s1 := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
 	s2 := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"

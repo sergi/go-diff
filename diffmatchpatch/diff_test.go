@@ -1033,6 +1033,17 @@ func TestDiffPrettyText(t *testing.T) {
 
 			Expected: "a\n\x1b[31m<B>b</B>\x1b[0m\x1b[32mc&d\x1b[0m",
 		},
+		{
+			Diffs: []Diff{
+				{Type: DiffEqual, Text: "a\n"},
+				{Type: DiffDelete, Text: "b\nc\n"},
+				{Type: DiffEqual, Text: "def"},
+				{Type: DiffInsert, Text: "\ng\nh"},
+				{Type: DiffEqual, Text: "\ni"},
+			},
+
+			Expected: "a\n\x1b[31mb\x1b[0m\n\x1b[31mc\x1b[0m\n\x1b[31m\x1b[0mdef\x1b[32m\x1b[0m\n\x1b[32mg\x1b[0m\n\x1b[32mh\x1b[0m\ni",
+		},
 	} {
 		actual := dmp.DiffPrettyText(tc.Diffs)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))

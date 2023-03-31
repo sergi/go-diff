@@ -22,6 +22,9 @@ import (
 	"unicode/utf8"
 )
 
+// LineMap is a mapping from a line hash to its text.
+type LineMap map[rune]string
+
 // Operation defines the operation of a diff item.
 type Operation int8
 
@@ -34,8 +37,6 @@ const (
 	DiffInsert Operation = 1
 	// DiffEqual item represents an equal diff.
 	DiffEqual Operation = 0
-	//IndexSeparator is used to seperate the array indexes in an index string
-	IndexSeparator = ","
 )
 
 // Diff represents one diff operation
@@ -83,12 +84,16 @@ func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 
 // DiffMain finds the differences between two texts.
 // If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
+//
+// Note: if checklines is true, the limitation noted in DiffLinesToChars applies
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
 	return dmp.DiffMainRunes([]rune(text1), []rune(text2), checklines)
 }
 
 // DiffMainRunes finds the differences between two rune sequences.
 // If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
+//
+// Note: if checklines is true, the limitation noted in DiffLinesToRunes applies
 func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
 	var deadline time.Time
 	if dmp.DiffTimeout > 0 {
@@ -391,29 +396,34 @@ func (dmp *DiffMatchPatch) diffBisectSplit(runes1, runes2 []rune, x, y int,
 
 // DiffLinesToChars splits two texts into a list of strings, and educes the texts to a string of hashes where each Unicode character represents one line.
 // It's slightly faster to call DiffLinesToRunes first, followed by DiffMainRunes.
-func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
-	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
-	return chars1, chars2, lineArray
+//
+// Note: since we hash lines to runes, there is an upper limit to the number of
+// unique lines this algorithm can handle.  That limit is 1,112,063 unique
+// lines.
+func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, LineMap) {
+	chars1, chars2, lineMap := dmp.diffLinesToStrings(text1, text2)
+	return chars1, chars2, lineMap
 }
 
 // DiffLinesToRunes splits two texts into a list of runes.
-func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
-	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
-	return []rune(chars1), []rune(chars2), lineArray
+//
+// Note: since we hash lines to runes, there is an upper limit to the number of
+// unique lines this algorithm can handle.  That limit is 1,112,063 unique
+// lines.
+func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, LineMap) {
+	chars1, chars2, lineMap := dmp.diffLinesToStrings(text1, text2)
+	return []rune(chars1), []rune(chars2), lineMap
 }
 
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of text.
-func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
+func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineMap LineMap) []Diff {
 	hydrated := make([]Diff, 0, len(diffs))
 	for _, aDiff := range diffs {
-		chars := strings.Split(aDiff.Text, IndexSeparator)
-		text := make([]string, len(chars))
+		runes := []rune(aDiff.Text)
+		text := make([]string, len(runes))
 
-		for i, r := range chars {
-			i1, err := strconv.Atoi(r)
-			if err == nil {
-				text[i] = lineArray[i1]
-			}
+		for i, r := range runes {
+			text[i] = lineMap[r]
 		}
 
 		aDiff.Text = strings.Join(text, "")
@@ -1309,24 +1319,29 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 }
 
 // diffLinesToStrings splits two texts into a list of strings. Each string represents one line.
-func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, string, []string) {
-	// '\x00' is a valid character, but various debuggers don't like it. So we'll insert a junk entry to avoid generating a null character.
-	lineArray := []string{""} // e.g. lineArray[4] == 'Hello\n'
+func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, string, LineMap) {
+	lineMap := LineMap{} // e.g. lineMap[4] == 'Hello\n'
 
-	lineHash := make(map[string]int)
-	//Each string has the index of lineArray which it points to
-	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray, lineHash)
-	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray, lineHash)
+	lineHash := make(map[string]rune)
+	//Each string has the index of lineMap which it points to
+	runes1 := dmp.diffLinesToRunesMunge(text1, lineMap, lineHash)
+	runes2 := dmp.diffLinesToRunesMunge(text2, lineMap, lineHash)
 
-	return intArrayToString(strIndexArray1), intArrayToString(strIndexArray2), lineArray
+	return string(runes1), string(runes2), lineMap
 }
 
-// diffLinesToStringsMunge splits a text into an array of strings, and reduces the texts to a []string.
-func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string, lineHash map[string]int) []uint32 {
+// Code points in the surrogate range are not valid for UTF-8.
+const (
+	surrogateMin = 0xD800
+	surrogateMax = 0xDFFF
+)
+
+// diffLinesToRunesMunge splits a text into an array of strings, and reduces the texts to a LineMap.
+func (dmp *DiffMatchPatch) diffLinesToRunesMunge(text string, lineMap LineMap, lineHash map[string]rune) []rune {
 	// Walk the text, pulling out a substring for each line. text.split('\n') would would temporarily double our memory footprint. Modifying text would create many large strings to garbage collect.
 	lineStart := 0
 	lineEnd := -1
-	strs := []uint32{}
+	var strs []rune
 
 	for lineEnd < len(text)-1 {
 		lineEnd = indexOf(text, "\n", lineStart)
@@ -1340,11 +1355,19 @@ func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]str
 		lineValue, ok := lineHash[line]
 
 		if ok {
-			strs = append(strs, uint32(lineValue))
+			strs = append(strs, lineValue)
 		} else {
-			*lineArray = append(*lineArray, line)
-			lineHash[line] = len(*lineArray) - 1
-			strs = append(strs, uint32(len(*lineArray)-1))
+			nextRune := rune(len(lineMap) + 1)
+			if nextRune >= surrogateMin {
+				// Skip invalid utf8 runes, if needed.
+				nextRune += surrogateMax - surrogateMin + 1
+			}
+			if nextRune > utf8.MaxRune {
+				panic("too many unique lines to use rune hashing")
+			}
+			lineMap[nextRune] = line
+			lineHash[line] = nextRune
+			strs = append(strs, nextRune)
 		}
 	}
 

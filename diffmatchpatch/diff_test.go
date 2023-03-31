@@ -308,18 +308,16 @@ func TestDiffLinesToChars(t *testing.T) {
 
 		ExpectedChars1 string
 		ExpectedChars2 string
-		ExpectedLines  []string
+		ExpectedLines  LineMap
 	}
 
 	dmp := New()
 
 	for i, tc := range []TestCase{
-		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "1,2,3,3", []string{"", "alpha\r\n", "beta\r\n", "\r\n"}},
-		{"a", "b", "1", "2", []string{"", "a", "b"}},
+		{"", "alpha\r\nbeta\r\n\r\n\r\n", "", "\u0001\u0002\u0003\u0003", map[rune]string{1: "alpha\r\n", 2: "beta\r\n", 3: "\r\n"}},
+		{"a", "b", "\u0001", "\u0002", map[rune]string{1: "a", 2: "b"}},
 		// Omit final newline.
-		{"alpha\nbeta\nalpha", "", "1,2,3", "", []string{"", "alpha\n", "beta\n", "alpha"}},
-		// Same lines in Text1 and Text2
-		{"abc\ndefg\n12345\n", "abc\ndef\n12345\n678", "1,2,3", "1,4,3,5", []string{"", "abc\n", "defg\n", "12345\n", "def\n", "678"}},
+		{"alpha\nbeta\nalpha", "", "\u0001\u0002\u0003", "", map[rune]string{1: "alpha\n", 2: "beta\n", 3: "alpha"}},
 	} {
 		actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(tc.Text1, tc.Text2)
 		assert.Equal(t, tc.ExpectedChars1, actualChars1, fmt.Sprintf("Test case #%d, %#v", i, tc))
@@ -329,28 +327,28 @@ func TestDiffLinesToChars(t *testing.T) {
 
 	// More than 256 to reveal any 8-bit limitations.
 	n := 300
-	lineList := []string{
-		"", // Account for the initial empty element of the lines array.
-	}
-	var charList []string
+	var lines []string
+	lineMap := LineMap{}
+	var charList []rune
 	for x := 1; x < n+1; x++ {
-		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, strconv.Itoa(x))
+		line := strconv.Itoa(x) + "\n"
+		lines = append(lines, line)
+		lineMap[rune(x)] = line
+		charList = append(charList, rune(x))
 	}
-	lines := strings.Join(lineList, "")
-	chars := strings.Join(charList[:], ",")
-	assert.Equal(t, n, len(strings.Split(chars, ",")))
+	chars := string(charList)
+	assert.Equal(t, n, utf8.RuneCountInString(chars))
 
-	actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(lines, "")
+	actualChars1, actualChars2, actualLines := dmp.DiffLinesToChars(strings.Join(lines, ""), "")
 	assert.Equal(t, chars, actualChars1)
 	assert.Equal(t, "", actualChars2)
-	assert.Equal(t, lineList, actualLines)
+	assert.Equal(t, lineMap, actualLines)
 }
 
 func TestDiffCharsToLines(t *testing.T) {
 	type TestCase struct {
 		Diffs []Diff
-		Lines []string
+		Lines map[rune]string
 
 		Expected []Diff
 	}
@@ -360,10 +358,10 @@ func TestDiffCharsToLines(t *testing.T) {
 	for i, tc := range []TestCase{
 		{
 			Diffs: []Diff{
-				{DiffEqual, "1,2,1"},
-				{DiffInsert, "2,1,2"},
+				{DiffEqual, "\u0001\u0002\u0001"},
+				{DiffInsert, "\u0002\u0001\u0002"},
 			},
-			Lines: []string{"", "alpha\n", "beta\n"},
+			Lines: map[rune]string{1: "alpha\n", 2: "beta\n"},
 
 			Expected: []Diff{
 				{DiffEqual, "alpha\nbeta\nalpha\n"},
@@ -377,19 +375,19 @@ func TestDiffCharsToLines(t *testing.T) {
 
 	// More than 256 to reveal any 8-bit limitations.
 	n := 300
-	lineList := []string{
-		"", // Account for the initial empty element of the lines array.
-	}
-	charList := []string{}
+	var lines []string
+	lineMap := LineMap{}
+	charList := []rune{}
 	for x := 1; x <= n; x++ {
-		lineList = append(lineList, strconv.Itoa(x)+"\n")
-		charList = append(charList, strconv.Itoa(x))
+		line := strconv.Itoa(x) + "\n"
+		lines = append(lines, line)
+		lineMap[rune(x)] = line
+		charList = append(charList, rune(x))
 	}
 	assert.Equal(t, n, len(charList))
-	chars := strings.Join(charList[:], ",")
 
-	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, chars}}, lineList)
-	assert.Equal(t, []Diff{Diff{DiffDelete, strings.Join(lineList, "")}}, actual)
+	actual := dmp.DiffCharsToLines([]Diff{Diff{DiffDelete, string(charList)}}, lineMap)
+	assert.Equal(t, []Diff{Diff{DiffDelete, strings.Join(lines, "")}}, actual)
 }
 
 func TestDiffCleanupMerge(t *testing.T) {
@@ -1529,5 +1527,88 @@ func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
 
 		diffs := dmp.DiffMainRunes(text1, text2, false)
 		diffs = dmp.DiffCharsToLines(diffs, linearray)
+	}
+}
+
+func TestLineDiff(t *testing.T) {
+	t.Run("VeryLarge", func(t *testing.T) {
+		var beforeBuf, afterBuf bytes.Buffer
+
+		for i := 0; i <= surrogateMax+1; i++ {
+			beforeBuf.WriteString(fmt.Sprintf("%d\n", i))
+			afterBuf.WriteString(fmt.Sprintf("%d\n", i/2))
+		}
+
+		before, after := beforeBuf.String(), afterBuf.String()
+
+		diff := New().DiffMain(before, after, true)
+		checkDiffText(t, before, after, diff)
+	})
+
+	t.Run("Chars", func(t *testing.T) {
+		before := `1
+2
+3
+4
+5
+6
+7
+8
+9
+`
+		after := `10
+`
+
+		dmp := New()
+		txt1, txt2, lines := dmp.DiffLinesToChars(string(before), string(after))
+		diff := dmp.DiffMain(txt1, txt2, false)
+		diff = dmp.DiffCharsToLines(diff, lines)
+
+		checkDiffText(t, before, after, diff)
+	})
+
+	t.Run("Runes", func(t *testing.T) {
+		before := `1
+2
+3
+4
+5
+6
+7
+8
+9
+`
+		after := `10
+`
+
+		dmp := New()
+		txt1, txt2, lines := dmp.DiffLinesToRunes(string(before), string(after))
+		diff := dmp.DiffMainRunes(txt1, txt2, false)
+		diff = dmp.DiffCharsToLines(diff, lines)
+
+		checkDiffText(t, before, after, diff)
+	})
+}
+
+func checkDiffText(t *testing.T, before, after string, diff []Diff) {
+	t.Helper()
+	var foundBefore, foundAfter string
+	for _, d := range diff {
+		switch d.Type {
+		case DiffEqual:
+			foundBefore += d.Text
+			foundAfter += d.Text
+		case DiffDelete:
+			foundBefore += d.Text
+		case DiffInsert:
+			foundAfter += d.Text
+		}
+	}
+
+	if foundBefore != before {
+		t.Errorf("Expected before %q; found %q", before, foundBefore)
+	}
+	if foundAfter != after {
+		t.Errorf("Expected after %q; found %q", after, foundAfter)
 	}
 }

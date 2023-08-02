@@ -1307,6 +1307,8 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, string, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it. So we'll insert a junk entry to avoid generating a null character.
 	lineArray := []string{""} // e.g. lineArray[4] == 'Hello\n'
+	lineHash := make(map[string]int)
+	lineHash[""] = 0
 
 	lineHash := make(map[string]int)
 	//Each string has the index of lineArray which it points to

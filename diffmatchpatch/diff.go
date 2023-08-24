@@ -1144,13 +1144,30 @@ func (dmp *DiffMatchPatch) DiffPrettyText(diffs []Diff) string {
 	for _, diff := range diffs {
 		text := diff.Text
 
+		var containsCharacters bool
+		// If the diff only consists of whitespace characters, then pretty-print the whiteshace
+		for _, char := range text {
+			if char != ' ' && char != '\n' {
+				containsCharacters = true
+				break
+			}
+		}
+
 		switch diff.Type {
 		case DiffInsert:
 			_, _ = buff.WriteString("\x1b[32m")
+			if !containsCharacters {
+				text = strings.ReplaceAll(text, " ", "█")
+				text = strings.ReplaceAll(text, "\n", "⏎")
+			}
 			_, _ = buff.WriteString(text)
 			_, _ = buff.WriteString("\x1b[0m")
 		case DiffDelete:
 			_, _ = buff.WriteString("\x1b[31m")
+			if !containsCharacters {
+				text = strings.ReplaceAll(text, " ", "█")
+				text = strings.ReplaceAll(text, "\n", "⏎")
+			}
 			_, _ = buff.WriteString(text)
 			_, _ = buff.WriteString("\x1b[0m")
 		case DiffEqual:

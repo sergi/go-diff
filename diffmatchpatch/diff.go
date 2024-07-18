@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html"
 	"math"
 	"net/url"
 	"regexp"
@@ -157,9 +156,9 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		}
 		// Shorter text is inside the longer text (speedup).
 		return []Diff{
-			Diff{op, string(longtext[:i])},
-			Diff{DiffEqual, string(shorttext)},
-			Diff{op, string(longtext[i+len(shorttext):])},
+			{op, string(longtext[:i])},
+			{DiffEqual, string(shorttext)},
+			{op, string(longtext[i+len(shorttext):])},
 		}
 	} else if len(shorttext) == 1 {
 		// Single character string.
@@ -336,7 +335,7 @@ func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time)
 			} else {
 				x2 = v2[k2Offset-1] + 1
 			}
-			var y2 = x2 - k2
+			y2 := x2 - k2
 			for x2 < runes1Len && y2 < runes2Len {
 				if runes1[runes1Len-x2-1] != runes2[runes2Len-y2-1] {
 					break
@@ -374,7 +373,8 @@ func (dmp *DiffMatchPatch) diffBisect(runes1, runes2 []rune, deadline time.Time)
 }
 
 func (dmp *DiffMatchPatch) diffBisectSplit(runes1, runes2 []rune, x, y int,
-	deadline time.Time) []Diff {
+	deadline time.Time,
+) []Diff {
 	runes1a := runes1[:x]
 	runes2a := runes2[:y]
 	runes1b := runes1[x:]
@@ -536,7 +536,7 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	// Check again based on the third quarter.
 	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+1)/2))
 
-	hm := [][]rune{}
+	var hm [][]rune
 	if hm1 == nil && hm2 == nil {
 		return nil
 	} else if hm2 == nil {
@@ -692,8 +692,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemantic(diffs []Diff) []Diff {
 
 					// Overlap found. Insert an equality and trim the surrounding edits.
 					diffs = splice(diffs, pointer, 0, Diff{DiffEqual, insertion[:overlapLength1]})
-					diffs[pointer-1].Text =
-						deletion[0 : len(deletion)-overlapLength1]
+					diffs[pointer-1].Text = deletion[0 : len(deletion)-overlapLength1]
 					diffs[pointer+1].Text = insertion[overlapLength1:]
 					pointer++
 				}
@@ -724,7 +723,6 @@ var (
 	whitespaceRegex      = regexp.MustCompile(`\s`)
 	linebreakRegex       = regexp.MustCompile(`[\r\n]`)
 	blanklineEndRegex    = regexp.MustCompile(`\n\r?\n$`)
-	blanklineStartRegex  = regexp.MustCompile(`^\r?\n\r?\n`)
 )
 
 // diffCleanupSemanticScore computes a score representing whether the internal boundary falls on logical boundaries.
@@ -971,12 +969,10 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			countInsert++
 			textInsert = append(textInsert, []rune(diffs[pointer].Text)...)
 			pointer++
-			break
 		case DiffDelete:
 			countDelete++
 			textDelete = append(textDelete, []rune(diffs[pointer].Text)...)
 			pointer++
-			break
 		case DiffEqual:
 			// Upon reaching an equality, check for prior redundancies.
 			if countDelete+countInsert > 1 {
@@ -1038,7 +1034,6 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			countDelete = 0
 			textDelete = nil
 			textInsert = nil
-			break
 		}
 	}
 
@@ -1064,8 +1059,7 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			} else if strings.HasPrefix(diffs[pointer].Text, diffs[pointer+1].Text) {
 				// Shift the edit over the next equality.
 				diffs[pointer-1].Text += diffs[pointer+1].Text
-				diffs[pointer].Text =
-					diffs[pointer].Text[len(diffs[pointer+1].Text):] + diffs[pointer+1].Text
+				diffs[pointer].Text = diffs[pointer].Text[len(diffs[pointer+1].Text):] + diffs[pointer+1].Text
 				diffs = splice(diffs, pointer+1, 1)
 				changes = true
 			}
@@ -1114,56 +1108,9 @@ func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
 	return lastChars2 + (loc - lastChars1)
 }
 
-// DiffPrettyHtml converts a []Diff into a pretty HTML report.
-// It is intended as an example from which to write one's own display functions.
-func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
-	var buff bytes.Buffer
-	for _, diff := range diffs {
-		text := strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
-		switch diff.Type {
-		case DiffInsert:
-			_, _ = buff.WriteString("<ins style=\"background:#e6ffe6;\">")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("</ins>")
-		case DiffDelete:
-			_, _ = buff.WriteString("<del style=\"background:#ffe6e6;\">")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("</del>")
-		case DiffEqual:
-			_, _ = buff.WriteString("<span>")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("</span>")
-		}
-	}
-	return buff.String()
-}
-
-// DiffPrettyText converts a []Diff into a colored text report.
-func (dmp *DiffMatchPatch) DiffPrettyText(diffs []Diff) string {
-	var buff bytes.Buffer
-	for _, diff := range diffs {
-		text := diff.Text
-
-		switch diff.Type {
-		case DiffInsert:
-			_, _ = buff.WriteString("\x1b[32m")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("\x1b[0m")
-		case DiffDelete:
-			_, _ = buff.WriteString("\x1b[31m")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("\x1b[0m")
-		case DiffEqual:
-			_, _ = buff.WriteString(text)
-		}
-	}
-
-	return buff.String()
-}
-
 // DiffText1 computes and returns the source text (all equalities and deletions).
 func (dmp *DiffMatchPatch) DiffText1(diffs []Diff) string {
-	//StringBuilder text = new StringBuilder()
+	// StringBuilder text = new StringBuilder()
 	var text bytes.Buffer
 
 	for _, aDiff := range diffs {
@@ -1220,17 +1167,14 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 			_, _ = text.WriteString("+")
 			_, _ = text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
 			_, _ = text.WriteString("\t")
-			break
 		case DiffDelete:
 			_, _ = text.WriteString("-")
 			_, _ = text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
 			_, _ = text.WriteString("\t")
-			break
 		case DiffEqual:
 			_, _ = text.WriteString("=")
 			_, _ = text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
 			_, _ = text.WriteString("\t")
-			break
 		}
 	}
 	delta := text.String()
@@ -1274,7 +1218,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 			if err != nil {
 				return nil, err
 			} else if n < 0 {
-				return nil, errors.New("Negative number in DiffFromDelta: " + param)
+				return nil, errors.New("negative number in DiffFromDelta: " + param)
 			}
 
 			i += int(n)
@@ -1292,15 +1236,43 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 			}
 		default:
 			// Anything else is an error.
-			return nil, errors.New("Invalid diff operation in DiffFromDelta: " + string(token[0]))
+			return nil, errors.New("invalid diff operation in DiffFromDelta: " + string(token[0]))
 		}
 	}
 
 	if i != len(runes) {
-		return nil, fmt.Errorf("Delta length (%v) is different from source text length (%v)", i, len(text1))
+		return nil, fmt.Errorf("delta length (%v) is different from source text length (%v)", i, len(text1))
 	}
 
 	return diffs, nil
+}
+
+// GetOriginalText computes the original text from the list of diffs
+func (dmp *DiffMatchPatch) GetOriginalText(diffs []Diff) string {
+	var text bytes.Buffer
+	for _, aDiff := range diffs {
+		if aDiff.Type != DiffInsert {
+			_, _ = text.WriteString(aDiff.Text)
+		}
+	}
+	return text.String()
+}
+
+// GetModifiedText computes the modified text from the list of diffs
+func (dmp *DiffMatchPatch) GetModifiedText(diffs []Diff) string {
+	var text bytes.Buffer
+	for _, aDiff := range diffs {
+		if aDiff.Type != DiffDelete {
+			_, _ = text.WriteString(aDiff.Text)
+		}
+	}
+	return text.String()
+}
+
+func (dmp *DiffMatchPatch) DiffLines(text1, text2 string) []Diff {
+	from, to, lineArray := dmp.DiffLinesToRunes(text1, text2)
+	diffs := dmp.DiffMainRunes(from, to, false)
+	return dmp.DiffCharsToLines(diffs, lineArray)
 }
 
 // diffLinesToStrings splits two texts into a list of strings. Each string represents one line.
@@ -1309,7 +1281,7 @@ func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, stri
 	lineArray := []string{""} // e.g. lineArray[4] == 'Hello\n'
 
 	lineHash := make(map[string]int)
-	//Each string has the index of lineArray which it points to
+	// Each string has the index of lineArray which it points to
 	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray, lineHash)
 	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray, lineHash)
 

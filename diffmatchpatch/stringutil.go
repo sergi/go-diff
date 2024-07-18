@@ -14,10 +14,12 @@ import (
 	"unicode/utf8"
 )
 
-const UNICODE_INVALID_RANGE_START = 0xD800
-const UNICODE_INVALID_RANGE_END = 0xDFFF
-const UNICODE_INVALID_RANGE_DELTA = UNICODE_INVALID_RANGE_END - UNICODE_INVALID_RANGE_START + 1
-const UNICODE_RANGE_MAX = 0x10FFFF
+const (
+	UNICODE_INVALID_RANGE_START = 0xD800
+	UNICODE_INVALID_RANGE_END   = 0xDFFF
+	UNICODE_INVALID_RANGE_DELTA = UNICODE_INVALID_RANGE_END - UNICODE_INVALID_RANGE_START + 1
+	UNICODE_RANGE_MAX           = 0x10FFFF
+)
 
 // unescaper unescapes selected chars for compatibility with JavaScript's encodeURI.
 // In speed critical applications this could be dropped since the receiving application will certainly decode these fine. Note that this function is case-sensitive.  Thus "%3F" would not be unescaped.  But this is ok because it is only called with the output of HttpUtility.UrlEncode which returns lowercase hex. Example: "%3f" -> "?", "%24" -> "$", etc.
@@ -107,10 +109,12 @@ func intArrayToString(ns []uint32) string {
 
 // These constants define the number of bits representable
 // in 1,2,3,4 byte utf8 sequences, respectively.
-const ONE_BYTE_BITS = 7
-const TWO_BYTE_BITS = 11
-const THREE_BYTE_BITS = 16
-const FOUR_BYTE_BITS = 21
+const (
+	ONE_BYTE_BITS   = 7
+	TWO_BYTE_BITS   = 11
+	THREE_BYTE_BITS = 16
+	FOUR_BYTE_BITS  = 21
+)
 
 // Helper for getting a sequence of bits from an integer.
 func getBits(i uint32, cnt byte, from byte) byte {

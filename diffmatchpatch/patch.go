@@ -93,7 +93,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 	// Add the prefix.
 	prefix := text[max(0, patch.Start2-padding):patch.Start2]
 	if len(prefix) != 0 {
-		patch.diffs = append([]Diff{Diff{DiffEqual, prefix}}, patch.diffs...)
+		patch.diffs = append([]Diff{{DiffEqual, prefix}}, patch.diffs...)
 	}
 	// Add the suffix.
 	suffix := text[patch.Start2+patch.Length1 : min(len(text), patch.Start2+patch.Length1+padding)]
@@ -336,7 +336,7 @@ func (dmp *DiffMatchPatch) PatchAddPadding(patches []Patch) string {
 	// Add some padding on start of first diff.
 	if len(patches[0].diffs) == 0 || patches[0].diffs[0].Type != DiffEqual {
 		// Add nullPadding equality.
-		patches[0].diffs = append([]Diff{Diff{DiffEqual, nullPadding}}, patches[0].diffs...)
+		patches[0].diffs = append([]Diff{{DiffEqual, nullPadding}}, patches[0].diffs...)
 		patches[0].Start1 -= paddingLength // Should be 0.
 		patches[0].Start2 -= paddingLength // Should be 0.
 		patches[0].Length1 += paddingLength
@@ -430,8 +430,7 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 					if diffText == bigpatch.diffs[0].Text {
 						bigpatch.diffs = bigpatch.diffs[1:]
 					} else {
-						bigpatch.diffs[0].Text =
-							bigpatch.diffs[0].Text[len(diffText):]
+						bigpatch.diffs[0].Text = bigpatch.diffs[0].Text[len(diffText):]
 					}
 				}
 			}
@@ -482,7 +481,7 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	text := strings.Split(textline, "\n")
 	textPointer := 0
-	patchHeader := regexp.MustCompile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@$")
+	patchHeader := regexp.MustCompile(`^@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@$`)
 
 	var patch Patch
 	var sign uint8

@@ -9,17 +9,17 @@
 package diffmatchpatch
 
 import (
-	"io/ioutil"
+	"os"
 )
 
 const testdataPath = "../testdata/"
 
 func speedtestTexts() (s1 string, s2 string) {
-	d1, err := ioutil.ReadFile(testdataPath + "speedtest1.txt")
+	d1, err := os.ReadFile(testdataPath + "speedtest1.txt")
 	if err != nil {
 		panic(err)
 	}
-	d2, err := ioutil.ReadFile(testdataPath + "speedtest2.txt")
+	d2, err := os.ReadFile(testdataPath + "speedtest2.txt")
 	if err != nil {
 		panic(err)
 	}

@@ -120,7 +120,6 @@ func TestLastIndexOf(t *testing.T) {
 // This test is slow and runs longer than 5 seconds but it does provide a safety
 // guarantee that these 2 functions are correct for the ranges we support.
 func TestRuneToInt(t *testing.T) {
-
 	for i := uint32(0); i <= UNICODE_RANGE_MAX-UNICODE_INVALID_RANGE_DELTA-3; i += 1 {
 		r := intToRune(i)
 		ic := runeToInt(r)

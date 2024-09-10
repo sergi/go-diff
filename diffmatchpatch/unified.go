@@ -15,7 +15,7 @@ func (dmp *DiffMatchPatch) Unified(text1, text2 string, opts ...UnifiedOption) s
 	diffs := dmp.DiffMain(text1Enc, text2Enc, false)
 	diffs = dmp.DiffCharsToLines(diffs, lines)
 
-	unified := toUnified(diffs, options)
+	unified := newUnified(diffs, options)
 
 	return unified.String()
 }
@@ -25,29 +25,36 @@ func (dmp *DiffMatchPatch) Unified(text1, text2 string, opts ...UnifiedOption) s
 func (dmp *DiffMatchPatch) DiffUnified(diffs []Diff, opts ...UnifiedOption) string {
 	options := newUnifiedOptions(opts)
 
-	u := toUnified(diffs, options)
+	u := newUnified(diffs, options)
 
 	return u.String()
 }
 
-// toUnified takes a []Diff slice and converts into into a unified struct, which
+// newUnified takes a []Diff slice and converts into into a unified struct, which
 // can then be used to produce the unified diff output using its String()
 // method.
-func toUnified(diffs []Diff, opts unifiedOptions) unified {
-	maxCtx := opts.contextLines * 2
-	u := unified{
+func newUnified(diffs []Diff, opts unifiedOptions) unified {
+	return unified{
 		label1: opts.text1Label,
 		label2: opts.text2Label,
-	}
 
-	if isEqual(diffs) {
-		return u
+		patches: patchMakeUnified(diffs, opts.contextLines),
+	}
+}
+
+func patchMakeUnified(diffs []Diff, contextLines int) []Patch {
+	maxCtx := contextLines * 2
+
+	var patches []Patch
+
+	if diffIsEqual(diffs) {
+		return nil
 	}
 
 	diffs = diffLinewise(diffs)
 
 	var (
-		h *hunk
+		patch Patch
 
 		lineNo1 int
 		lineNo2 int
@@ -69,71 +76,83 @@ func toUnified(diffs []Diff, opts unifiedOptions) unified {
 			continue
 		}
 
-		// close previous hunk
-		if h != nil && len(context) > maxCtx {
-			cl := len(context)
-			if cl > opts.contextLines {
-				cl = opts.contextLines
-			}
+		// close previous patch
+		if len(patch.diffs) != 0 && len(context) > maxCtx {
+			cl := min(len(context), contextLines)
 
-			h.diffs = append(h.diffs, context[:cl]...)
+			patch.diffs = append(patch.diffs, context[:cl]...)
 
-			u.hunks = append(u.hunks, *h)
-			h = nil
+			patchUpdateLength(&patch)
+
+			patches = append(patches, patch)
+			patch = Patch{}
 		}
 
-		// start new hunk
-		if h == nil {
-			cl := len(context)
-			if cl > opts.contextLines {
-				cl = opts.contextLines
-			}
+		// start new patch
+		if len(patch.diffs) == 0 {
+			cl := min(len(context), contextLines)
 
 			l1 := lineNo1 - cl
 			l2 := lineNo2 - cl
 
-			// When starting a new hunk, the line number for lineNo1 XOR lineNo2
+			// When starting a new patch, the line number for lineNo1 XOR lineNo2
 			// as already been advanced, but not the other. Account for that in
 			// l1 or l2.
 			switch diff.Type {
 			case DiffDelete:
-				l2++
+				l1--
 			case DiffInsert:
-				l1++
+				l2--
 			}
 
-			h = &hunk{
-				fromLine: l1,
-				toLine:   l2,
-				diffs:    context[len(context)-cl:],
+			patch = Patch{
+				Start1: l1,
+				Start2: l2,
+				diffs:  context[len(context)-cl:],
 			}
 
 			context = nil
 		}
 
-		h.diffs = append(h.diffs, context...)
+		patch.diffs = append(patch.diffs, context...)
 		context = nil
 
-		h.diffs = append(h.diffs, diff)
+		patch.diffs = append(patch.diffs, diff)
 	}
 
 	// close last hunk
-	if h != nil {
-		cl := len(context)
-		if cl > opts.contextLines {
-			cl = opts.contextLines
-		}
+	if len(patch.diffs) != 0 {
+		cl := min(len(context), contextLines)
 
-		h.diffs = append(h.diffs, context[:cl]...)
+		patch.diffs = append(patch.diffs, context[:cl]...)
 
-		u.hunks = append(u.hunks, *h)
-		h = nil
+		patchUpdateLength(&patch)
+
+		patches = append(patches, patch)
+		patch = Patch{}
 	}
 
-	return u
+	return patches
 }
 
-func isEqual(diffs []Diff) bool {
+func patchUpdateLength(p *Patch) {
+	p.Length1 = 0
+	p.Length2 = 0
+
+	for _, diff := range p.diffs {
+		switch diff.Type {
+		case DiffDelete:
+			p.Length1++
+		case DiffInsert:
+			p.Length2++
+		case DiffEqual:
+			p.Length1++
+			p.Length2++
+		}
+	}
+}
+
+func diffIsEqual(diffs []Diff) bool {
 	for _, diff := range diffs {
 		if diff.Type != DiffEqual {
 			return false
@@ -315,93 +334,54 @@ func reorderDeletionsFirst(diffs []Diff) []Diff {
 // unified represents modifications in a form conducive to printing a unified diff.
 type unified struct {
 	label1, label2 string
-	hunks          []hunk
-}
 
-// hunk is a list of nearby changes, deperated by at most 2*contextLines lines.
-type hunk struct {
-	// The line in the original source where the hunk starts.
-	fromLine int
-	// The line in the original source where the hunk finishes.
-	toLine int
-	// List of modifications. Each Diff represents one deleted, inserted, or equal line.
-	diffs []Diff
-}
-
-// numLines returns the number of lines in the hunk for text1 and text2.
-func (h hunk) numLines() (n1, n2 int) {
-	for _, diff := range h.diffs {
-		switch diff.Type {
-		case DiffDelete:
-			n1++
-		case DiffInsert:
-			n2++
-		case DiffEqual:
-			n1++
-			n2++
-		}
-	}
-
-	return n1, n2
-}
-
-func (h hunk) String() string {
-	var b strings.Builder
-
-	fmt.Fprint(&b, "@@")
-
-	numLines1, numLines2 := h.numLines()
-
-	switch {
-	case numLines1 > 1:
-		fmt.Fprintf(&b, " -%d,%d", h.fromLine, numLines1)
-	case h.fromLine == 1 && numLines1 == 0:
-		// Mimic GNU diff -u behavior when adding to empty file.
-		fmt.Fprintf(&b, " -0,0")
-	default:
-		fmt.Fprintf(&b, " -%d", h.fromLine)
-	}
-
-	switch {
-	case numLines2 > 1:
-		fmt.Fprintf(&b, " +%d,%d", h.toLine, numLines2)
-	case h.toLine == 1 && numLines2 == 0:
-		// Mimic GNU diff -u behavior when adding to empty file.
-		fmt.Fprintf(&b, " +0,0")
-	default:
-		fmt.Fprintf(&b, " +%d", h.toLine)
-	}
-
-	fmt.Fprint(&b, " @@\n")
-
-	for _, diff := range h.diffs {
-		switch diff.Type {
-		case DiffDelete:
-			fmt.Fprintf(&b, "-%s", diff.Text)
-		case DiffInsert:
-			fmt.Fprintf(&b, "+%s", diff.Text)
-		default:
-			fmt.Fprintf(&b, " %s", diff.Text)
-		}
-		if !strings.HasSuffix(diff.Text, "\n") {
-			fmt.Fprintf(&b, "\n\\ No newline at end of file\n")
-		}
-	}
-
-	return b.String()
+	patches []Patch
 }
 
 // String converts a unified diff to the standard textual form for that diff.
 // The output of this function can be passed to tools like patch.
 func (u unified) String() string {
-	if len(u.hunks) == 0 {
+	if len(u.patches) == 0 {
 		return ""
 	}
+
 	var b strings.Builder
 	fmt.Fprintf(&b, "--- %s\n", u.label1)
 	fmt.Fprintf(&b, "+++ %s\n", u.label2)
-	for _, hunk := range u.hunks {
-		fmt.Fprint(&b, hunk)
+
+	for _, patch := range u.patches {
+		fmt.Fprint(&b, patchFormatUnified(patch))
+	}
+
+	return b.String()
+}
+
+// patchFormatUnified implements GNU's unified diff format.
+// This differs from Patch.String() in that this function assumes that each Diff
+// (except possibly the last ones) ends in a newline. If either input does not
+// end with a newline character, an appropriate message will be printed.
+// The output is not URL encoded.
+func patchFormatUnified(p Patch) string {
+	var b strings.Builder
+
+	fmt.Fprint(&b, p.header())
+
+	for _, diff := range p.diffs {
+		var prefix string
+		switch diff.Type {
+		case DiffDelete:
+			prefix = "-"
+		case DiffInsert:
+			prefix = "+"
+		case DiffEqual:
+			prefix = " "
+		}
+
+		fmt.Fprint(&b, prefix, diff.Text)
+
+		if !strings.HasSuffix(diff.Text, "\n") {
+			fmt.Fprint(&b, "\n\\ No newline at end of file\n")
+		}
 	}
 
 	return b.String()

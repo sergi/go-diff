@@ -388,30 +388,31 @@ func (dmp *DiffMatchPatch) diffBisectSplit(runes1, runes2 []rune, x, y int,
 }
 
 // DiffLinesToChars splits two texts into a list of strings, and educes the texts to a string of hashes where each Unicode character represents one line.
-// It's slightly faster to call DiffLinesToRunes first, followed by DiffMainRunes.
 func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
-	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
-	return chars1, chars2, lineArray
+	chars1, chars2, lineArray := dmp.diffLinesToIndexes(text1, text2)
+	return indexesToString(chars1), indexesToString(chars2), lineArray
 }
 
 // DiffLinesToRunes splits two texts into a list of runes.
 func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
+	chars1, chars2, lineArray := dmp.diffLinesToIndexes(text1, text2)
+	return []rune(indexesToString(chars1)), []rune(indexesToString(chars2)), lineArray
+}
+
+func (dmp *DiffMatchPatch) diffLinesToIndexes(text1, text2 string) ([]index, []index, []string) {
 	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
-	return []rune(chars1), []rune(chars2), lineArray
+	return chars1, chars2, lineArray
 }
 
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of text.
 func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
 	hydrated := make([]Diff, 0, len(diffs))
 	for _, aDiff := range diffs {
-		runes := []rune(aDiff.Text)
-		text := make([]string, len(runes))
-
-		for i, r := range runes {
-			text[i] = lineArray[runeToInt(r)]
+		var sb strings.Builder
+		for _, i := range stringToIndex(aDiff.Text) {
+			sb.WriteString(lineArray[i])
 		}
-
-		aDiff.Text = strings.Join(text, "")
+		aDiff.Text = sb.String()
 		hydrated = append(hydrated, aDiff)
 	}
 	return hydrated
@@ -1304,7 +1305,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 }
 
 // diffLinesToStrings splits two texts into a list of strings. Each string represents one line.
-func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, string, []string) {
+func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) ([]index, []index, []string) {
 	// '\x00' is a valid character, but various debuggers don't like it. So we'll insert a junk entry to avoid generating a null character.
 	lineArray := []string{""} // e.g. lineArray[4] == 'Hello\n'
 
@@ -1313,15 +1314,15 @@ func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, stri
 	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray, lineHash)
 	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray, lineHash)
 
-	return intArrayToString(strIndexArray1), intArrayToString(strIndexArray2), lineArray
+	return strIndexArray1, strIndexArray2, lineArray
 }
 
 // diffLinesToStringsMunge splits a text into an array of strings, and reduces the texts to a []string.
-func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string, lineHash map[string]int) []uint32 {
+func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string, lineHash map[string]int) []index {
 	// Walk the text, pulling out a substring for each line. text.split('\n') would would temporarily double our memory footprint. Modifying text would create many large strings to garbage collect.
 	lineStart := 0
 	lineEnd := -1
-	strs := []uint32{}
+	strs := []index{}
 
 	for lineEnd < len(text)-1 {
 		lineEnd = indexOf(text, "\n", lineStart)
@@ -1335,11 +1336,11 @@ func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]str
 		lineValue, ok := lineHash[line]
 
 		if ok {
-			strs = append(strs, uint32(lineValue))
+			strs = append(strs, index(lineValue))
 		} else {
 			*lineArray = append(*lineArray, line)
 			lineHash[line] = len(*lineArray) - 1
-			strs = append(strs, uint32(len(*lineArray)-1))
+			strs = append(strs, index(len(*lineArray)-1))
 		}
 	}
 

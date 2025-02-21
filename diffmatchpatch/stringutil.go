@@ -93,18 +93,6 @@ func runesIndex(r1, r2 []rune) int {
 	return -1
 }
 
-func intArrayToString(ns []uint32) string {
-	if len(ns) == 0 {
-		return ""
-	}
-
-	b := []rune{}
-	for _, n := range ns {
-		b = append(b, intToRune(n))
-	}
-	return string(b)
-}
-
 // These constants define the number of bits representable
 // in 1,2,3,4 byte utf8 sequences, respectively.
 const ONE_BYTE_BITS = 7

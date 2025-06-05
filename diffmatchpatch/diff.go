@@ -1146,13 +1146,28 @@ func (dmp *DiffMatchPatch) DiffPrettyText(diffs []Diff) string {
 
 		switch diff.Type {
 		case DiffInsert:
-			_, _ = buff.WriteString("\x1b[32m")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("\x1b[0m")
+			lines := strings.Split(text, "\n")
+			for i, line := range lines {
+				_, _ = buff.WriteString("\x1b[32m")
+				_, _ = buff.WriteString(line)
+				if i < len(lines)-1 {
+					_, _ = buff.WriteString("\x1b[0m\n")
+				} else {
+					_, _ = buff.WriteString("\x1b[0m")
+				}
+			}
+
 		case DiffDelete:
-			_, _ = buff.WriteString("\x1b[31m")
-			_, _ = buff.WriteString(text)
-			_, _ = buff.WriteString("\x1b[0m")
+			lines := strings.Split(text, "\n")
+			for i, line := range lines {
+				_, _ = buff.WriteString("\x1b[31m")
+				_, _ = buff.WriteString(line)
+				if i < len(lines)-1 {
+					_, _ = buff.WriteString("\x1b[0m\n")
+				} else {
+					_, _ = buff.WriteString("\x1b[0m")
+				}
+			}
 		case DiffEqual:
 			_, _ = buff.WriteString(text)
 		}

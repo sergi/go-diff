@@ -563,8 +563,7 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 // diffHalfMatchI checks if a substring of shorttext exist within longtext such that the substring is at least half the length of longtext?
 // Returns a slice containing the prefix of longtext, the suffix of longtext, the prefix of shorttext, the suffix of shorttext and the common middle, or null if there was no match.
 func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
-	var bestCommonA []rune
-	var bestCommonB []rune
+	var bestCommon []rune
 	var bestCommonLen int
 	var bestLongtextA []rune
 	var bestLongtextB []rune
@@ -579,9 +578,8 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 		suffixLength := commonSuffixLength(l[:i], s[:j])
 
 		if bestCommonLen < suffixLength+prefixLength {
-			bestCommonA = s[j-suffixLength : j]
-			bestCommonB = s[j : j+prefixLength]
-			bestCommonLen = len(bestCommonA) + len(bestCommonB)
+			bestCommon = s[j-suffixLength : j+prefixLength]
+			bestCommonLen = len(bestCommon)
 			bestLongtextA = l[:i-suffixLength]
 			bestLongtextB = l[i+prefixLength:]
 			bestShorttextA = s[:j-suffixLength]
@@ -598,7 +596,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 		bestLongtextB,
 		bestShorttextA,
 		bestShorttextB,
-		append(bestCommonA, bestCommonB...),
+		bestCommon,
 	}
 }
 

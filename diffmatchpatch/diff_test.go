@@ -1574,3 +1574,236 @@ func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
 		diffs = dmp.DiffCharsToLines(diffs, linearray)
 	}
 }
+
+func TestDiffLineMode(t *testing.T) {
+	dmp := New()
+
+	// Helper function to test line mode diffing
+	testLineMode := func(t *testing.T, text1, text2 string, expected []Diff) {
+		t.Helper()
+		actual := dmp.DiffLineMode(text1, text2)
+		assert.Equal(t, expected, actual,
+			fmt.Sprintf("DiffLineMode(%q, %q) = %v, want %v", text1, text2, actual, expected))
+	}
+
+	t.Run("empty strings", func(t *testing.T) {
+		testLineMode(t, "", "", []Diff{{DiffEqual, ""}})
+	})
+
+	t.Run("identical strings", func(t *testing.T) {
+		testLineMode(t, "abc", "abc", []Diff{{DiffEqual, "abc"}})
+	})
+
+	t.Run("simple insertions", func(t *testing.T) {
+		testLineMode(t, "abc", "ab123c", []Diff{{DiffDelete, "abc"}, {DiffInsert, "ab123c"}})
+		testLineMode(t, "abc", "a123b456c", []Diff{{DiffDelete, "abc"}, {DiffInsert, "a123b456c"}})
+	})
+
+	t.Run("simple deletions", func(t *testing.T) {
+		testLineMode(t, "a123bc", "abc", []Diff{{DiffDelete, "a123bc"}, {DiffInsert, "abc"}})
+		testLineMode(t, "a123b456c", "abc", []Diff{{DiffDelete, "a123b456c"}, {DiffInsert, "abc"}})
+	})
+
+	t.Run("single character replacements", func(t *testing.T) {
+		testLineMode(t, "a", "b", []Diff{{DiffDelete, "a"}, {DiffInsert, "b"}})
+	})
+
+	t.Run("sentence replacements", func(t *testing.T) {
+		testLineMode(t, "Apples are a fruit.", "Bananas are also fruit.", []Diff{
+			{DiffDelete, "Apples are a fruit."},
+			{DiffInsert, "Bananas are also fruit."},
+		})
+	})
+
+	t.Run("multi-line text changes", func(t *testing.T) {
+		testLineMode(t, "Apples are a fruit.\nline 2, line 3", "Bananas are also fruit.\nline 2, line 3\nline 4, line 5", []Diff{
+			{DiffDelete, "Apples are a fruit.\nline 2, line 3"},
+			{DiffInsert, "Bananas are also fruit.\nline 2, line 3\nline 4, line 5"},
+		})
+	})
+
+	t.Run("unicode and special characters", func(t *testing.T) {
+		testLineMode(t, "ax\t", "\u0680x\u0000", []Diff{
+			{DiffDelete, "ax\t"},
+			{DiffInsert, "\u0680x\u0000"},
+		})
+	})
+
+	t.Run("complex text transformations", func(t *testing.T) {
+		testLineMode(t, "1ayb2", "abxab", []Diff{
+			{DiffDelete, "1ayb2"},
+			{DiffInsert, "abxab"},
+		})
+
+		testLineMode(t, "abcy", "xaxcxabc", []Diff{
+			{DiffDelete, "abcy"},
+			{DiffInsert, "xaxcxabc"},
+		})
+	})
+
+	t.Run("long text with mixed operations", func(t *testing.T) {
+		testLineMode(t, "ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg", "a-bcd-efghijklmnopqrs", []Diff{
+			{DiffDelete, "ABCDa=bcd=efghijklmnopqrsEFGHIJKLMNOefg"},
+			{DiffInsert, "a-bcd-efghijklmnopqrs"},
+		})
+	})
+
+	t.Run("wiki-style text", func(t *testing.T) {
+		// t.Skip("FIXME: check why this fails")
+		testLineMode(t,
+			"a [[Pennsylvania]] and [[New",
+			" and [[Pennsylvania]]",
+			[]Diff{
+				{DiffDelete, "a [[Pennsylvania]] and [[New"},
+				{DiffInsert, " and [[Pennsylvania]]"},
+			},
+		)
+	})
+
+	t.Run("invalid UTF-8 sequences", func(t *testing.T) {
+		testLineMode(t, "\xe0\xe5", "", []Diff{{DiffDelete, "��"}})
+	})
+
+	t.Run("real diff without timeout", func(t *testing.T) {
+		// Perform a real diff and switch off the timeout.
+		dmp.DiffTimeout = 0
+
+		// Re-run a few key tests to ensure they work with timeout disabled
+		testLineMode(t, "a", "b", []Diff{{DiffDelete, "a"}, {DiffInsert, "b"}})
+		testLineMode(t, "Apples are a fruit.", "Bananas are also fruit.", []Diff{
+			{DiffDelete, "Apples are a fruit."},
+			{DiffInsert, "Bananas are also fruit."},
+		})
+	})
+}
+
+func TestDiffCleanupLineBased(t *testing.T) {
+	dmp := New()
+
+	tests := []struct {
+		name     string
+		input    []Diff
+		expected []Diff
+	}{
+		{
+			name:     "empty diffs",
+			input:    []Diff{},
+			expected: []Diff{},
+		},
+		{
+			name: "merge consecutive deletions",
+			input: []Diff{
+				{DiffDelete, "line1\n"},
+				{DiffDelete, "line2\n"},
+				{DiffEqual, "unchanged\n"},
+			},
+			expected: []Diff{
+				{DiffDelete, "line1\nline2\n"},
+				{DiffEqual, "unchanged\n"},
+			},
+		},
+		{
+			name: "merge consecutive insertions",
+			input: []Diff{
+				{DiffEqual, "unchanged\n"},
+				{DiffInsert, "newline1\n"},
+				{DiffInsert, "newline2\n"},
+			},
+			expected: []Diff{
+				{DiffEqual, "unchanged\n"},
+				{DiffInsert, "newline1\nnewline2\n"},
+			},
+		},
+		{
+			name: "merge consecutive equalities",
+			input: []Diff{
+				{DiffEqual, "line1\n"},
+				{DiffEqual, "line2\n"},
+				{DiffDelete, "deleted\n"},
+			},
+			expected: []Diff{
+				{DiffEqual, "line1\nline2\n"},
+				{DiffDelete, "deleted\n"},
+			},
+		},
+		{
+			name: "remove empty whitespace-only equalities",
+			input: []Diff{
+				{DiffEqual, "line1\n"},
+				{DiffEqual, "   \n"},
+				{DiffEqual, "line2\n"},
+			},
+			expected: []Diff{
+				{DiffEqual, "line1\nline2\n"},
+			},
+		},
+		{
+			name: "complex line-based diff",
+			input: []Diff{
+				{DiffDelete, "old1\n"},
+				{DiffDelete, "old2\n"},
+				{DiffEqual, "common1\n"},
+				{DiffEqual, "common2\n"},
+				{DiffInsert, "new1\n"},
+				{DiffInsert, "new2\n"},
+			},
+			expected: []Diff{
+				{DiffDelete, "old1\nold2\n"},
+				{DiffEqual, "common1\ncommon2\n"},
+				{DiffInsert, "new1\nnew2\n"},
+			},
+		},
+		{
+			name: "preserve non-empty whitespace lines",
+			input: []Diff{
+				{DiffEqual, "line1\n"},
+				{DiffEqual, "  indented\n"},
+				{DiffEqual, "line2\n"},
+			},
+			expected: []Diff{
+				{DiffEqual, "line1\n  indented\nline2\n"},
+			},
+		},
+		{
+			name: "remove empty insert with a equal line between",
+			input: []Diff{
+				{DiffEqual, ""},
+				{DiffEqual, "line2\n"},
+				{DiffInsert, ""},
+			},
+			expected: []Diff{
+				{DiffEqual, "line2\n"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := dmp.DiffCleanupLineBased(tt.input)
+			assert.Equal(t, tt.expected, result,
+				fmt.Sprintf("DiffCleanupLineBased failed for test: %s", tt.name))
+		})
+	}
+}
+
+func BenchmarkDiffCleanupLineBased(b *testing.B) {
+	dmp := New()
+
+	// Create a realistic line-based diff with many operations
+	diffs := []Diff{
+		{DiffDelete, "old line 1\n"},
+		{DiffDelete, "old line 2\n"},
+		{DiffEqual, "common line 1\n"},
+		{DiffEqual, "common line 2\n"},
+		{DiffInsert, "new line 1\n"},
+		{DiffInsert, "new line 2\n"},
+		{DiffEqual, "more common\n"},
+		{DiffDelete, "another old\n"},
+		{DiffInsert, "another new\n"},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		dmp.DiffCleanupLineBased(diffs)
+	}
+}

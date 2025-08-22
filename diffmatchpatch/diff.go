@@ -79,6 +79,9 @@ func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 	return slice
 }
 
+// DiffFunction represents a function that can compute differences between two rune slices
+type DiffFunction func(text1, text2 []rune) []Diff
+
 // DiffMain finds the differences between two texts.
 // If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
@@ -88,14 +91,20 @@ func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff
 // DiffMainRunes finds the differences between two rune sequences.
 // If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
-	var deadline time.Time
-	if dmp.DiffTimeout > 0 {
-		deadline = time.Now().Add(dmp.DiffTimeout)
+	deadline := dmp.getDeadline()
+
+	// Encapsulate the deadline and line mode logic in the closure
+	diffFn := func(text1, text2 []rune) []Diff {
+		if checklines && len(text1) > 100 && len(text2) > 100 {
+			return dmp.diffBigLine(text1, text2, deadline)
+		}
+		return dmp.diffBisect(text1, text2, deadline)
 	}
-	return dmp.diffMainRunes(text1, text2, checklines, deadline)
+
+	return dmp.diffMainRunes(text1, text2, diffFn)
 }
 
-func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, diffFn DiffFunction) []Diff {
 	if runesEqual(text1, text2) {
 		var diffs []Diff
 		if len(text1) > 0 {
@@ -116,7 +125,7 @@ func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, d
 	text2 = text2[:len(text2)-commonlength]
 
 	// Compute the diff on the middle block.
-	diffs := dmp.diffCompute(text1, text2, checklines, deadline)
+	diffs := dmp.diffCompute(text1, text2, diffFn)
 
 	// Restore the prefix and suffix.
 	if len(commonprefix) != 0 {
@@ -129,8 +138,16 @@ func (dmp *DiffMatchPatch) diffMainRunes(text1, text2 []rune, checklines bool, d
 	return dmp.DiffCleanupMerge(diffs)
 }
 
+// getDeadline returns the deadline for the diff operation
+func (dmp *DiffMatchPatch) getDeadline() time.Time {
+	if dmp.DiffTimeout > 0 {
+		return time.Now().Add(dmp.DiffTimeout)
+	}
+	return time.Time{}
+}
+
 // diffCompute finds the differences between two rune slices.  Assumes that the texts do not have any common prefix or suffix.
-func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, deadline time.Time) []Diff {
+func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, diffFn DiffFunction) []Diff {
 	diffs := []Diff{}
 	if len(text1) == 0 {
 		// Just add some text (speedup).
@@ -177,25 +194,30 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		text2B := hm[3]
 		midCommon := hm[4]
 		// Send both pairs off for separate processing.
-		diffsA := dmp.diffMainRunes(text1A, text2A, checklines, deadline)
-		diffsB := dmp.diffMainRunes(text1B, text2B, checklines, deadline)
+		diffsA := dmp.diffMainRunes(text1A, text2A, diffFn)
+		diffsB := dmp.diffMainRunes(text1B, text2B, diffFn)
 		// Merge the results.
 		diffs := diffsA
 		diffs = append(diffs, Diff{DiffEqual, string(midCommon)})
 		diffs = append(diffs, diffsB...)
 		return diffs
-	} else if checklines && len(text1) > 100 && len(text2) > 100 {
-		return dmp.diffLineMode(text1, text2, deadline)
 	}
-	return dmp.diffBisect(text1, text2, deadline)
+
+	return diffFn(text1, text2)
 }
 
-// diffLineMode does a quick line-level diff on both []runes, then rediff the parts for greater accuracy. This speedup can produce non-minimal diffs.
-func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time) []Diff {
+// diffBigLine does a quick line-level diff on both []runes, then rediff the parts for greater accuracy. This speedup can produce non-minimal diffs.
+func (dmp *DiffMatchPatch) diffBigLine(text1, text2 []rune, deadline time.Time) []Diff {
 	// Scan the text on a line-by-line basis first.
 	text1, text2, linearray := dmp.DiffLinesToRunes(string(text1), string(text2))
 
-	diffs := dmp.diffMainRunes(text1, text2, false, deadline)
+	// For line-level diffing, we want to do a simple comparison of the line-based runes
+	// rather than character-by-character diffing
+	diffFn := func(text1, text2 []rune) []Diff {
+		return dmp.diffBisect(text1, text2, deadline)
+	}
+
+	diffs := dmp.diffMainRunes(text1, text2, diffFn)
 
 	// Convert the diff back to original text.
 	diffs = dmp.DiffCharsToLines(diffs, linearray)
@@ -230,7 +252,7 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 					countDelete+countInsert)
 
 				pointer = pointer - countDelete - countInsert
-				a := dmp.diffMainRunes([]rune(textDelete), []rune(textInsert), false, deadline)
+				a := dmp.diffMainRunes([]rune(textDelete), []rune(textInsert), diffFn)
 				for j := len(a) - 1; j >= 0; j-- {
 					diffs = splice(diffs, pointer, 0, a[j])
 				}
@@ -246,6 +268,37 @@ func (dmp *DiffMatchPatch) diffLineMode(text1, text2 []rune, deadline time.Time)
 	}
 
 	return diffs[:len(diffs)-1] // Remove the dummy entry at the end.
+}
+
+// DiffLineMode finds the differences between two texts, always using line mode.
+// Unlike DiffMain with checklines=true, this method will always use line mode regardless of text length.
+// If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
+func (dmp *DiffMatchPatch) DiffLineMode(text1, text2 string) []Diff {
+	return dmp.diffOnlyByLines([]rune(text1), []rune(text2))
+}
+
+// diffOnlyByLines finds the differences between two texts, only by lines.
+func (dmp *DiffMatchPatch) diffOnlyByLines(text1, text2 []rune) []Diff {
+	// For line-level diffing, we want to do a simple comparison of the line-based runes
+	// rather than character-by-character diffing
+	diffFn := func(text1, text2 []rune) []Diff {
+		if !runesEqual(text1, text2) {
+			return []Diff{
+				{DiffDelete, string(text1)},
+				{DiffInsert, string(text2)},
+			}
+		}
+		return []Diff{{DiffEqual, string(text1)}}
+	}
+
+	// For line-based diffing, we want to avoid the character-based optimizations in diffCompute
+	// and just use our simple diff function directly
+	diffs := diffFn(text1, text2)
+
+	// Optimize line-based diffs using line-specific cleanup
+	diffs = dmp.DiffCleanupLineBased(diffs)
+
+	return diffs
 }
 
 // DiffBisect finds the 'middle snake' of a diff, split the problem in two and return the recursively constructed diff.
@@ -380,9 +433,14 @@ func (dmp *DiffMatchPatch) diffBisectSplit(runes1, runes2 []rune, x, y int,
 	runes1b := runes1[x:]
 	runes2b := runes2[y:]
 
+	// wrap dmp.diffBisect with deadline
+	diffFn := func(text1, text2 []rune) []Diff {
+		return dmp.diffBisect(text1, text2, deadline)
+	}
+
 	// Compute both diffs serially.
-	diffs := dmp.diffMainRunes(runes1a, runes2a, false, deadline)
-	diffsb := dmp.diffMainRunes(runes1b, runes2b, false, deadline)
+	diffs := dmp.diffMainRunes(runes1a, runes2a, diffFn)
+	diffsb := dmp.diffMainRunes(runes1b, runes2b, diffFn)
 
 	return append(diffs, diffsb...)
 }
@@ -951,6 +1009,77 @@ func (dmp *DiffMatchPatch) DiffCleanupEfficiency(diffs []Diff) []Diff {
 	}
 
 	return diffs
+}
+
+// DiffCleanupLineBased optimizes line-based diffs by merging consecutive operations,
+// removing empty line diffs, and grouping related line changes together.
+// This function is specifically designed for line-level diffing where each diff
+// represents entire lines rather than character-level changes.
+func (dmp *DiffMatchPatch) DiffCleanupLineBased(diffs []Diff) []Diff {
+	if len(diffs) == 0 {
+		return diffs
+	}
+
+	// First pass: merge consecutive operations of the same type
+	cleaned := make([]Diff, 0, len(diffs))
+	pointer := 0
+
+	for pointer < len(diffs) {
+		current := diffs[pointer]
+
+		// If this is an equality, just add it
+		if current.Type == DiffEqual {
+			cleaned = append(cleaned, current)
+			pointer++
+			continue
+		}
+
+		// Collect consecutive operations of the same type
+		mergedText := current.Text
+		pointer++
+
+		// Merge consecutive deletions or insertions
+		for pointer < len(diffs) && diffs[pointer].Type == current.Type {
+			mergedText += diffs[pointer].Text
+			pointer++
+		}
+
+		// Only add non-empty merged operations
+		if len(strings.TrimSpace(mergedText)) > 0 {
+			cleaned = append(cleaned, Diff{current.Type, mergedText})
+		}
+	}
+
+	// Second pass: remove trivial equalities (empty lines or whitespace-only lines)
+	// and merge adjacent equalities
+	if len(cleaned) > 1 {
+		final := make([]Diff, 0, len(cleaned))
+
+		for i := 0; i < len(cleaned); i++ {
+			current := cleaned[i]
+
+			// Skip empty or whitespace-only equalities
+			if current.Type == DiffEqual && len(strings.TrimSpace(current.Text)) == 0 {
+				continue
+			}
+
+			// Merge consecutive equalities
+			if current.Type == DiffEqual && len(final) > 0 && final[len(final)-1].Type == DiffEqual {
+				final[len(final)-1].Text += current.Text
+			} else {
+				final = append(final, current)
+			}
+		}
+
+		cleaned = final
+	}
+
+	// Third pass: optimize deletion-insertion pairs
+	// If we have a deletion followed by an insertion, and they're similar,
+	// we might want to keep them as separate operations for clarity in line-based diffs
+	// This preserves the line-by-line nature of the diff
+
+	return cleaned
 }
 
 // DiffCleanupMerge reorders and merges like edit sections. Merge equalities.

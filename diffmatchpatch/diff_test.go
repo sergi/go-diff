@@ -1042,7 +1042,7 @@ func TestDiffPrettyText(t *testing.T) {
 				{Type: DiffEqual, Text: "\ni"},
 			},
 
-			Expected: "a\n\x1b[31mb\x1b[0m\n\x1b[31mc\x1b[0m\n\x1b[31m\x1b[0mdef\x1b[32m\x1b[0m\n\x1b[32mg\x1b[0m\n\x1b[32mh\x1b[0m\ni",
+			Expected: "a\n\x1b[31mb\nc\n\x1b[0mdef\x1b[32m\ng\nh\x1b[0m\ni",
 		},
 	} {
 		actual := dmp.DiffPrettyText(tc.Diffs)

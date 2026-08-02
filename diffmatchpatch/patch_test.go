@@ -362,3 +362,25 @@ func TestPatchMakeOutOfRangePanic(t *testing.T) {
 	patches := dmp.PatchMake(text1, text2)
 	assert.Equal(t, 6, len(patches), "TestPatchMakeOutOfRangePanic")
 }
+
+func TestPatchMakeInvalidUTF8(t *testing.T) {
+	text1 := string([]byte{0xe0})
+	normalizedText1 := string([]rune(text1))
+	dmp := New()
+	diffs := dmp.DiffMain(text1, "", true)
+
+	for _, patches := range [][]Patch{
+		dmp.PatchMake(text1, ""),
+		dmp.PatchMake(text1, diffs),
+	} {
+		actual, applied := dmp.PatchApply(patches, normalizedText1)
+		assert.Equal(t, "", actual)
+		assert.Equal(t, []bool{true}, applied)
+	}
+
+	// Handcrafted byte-level diffs should continue to use the original bytes.
+	patches := dmp.PatchMake(text1, []Diff{{DiffDelete, text1}})
+	actual, applied := dmp.PatchApply(patches, text1)
+	assert.Equal(t, "", actual)
+	assert.Equal(t, []bool{true}, applied)
+}

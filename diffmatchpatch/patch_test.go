@@ -362,3 +362,20 @@ func TestPatchMakeOutOfRangePanic(t *testing.T) {
 	patches := dmp.PatchMake(text1, text2)
 	assert.Equal(t, 6, len(patches), "TestPatchMakeOutOfRangePanic")
 }
+
+func TestPatchMakeInvalidUTF8MatchesNormalizedInput(t *testing.T) {
+	dmp := New()
+	for _, tc := range []struct {
+		name, input, output string
+	}{
+		{"single invalid byte", string([]byte{0xe0}), ""},
+		{"invalid byte in context", string([]byte{'a', 0xe0, 'b'}), "ab"},
+		{"multiple invalid bytes", string([]byte{0xe0, 0xe0}), "x"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := dmp.PatchToText(dmp.PatchMake(tc.input, tc.output))
+			want := dmp.PatchToText(dmp.PatchMake(string([]rune(tc.input)), tc.output))
+			assert.Equal(t, want, got)
+		})
+	}
+}

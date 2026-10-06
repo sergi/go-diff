@@ -1,5 +1,7 @@
 package diffmatchpatch
 
+import "fmt"
+
 type index uint32
 
 const runeSkipStart = 0xd800
@@ -19,14 +21,21 @@ func stringToIndex(text string) []index {
 	return indexes
 }
 
-func indexesToString(indexes []index) string {
+func indexesToRunes(indexes []index) []rune {
 	runes := make([]rune, len(indexes))
-	for i, index := range indexes {
-		if index < runeSkipStart {
-			runes[i] = rune(index)
+	for i, idx := range indexes {
+		if idx >= runeMax-(runeSkipEnd-runeSkipStart) {
+			panic(fmt.Sprintf("The index %d is too large for indexesToRunes()", idx))
+		}
+		if idx < runeSkipStart {
+			runes[i] = rune(idx)
 		} else {
-			runes[i] = rune(index + (runeSkipEnd - runeSkipStart))
+			runes[i] = rune(idx + (runeSkipEnd - runeSkipStart))
 		}
 	}
-	return string(runes)
+	return runes
+}
+
+func indexesToString(indexes []index) string {
+	return string(indexesToRunes(indexes))
 }

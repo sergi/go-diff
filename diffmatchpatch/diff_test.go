@@ -1511,6 +1511,334 @@ line 10 text2`)
 	}, diffs)
 }
 
+func TestDiffMatchPatchSemanticsIssue151(t *testing.T) {
+	aLines := []string{
+		"        .lock()\n",
+		"        .unwrap()\n",
+		"        .iter()\n",
+		"        .rev()\n",
+		"        .fold(vec![], |mut acc, event| {\n",
+		"            // Group contiguous to the same\n",
+		"            acc.push(ext::WorkspaceEvent::TextDocumentChange {\n",
+		"                uri: \"\".into(),\n",
+		"                hunks: vec![],\n",
+		"            });\n",
+		"            acc\n",
+	}
+	bLines := []string{
+		"        .lock()\n",
+		"        .unwrap()\n",
+		"        .iter()\n",
+		"        .rev()\n",
+		"        .fold(vec![], |mut acc, event| {\n",
+		"            // Group contiguous to the same uri\n",
+		"            if let Some(last) = acc.last_mut() {\n",
+		"                if last.uri == event.uri {\n",
+		"                    last.hunks.extend(event.hunks);\n",
+		"                    return acc;\n",
+		"                }\n",
+		"            }\n",
+		"            acc.push(ext::WorkspaceEvent::TextDocumentChange {\n",
+		"                uri: event.uri.clone(),\n",
+		"                hunks: event.hunks,\n",
+		"            });\n",
+		"            acc\n",
+	}
+	a := strings.Join(aLines, "")
+	b := strings.Join(bLines, "")
+
+	dmp := New()
+
+	// Verify using DiffLinesToChars + DiffMain + DiffCharsToLines
+	charsA, charsB, lineArray := dmp.DiffLinesToChars(a, b)
+	diff := dmp.DiffMain(charsA, charsB, false)
+	diff = dmp.DiffCharsToLines(diff, lineArray)
+
+	hasDelete := false
+	hasInsert := false
+	for _, op := range diff {
+		if op.Type == DiffDelete {
+			hasDelete = true
+		}
+		if op.Type == DiffInsert {
+			hasInsert = true
+		}
+	}
+	assert.True(t, hasDelete, "diff should contain DiffDelete operations")
+	assert.True(t, hasInsert, "diff should contain DiffInsert operations")
+
+	expectedDiff := []Diff{
+		{
+			Type: DiffEqual,
+			Text: strings.Join(aLines[:5], ""),
+		},
+		{
+			Type: DiffDelete,
+			Text: aLines[5],
+		},
+		{
+			Type: DiffInsert,
+			Text: strings.Join(bLines[5:12], ""),
+		},
+		{
+			Type: DiffEqual,
+			Text: aLines[6],
+		},
+		{
+			Type: DiffDelete,
+			Text: strings.Join(aLines[7:9], ""),
+		},
+		{
+			Type: DiffInsert,
+			Text: strings.Join(bLines[13:15], ""),
+		},
+		{
+			Type: DiffEqual,
+			Text: strings.Join(aLines[9:], ""),
+		},
+	}
+	assert.Equal(t, expectedDiff, diff)
+
+	rebuilt := diffRebuildTexts(diff)
+	assert.Equal(t, a, rebuilt[0])
+	assert.Equal(t, b, rebuilt[1])
+
+	// Verify using DiffLinesToRunes + DiffMainRunes + DiffCharsToLines
+	runesA, runesB, lineArrayRunes := dmp.DiffLinesToRunes(a, b)
+	diffRunes := dmp.DiffMainRunes(runesA, runesB, false)
+	diffRunes = dmp.DiffCharsToLines(diffRunes, lineArrayRunes)
+	assert.Equal(t, expectedDiff, diffRunes)
+}
+
+func TestDiffLinesRuneBoundaryOver65536(t *testing.T) {
+	n := 70000
+	var aLines, bLines []string
+	for i := 1; i <= n; i++ {
+		line := fmt.Sprintf("line %d\n", i)
+		aLines = append(aLines, line)
+		if i == 1000 || i == 56000 || i == 66000 {
+			bLines = append(bLines, fmt.Sprintf("modified line %d\n", i))
+		} else if i != 2000 && i != 57000 && i != 67000 {
+			bLines = append(bLines, line)
+		}
+	}
+	bLines = append(bLines, "extra line at end\n")
+
+	a := strings.Join(aLines, "")
+	b := strings.Join(bLines, "")
+
+	dmp := New()
+
+	// Test DiffLinesToChars pipeline
+	charsA, charsB, lineArray := dmp.DiffLinesToChars(a, b)
+	diff := dmp.DiffMain(charsA, charsB, false)
+	diff = dmp.DiffCharsToLines(diff, lineArray)
+
+	hasDelete := false
+	hasInsert := false
+	for _, op := range diff {
+		if op.Type == DiffDelete {
+			hasDelete = true
+		}
+		if op.Type == DiffInsert {
+			hasInsert = true
+		}
+	}
+	assert.True(t, hasDelete, "diff should contain DiffDelete operations across 65536 boundary")
+	assert.True(t, hasInsert, "diff should contain DiffInsert operations across 65536 boundary")
+
+	rebuilt := diffRebuildTexts(diff)
+	assert.Equal(t, a, rebuilt[0])
+	assert.Equal(t, b, rebuilt[1])
+
+	// Test DiffLinesToRunes pipeline
+	runesA, runesB, lineArrayR := dmp.DiffLinesToRunes(a, b)
+	diffR := dmp.DiffMainRunes(runesA, runesB, false)
+	diffR = dmp.DiffCharsToLines(diffR, lineArrayR)
+
+	rebuiltR := diffRebuildTexts(diffR)
+	assert.Equal(t, a, rebuiltR[0])
+	assert.Equal(t, b, rebuiltR[1])
+
+	// Test line index conversion round-trip for 70000 lines
+	var charList []index
+	for x := 1; x <= n; x++ {
+		charList = append(charList, index(x))
+	}
+	chars := indexesToString(charList)
+	lineList := append([]string{""}, aLines...)
+	rehydrated := dmp.DiffCharsToLines([]Diff{{DiffDelete, chars}}, lineList)
+	assert.Equal(t, 1, len(rehydrated))
+	assert.Equal(t, DiffDelete, rehydrated[0].Type)
+	assert.Equal(t, a, rehydrated[0].Text)
+}
+
+func TestDiffLinesEmptyStrings(t *testing.T) {
+	dmp := New()
+
+	type testCase struct {
+		text1    string
+		text2    string
+		expected []Diff
+	}
+
+	cases := []testCase{
+		{
+			text1:    "",
+			text2:    "",
+			expected: []Diff{},
+		},
+		{
+			text1: "",
+			text2: "first line\nsecond line\n",
+			expected: []Diff{
+				{DiffInsert, "first line\nsecond line\n"},
+			},
+		},
+		{
+			text1: "first line\nsecond line\n",
+			text2: "",
+			expected: []Diff{
+				{DiffDelete, "first line\nsecond line\n"},
+			},
+		},
+		{
+			text1: "",
+			text2: "single line without newline",
+			expected: []Diff{
+				{DiffInsert, "single line without newline"},
+			},
+		},
+		{
+			text1: "single line without newline",
+			text2: "",
+			expected: []Diff{
+				{DiffDelete, "single line without newline"},
+			},
+		},
+	}
+
+	for i, tc := range cases {
+		charsA, charsB, lineArray := dmp.DiffLinesToChars(tc.text1, tc.text2)
+		diff := dmp.DiffMain(charsA, charsB, false)
+		diff = dmp.DiffCharsToLines(diff, lineArray)
+		assert.Equal(t, tc.expected, diff, fmt.Sprintf("case %d DiffLinesToChars", i))
+
+		rebuilt := diffRebuildTexts(diff)
+		assert.Equal(t, tc.text1, rebuilt[0], fmt.Sprintf("case %d rebuilt[0]", i))
+		assert.Equal(t, tc.text2, rebuilt[1], fmt.Sprintf("case %d rebuilt[1]", i))
+
+		runesA, runesB, lineArrayR := dmp.DiffLinesToRunes(tc.text1, tc.text2)
+		diffR := dmp.DiffMainRunes(runesA, runesB, false)
+		diffR = dmp.DiffCharsToLines(diffR, lineArrayR)
+		assert.Equal(t, tc.expected, diffR, fmt.Sprintf("case %d DiffLinesToRunes", i))
+	}
+}
+
+func TestDiffLinesMultilineChanges(t *testing.T) {
+	dmp := New()
+
+	var origLines, modLines []string
+	for i := 1; i <= 60; i++ {
+		origLines = append(origLines, fmt.Sprintf("orig line %d\n", i))
+	}
+	// Prefix of 10 lines unchanged
+	modLines = append(modLines, origLines[:10]...)
+	// Middle 40 lines replaced with 20 different lines
+	for i := 1; i <= 20; i++ {
+		modLines = append(modLines, fmt.Sprintf("replacement line %d\n", i))
+	}
+	// Suffix of 10 lines unchanged
+	modLines = append(modLines, origLines[50:]...)
+
+	text1 := strings.Join(origLines, "")
+	text2 := strings.Join(modLines, "")
+
+	charsA, charsB, lineArray := dmp.DiffLinesToChars(text1, text2)
+	diff := dmp.DiffMain(charsA, charsB, false)
+	diff = dmp.DiffCharsToLines(diff, lineArray)
+
+	hasDelete := false
+	hasInsert := false
+	for _, op := range diff {
+		if op.Type == DiffDelete {
+			hasDelete = true
+		}
+		if op.Type == DiffInsert {
+			hasInsert = true
+		}
+	}
+	assert.True(t, hasDelete, "multiline change should contain DiffDelete")
+	assert.True(t, hasInsert, "multiline change should contain DiffInsert")
+
+	rebuilt := diffRebuildTexts(diff)
+	assert.Equal(t, text1, rebuilt[0])
+	assert.Equal(t, text2, rebuilt[1])
+
+	// Trailing newline difference
+	noNL := "line 1\nline 2\nline 3"
+	withNL := "line 1\nline 2\nline 3\n"
+
+	c1, c2, lArr := dmp.DiffLinesToChars(noNL, withNL)
+	d := dmp.DiffCharsToLines(dmp.DiffMain(c1, c2, false), lArr)
+	rb := diffRebuildTexts(d)
+	assert.Equal(t, noNL, rb[0])
+	assert.Equal(t, withNL, rb[1])
+
+	c1, c2, lArr = dmp.DiffLinesToChars(withNL, noNL)
+	d = dmp.DiffCharsToLines(dmp.DiffMain(c1, c2, false), lArr)
+	rb = diffRebuildTexts(d)
+	assert.Equal(t, withNL, rb[0])
+	assert.Equal(t, noNL, rb[1])
+}
+
+func TestDiffLinesInterleavedDeletionsAndAdditions(t *testing.T) {
+	dmp := New()
+
+	aLines := []string{
+		"header\n",
+		"old row 1\n",
+		"separator 1\n",
+		"old row 2\n",
+		"separator 2\n",
+		"old row 3\n",
+		"footer\n",
+	}
+
+	bLines := []string{
+		"header\n",
+		"new row 1\n",
+		"separator 1\n",
+		"separator 2\n",
+		"new row 2.5\n",
+		"footer\n",
+	}
+
+	text1 := strings.Join(aLines, "")
+	text2 := strings.Join(bLines, "")
+
+	charsA, charsB, lineArray := dmp.DiffLinesToChars(text1, text2)
+	diff := dmp.DiffMain(charsA, charsB, false)
+	diff = dmp.DiffCharsToLines(diff, lineArray)
+
+	hasDelete := false
+	hasInsert := false
+	for _, op := range diff {
+		if op.Type == DiffDelete {
+			hasDelete = true
+		}
+		if op.Type == DiffInsert {
+			hasInsert = true
+		}
+	}
+	assert.True(t, hasDelete, "interleaved diff should contain DiffDelete")
+	assert.True(t, hasInsert, "interleaved diff should contain DiffInsert")
+
+	rebuilt := diffRebuildTexts(diff)
+	assert.Equal(t, text1, rebuilt[0])
+	assert.Equal(t, text2, rebuilt[1])
+}
+
 func BenchmarkDiffMain(bench *testing.B) {
 	s1 := "`Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe:\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.\n"
 	s2 := "I am the very model of a modern major general,\nI've information vegetable, animal, and mineral,\nI know the kings of England, and I quote the fights historical,\nFrom Marathon to Waterloo, in order categorical.\n"

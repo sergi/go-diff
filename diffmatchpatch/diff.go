@@ -396,22 +396,22 @@ func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string
 
 // DiffLinesToRunes splits two texts into a list of runes.
 func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
-	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
-	return []rune(chars1), []rune(chars2), lineArray
+	chars1, chars2, lineArray := dmp.diffLinesToIndexes(text1, text2)
+	return indexesToRunes(chars1), indexesToRunes(chars2), lineArray
 }
 
 // DiffCharsToLines rehydrates the text in a diff from a string of line hashes to real lines of text.
 func (dmp *DiffMatchPatch) DiffCharsToLines(diffs []Diff, lineArray []string) []Diff {
 	hydrated := make([]Diff, 0, len(diffs))
 	for _, aDiff := range diffs {
-		runes := []rune(aDiff.Text)
-		text := make([]string, len(runes))
-
-		for i, r := range runes {
-			text[i] = lineArray[runeToInt(r)]
+		var sb strings.Builder
+		for _, i := range stringToIndex(aDiff.Text) {
+			if int(i) < len(lineArray) {
+				sb.WriteString(lineArray[i])
+			}
 		}
 
-		aDiff.Text = strings.Join(text, "")
+		aDiff.Text = sb.String()
 		hydrated = append(hydrated, aDiff)
 	}
 	return hydrated
@@ -1320,14 +1320,20 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 
 // diffLinesToStrings splits two texts into a list of strings. Each string represents one line.
 func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, string, []string) {
+	strIndexArray1, strIndexArray2, lineArray := dmp.diffLinesToIndexes(text1, text2)
+	return intArrayToString(strIndexArray1), intArrayToString(strIndexArray2), lineArray
+}
+
+// diffLinesToIndexes splits two texts into slices of line indexes.
+func (dmp *DiffMatchPatch) diffLinesToIndexes(text1, text2 string) ([]index, []index, []string) {
 	lineArray := []string{""} // e.g. lineArray[4] == 'Hello\n'
 
 	lineHash := make(map[string]int)
-	//Each string has the index of lineArray which it points to
+	// Each string has the index of lineArray which it points to
 	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray, lineHash)
 	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray, lineHash)
 
-	return intArrayToString(strIndexArray1), intArrayToString(strIndexArray2), lineArray
+	return strIndexArray1, strIndexArray2, lineArray
 }
 
 // diffLinesToStringsMunge splits a text into an array of strings, and reduces the texts to a []index.

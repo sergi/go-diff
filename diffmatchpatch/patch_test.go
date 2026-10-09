@@ -362,3 +362,49 @@ func TestPatchMakeOutOfRangePanic(t *testing.T) {
 	patches := dmp.PatchMake(text1, text2)
 	assert.Equal(t, 6, len(patches), "TestPatchMakeOutOfRangePanic")
 }
+
+func TestPatchMakeInvalidUTF8(t *testing.T) {
+	dmp := New()
+	testCases := []struct {
+		name   string
+		input1 string
+		input2 string
+	}{
+		{"single invalid byte text1 deletion", string([]byte{0xe0}), ""},
+		{"invalid byte in context", string([]byte{'a', 0xe0, 'b'}), "ab"},
+		{"multiple invalid bytes", string([]byte{0xe0, 0xe0}), "x"},
+		{"truncated multi-byte sequence", string([]byte{0xc2}), "restored"},
+		{"overlong sequence", string([]byte{0xc0, 0xaf}), "replacement"},
+		{"single invalid byte text2 insertion", "", string([]byte{0xe0})},
+		{"identical invalid bytes", string([]byte{0xe0}), string([]byte{0xe0})},
+		{"different invalid bytes", string([]byte{0xe0}), string([]byte{0xe1})},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			patches := dmp.PatchMake(tc.input1, tc.input2)
+			got := dmp.PatchToText(patches)
+
+			expectedPatches := dmp.PatchMake(string([]rune(tc.input1)), string([]rune(tc.input2)))
+			want := dmp.PatchToText(expectedPatches)
+			assert.Equal(t, want, got)
+
+			// Verify direct PatchMake(text1, diffs) variant produces identical patch.
+			diffs := dmp.DiffMain(tc.input1, tc.input2, true)
+			directPatches := dmp.PatchMake(tc.input1, diffs)
+			assert.Equal(t, want, dmp.PatchToText(directPatches))
+
+			// Verify round-trip parsing and application against normalized source text.
+			normalizedInput1 := string([]rune(tc.input1))
+			normalizedInput2 := string([]rune(tc.input2))
+			parsedPatches, err := dmp.PatchFromText(got)
+			assert.Nil(t, err)
+
+			appliedText, appliedBools := dmp.PatchApply(parsedPatches, normalizedInput1)
+			assert.Equal(t, normalizedInput2, appliedText)
+			for _, applied := range appliedBools {
+				assert.True(t, applied)
+			}
+		})
+	}
+}

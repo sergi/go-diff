@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Patch represents one patch operation.
@@ -143,6 +144,12 @@ func (dmp *DiffMatchPatch) patchMake2(text1 string, diffs []Diff) []Patch {
 	patches := []Patch{}
 	if len(diffs) == 0 {
 		return patches // Get rid of the null case.
+	}
+
+	// DiffMain replaces invalid UTF-8 sequences with utf8.RuneError. Keep text1
+	// aligned with those diffs so byte offsets remain valid.
+	if !utf8.ValidString(text1) {
+		text1 = string([]rune(text1))
 	}
 
 	patch := Patch{}

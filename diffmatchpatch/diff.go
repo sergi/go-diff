@@ -169,7 +169,7 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 			{DiffInsert, string(text2)},
 		}
 		// Check to see if the problem can be split in two.
-	} else if hm := dmp.diffHalfMatch(text1, text2); hm != nil {
+	} else if hm := dmp.diffHalfMatch(text1, text2, deadline); hm != nil {
 		// A half-match was found, sort out the return data.
 		text1A := hm[0]
 		text1B := hm[1]
@@ -499,7 +499,8 @@ func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 // DiffHalfMatch checks whether the two texts share a substring which is at least half the length of the longer text. This speedup can produce non-minimal diffs.
 func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	// Unused in this code, but retained for interface compatibility.
-	runeSlices := dmp.diffHalfMatch([]rune(text1), []rune(text2))
+	// A zero deadline means the search is not time-bounded, as before.
+	runeSlices := dmp.diffHalfMatch([]rune(text1), []rune(text2), time.Time{})
 	if runeSlices == nil {
 		return nil
 	}
@@ -511,7 +512,7 @@ func (dmp *DiffMatchPatch) DiffHalfMatch(text1, text2 string) []string {
 	return result
 }
 
-func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
+func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune, deadline time.Time) [][]rune {
 	if dmp.DiffTimeout <= 0 {
 		// Don't risk returning a non-optimal diff if we have unlimited time.
 		return nil
@@ -531,10 +532,10 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	}
 
 	// First check if the second quarter is the seed for a half-match.
-	hm1 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+3)/4))
+	hm1 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+3)/4), deadline)
 
 	// Check again based on the third quarter.
-	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+1)/2))
+	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+1)/2), deadline)
 
 	hm := [][]rune{}
 	if hm1 == nil && hm2 == nil {
@@ -562,7 +563,7 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 
 // diffHalfMatchI checks if a substring of shorttext exist within longtext such that the substring is at least half the length of longtext?
 // Returns a slice containing the prefix of longtext, the suffix of longtext, the prefix of shorttext, the suffix of shorttext and the common middle, or null if there was no match.
-func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
+func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int, deadline time.Time) [][]rune {
 	var bestCommonA []rune
 	var bestCommonB []rune
 	var bestCommonLen int
@@ -574,7 +575,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 	// Start with a 1/4 length substring at position i as a seed.
 	seed := l[i : i+len(l)/4]
 
-	for j := runesIndexOf(s, seed, 0); j != -1; j = runesIndexOf(s, seed, j+1) {
+	for j := runesIndexOfDeadline(s, seed, 0, deadline); j != -1; j = runesIndexOfDeadline(s, seed, j+1, deadline) {
 		prefixLength := commonPrefixLength(l[i:], s[j:])
 		suffixLength := commonSuffixLength(l[:i], s[:j])
 
@@ -587,6 +588,11 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 			bestShorttextA = s[:j-suffixLength]
 			bestShorttextB = s[j+prefixLength:]
 		}
+	}
+
+	// Bail out if deadline is reached; the caller falls back to bisect.
+	if !deadline.IsZero() && time.Now().After(deadline) {
+		return nil
 	}
 
 	if bestCommonLen*2 < len(l) {

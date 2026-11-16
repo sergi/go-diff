@@ -4,6 +4,8 @@ on:
   push:
     branches: [master]
   pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
 
 jobs:
   linux:
@@ -36,3 +38,11 @@ jobs:
           go-version: "1.x"
       - run: go vet ./...
       - run: go test -count=1 ./...
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.x"
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

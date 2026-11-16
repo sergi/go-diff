@@ -389,12 +389,14 @@ func (dmp *DiffMatchPatch) diffBisectSplit(runes1, runes2 []rune, x, y int,
 
 // DiffLinesToChars splits two texts into a list of strings, and educes the texts to a string of hashes where each Unicode character represents one line.
 // It's slightly faster to call DiffLinesToRunes first, followed by DiffMainRunes.
+// At most 1,112,060 unique lines can be encoded across both texts; if the texts contain more unique lines, this function panics.
 func (dmp *DiffMatchPatch) DiffLinesToChars(text1, text2 string) (string, string, []string) {
 	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
 	return chars1, chars2, lineArray
 }
 
 // DiffLinesToRunes splits two texts into a list of runes.
+// At most 1,112,060 unique lines can be encoded across both texts; if the texts contain more unique lines, this function panics.
 func (dmp *DiffMatchPatch) DiffLinesToRunes(text1, text2 string) ([]rune, []rune, []string) {
 	chars1, chars2, lineArray := dmp.diffLinesToStrings(text1, text2)
 	return []rune(chars1), []rune(chars2), lineArray

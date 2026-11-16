@@ -132,3 +132,10 @@ func TestRuneToInt(t *testing.T) {
 		intToRune(UNICODE_RANGE_MAX - UNICODE_INVALID_RANGE_DELTA - 2)
 	})
 }
+
+func TestIntToRuneLimit(t *testing.T) {
+	// DiffLinesToChars and DiffLinesToRunes can encode at most 1,112,060
+	// unique lines across both texts; the line index one past that panics.
+	assert.NotPanics(t, func() { intToRune(1112060) })
+	assert.Panics(t, func() { intToRune(1112061) })
+}

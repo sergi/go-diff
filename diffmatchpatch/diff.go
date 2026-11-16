@@ -611,7 +611,7 @@ func (dmp *DiffMatchPatch) diffHalfMatchI(l, s []rune, i int) [][]rune {
 		bestLongtextB,
 		bestShorttextA,
 		bestShorttextB,
-		append(bestCommonA, bestCommonB...),
+		append(append([]rune(nil), bestCommonA...), bestCommonB...),
 	}
 }
 
@@ -1264,7 +1264,7 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 	delta := text.String()
 	if len(delta) != 0 {
 		// Strip off trailing tab character.
-		delta = delta[0 : utf8.RuneCountInString(delta)-1]
+		delta = delta[0 : len(delta)-1]
 		delta = unescaper.Replace(delta)
 	}
 	return delta
@@ -1325,7 +1325,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 	}
 
 	if i != len(runes) {
-		return nil, fmt.Errorf("Delta length (%v) is different from source text length (%v)", i, len(text1))
+		return nil, fmt.Errorf("Delta length (%v) is different from source text length (%v)", i, len(runes))
 	}
 
 	return diffs, nil

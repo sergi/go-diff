@@ -518,6 +518,18 @@ func TestDiffCleanupSemanticLossless(t *testing.T) {
 			},
 		},
 		{
+			"Multibyte common suffix shifted fully left",
+			[]Diff{
+				Diff{DiffEqual, "éa"},
+				Diff{DiffInsert, "Xéa"},
+				Diff{DiffEqual, "b"},
+			},
+			[]Diff{
+				Diff{DiffInsert, "éaX"},
+				Diff{DiffEqual, "éab"},
+			},
+		},
+		{
 			"Line boundaries",
 			[]Diff{
 				Diff{DiffEqual, "AAA\r\nBBB"},

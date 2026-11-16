@@ -456,6 +456,19 @@ func commonSuffixLength(text1, text2 []rune) int {
 	}
 }
 
+// commonSuffixBytes returns the length in bytes of the common suffix of two strings, never splitting a rune.
+func commonSuffixBytes(text1, text2 string) int {
+	n := 0
+	for n < len(text1) && n < len(text2) {
+		_, size := utf8.DecodeLastRuneInString(text1[:len(text1)-n])
+		if size > len(text2)-n || text1[len(text1)-n-size:len(text1)-n] != text2[len(text2)-n-size:len(text2)-n] {
+			break
+		}
+		n += size
+	}
+	return n
+}
+
 // DiffCommonOverlap determines if the suffix of one string is the prefix of another.
 func (dmp *DiffMatchPatch) DiffCommonOverlap(text1 string, text2 string) int {
 	// Cache the text lengths to prevent multiple calls.
@@ -785,7 +798,7 @@ func (dmp *DiffMatchPatch) DiffCleanupSemanticLossless(diffs []Diff) []Diff {
 			equality2 := diffs[pointer+1].Text
 
 			// First, shift the edit as far left as possible.
-			commonOffset := dmp.DiffCommonSuffix(equality1, edit)
+			commonOffset := commonSuffixBytes(equality1, edit)
 			if commonOffset > 0 {
 				commonString := edit[len(edit)-commonOffset:]
 				equality1 = equality1[0 : len(equality1)-commonOffset]

@@ -267,6 +267,27 @@ func TestDiffHalfMatch(t *testing.T) {
 	}
 }
 
+func TestDiffMainHalfMatchHonorsDeadline(t *testing.T) {
+	n := 100000
+	k := 25000
+
+	for name, tc := range map[string][2]string{
+		"repeated run": {"b" + strings.Repeat("a", n) + "c", "d" + strings.Repeat("a", n) + "e"},
+		"seed search":  {"x" + strings.Repeat("a", 4*k-2) + "y", "d" + strings.Repeat("a", 2*k-2) + "b" + strings.Repeat("a", 2*k-1) + "e"},
+	} {
+		dmp := New()
+		dmp.DiffTimeout = 100 * time.Millisecond
+
+		start := time.Now()
+		diffs := dmp.DiffMain(tc[0], tc[1], false)
+		elapsed := time.Since(start)
+
+		assert.True(t, elapsed < 2*time.Second, fmt.Sprintf("%s: DiffMain took %v with DiffTimeout %v", name, elapsed, dmp.DiffTimeout))
+		assert.Equal(t, tc[0], dmp.DiffText1(diffs), name)
+		assert.Equal(t, tc[1], dmp.DiffText2(diffs), name)
+	}
+}
+
 func BenchmarkDiffHalfMatch(b *testing.B) {
 	s1, s2 := speedtestTexts()
 

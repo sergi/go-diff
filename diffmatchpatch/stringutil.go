@@ -11,6 +11,7 @@ package diffmatchpatch
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -88,6 +89,23 @@ func runesIndex(r1, r2 []rune) int {
 	for i := 0; i <= last; i++ {
 		if runesEqual(r1[i:i+len(r2)], r2) {
 			return i
+		}
+	}
+	return -1
+}
+
+// runesIndexOfDeadline is like runesIndexOf, but gives up and returns -1 once a non-zero deadline has passed.
+func runesIndexOfDeadline(target, pattern []rune, i int, deadline time.Time) int {
+	if i < 0 {
+		i = 0
+	}
+	last := len(target) - len(pattern)
+	for j := i; j <= last; j++ {
+		if !deadline.IsZero() && (j-i)%1024 == 0 && time.Now().After(deadline) {
+			return -1
+		}
+		if runesEqual(target[j:j+len(pattern)], pattern) {
+			return j
 		}
 	}
 	return -1

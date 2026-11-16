@@ -67,6 +67,7 @@ func TestPatchFromText(t *testing.T) {
 		{"@@ -0,0 +1,3 @@\n+abc\n", ""},
 		{"@@ _0,0 +0,0 @@\n+abc\n", "Invalid patch string: @@ _0,0 +0,0 @@"},
 		{"Bad\nPatch\n", "Invalid patch string"},
+		{"@@ -1 +1 @@\n-%zz\n", "invalid URL escape"},
 	} {
 		patches, err := dmp.PatchFromText(tc.Patch)
 		if tc.ErrorMessagePrefix == "" {

@@ -530,7 +530,11 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 
 			line = text[textPointer][1:]
 			line = strings.Replace(line, "+", "%2b", -1)
-			line, _ = url.QueryUnescape(line)
+			var err error
+			line, err = url.QueryUnescape(line)
+			if err != nil {
+				return patches, err
+			}
 			if sign == '-' {
 				// Deletion.
 				patch.diffs = append(patch.diffs, Diff{DiffDelete, line})

@@ -507,27 +507,46 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 		patch = Patch{}
 		m := patchHeader.FindStringSubmatch(text[textPointer])
 
-		patch.Start1, _ = strconv.Atoi(m[1])
+		// Coordinates are parsed as 32-bit integers, like the reference Java
+		// and C# implementations. Out-of-range values are invalid rather
+		// than clamped: accepting them made hostile patches apply at wrong
+		// locations and leak internal padding into the result.
+		start1, err := strconv.ParseInt(m[1], 10, 32)
+		if err != nil {
+			return patches, errors.New("Invalid patch string: " + text[textPointer])
+		}
+		patch.Start1 = int(start1)
 		if len(m[2]) == 0 {
 			patch.Start1--
 			patch.Length1 = 1
 		} else if m[2] == "0" {
 			patch.Length1 = 0
 		} else {
+			length1, err := strconv.ParseInt(m[2], 10, 32)
+			if err != nil {
+				return patches, errors.New("Invalid patch string: " + text[textPointer])
+			}
 			patch.Start1--
-			patch.Length1, _ = strconv.Atoi(m[2])
+			patch.Length1 = int(length1)
 		}
 
-		patch.Start2, _ = strconv.Atoi(m[3])
-
+		start2, err := strconv.ParseInt(m[3], 10, 32)
+		if err != nil {
+			return patches, errors.New("Invalid patch string: " + text[textPointer])
+		}
+		patch.Start2 = int(start2)
 		if len(m[4]) == 0 {
 			patch.Start2--
 			patch.Length2 = 1
 		} else if m[4] == "0" {
 			patch.Length2 = 0
 		} else {
+			length2, err := strconv.ParseInt(m[4], 10, 32)
+			if err != nil {
+				return patches, errors.New("Invalid patch string: " + text[textPointer])
+			}
 			patch.Start2--
-			patch.Length2, _ = strconv.Atoi(m[4])
+			patch.Length2 = int(length2)
 		}
 		textPointer++
 

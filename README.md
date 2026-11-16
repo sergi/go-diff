@@ -41,7 +41,7 @@ func main() {
 
 ## Status
 
-go-diff is in maintenance mode: bug fixes are made and released, and new features are not planned.
+go-diff is a finished, actively maintained library. Its feature set is complete: bug fixes are made and released promptly, and new features are not planned.
 
 ## Found a bug or are you missing a feature in go-diff?
 

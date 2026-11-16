@@ -1277,7 +1277,11 @@ func TestDiffBisect(t *testing.T) {
 		},
 		{
 			Name: "Timeout",
-			Time: time.Now().Add(time.Nanosecond),
+			// An unambiguously expired deadline. A deadline one
+			// nanosecond ahead of setup was unreliable: coarse clocks
+			// (Windows) could read the same value back, miss the
+			// expiry, and run the bisect to completion.
+			Time: time.Now().Add(-time.Second),
 
 			Expected: []Diff{
 				{DiffDelete, "cat"},

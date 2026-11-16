@@ -39,6 +39,8 @@ func main() {
 }
 ```
 
+More examples, including line-level diffing and the full patch cycle, are part of the [package documentation](https://pkg.go.dev/github.com/sergi/go-diff/diffmatchpatch).
+
 ## Status
 
 go-diff is a finished, actively maintained library. Its feature set is complete: bug fixes are made and released promptly, and new features are not planned.

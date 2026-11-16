@@ -98,9 +98,9 @@ func intArrayToString(ns []index) string {
 		return ""
 	}
 
-	b := []rune{}
-	for _, n := range ns {
-		b = append(b, intToRune(uint32(n)))
+	b := make([]rune, len(ns))
+	for i, n := range ns {
+		b[i] = intToRune(uint32(n))
 	}
 	return string(b)
 }

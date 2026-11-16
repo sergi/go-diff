@@ -1337,21 +1337,24 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 
 // diffLinesToStrings splits two texts into a list of strings. Each string represents one line.
 func (dmp *DiffMatchPatch) diffLinesToStrings(text1, text2 string) (string, string, []string) {
-	lineArray := []string{""} // e.g. lineArray[4] == 'Hello\n'
+	n1 := strings.Count(text1, "\n") + 1
+	n2 := strings.Count(text2, "\n") + 1
 
-	lineHash := make(map[string]int)
+	lineArray := make([]string, 1, n1+n2+1) // e.g. lineArray[4] == 'Hello\n'
+
+	lineHash := make(map[string]int, n1+n2)
 	//Each string has the index of lineArray which it points to
-	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray, lineHash)
-	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray, lineHash)
+	strIndexArray1 := dmp.diffLinesToStringsMunge(text1, &lineArray, lineHash, n1)
+	strIndexArray2 := dmp.diffLinesToStringsMunge(text2, &lineArray, lineHash, n2)
 
 	return intArrayToString(strIndexArray1), intArrayToString(strIndexArray2), lineArray
 }
 
 // diffLinesToStringsMunge splits a text into an array of strings, and reduces the texts to a []index.
-func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string, lineHash map[string]int) []index {
+func (dmp *DiffMatchPatch) diffLinesToStringsMunge(text string, lineArray *[]string, lineHash map[string]int, lineCount int) []index {
 	lineStart := 0
 	lineEnd := -1
-	strs := []index{}
+	strs := make([]index, 0, lineCount)
 
 	for lineEnd < len(text)-1 {
 		lineEnd = indexOf(text, "\n", lineStart)

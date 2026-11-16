@@ -390,3 +390,53 @@ func TestPatchMakeInvalidUTF8(t *testing.T) {
 	assert.Equal(t, "", actual)
 	assert.Equal(t, []bool{true}, applied)
 }
+
+func BenchmarkPatchFromText(b *testing.B) {
+	s1, s2 := speedtestTexts()
+
+	dmp := New()
+	text := dmp.PatchToText(dmp.PatchMake(s1, s2))
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = dmp.PatchFromText(text)
+	}
+}
+
+func BenchmarkPatchApply(b *testing.B) {
+	s1, s2 := speedtestTexts()
+
+	dmp := New()
+	patches := dmp.PatchMake(s1, s2)
+	// Shift the text so patches miss their expected location and fall back to fuzzy matching.
+	text := strings.Repeat("x", 16) + s1
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		dmp.PatchApply(patches, text)
+	}
+}
+
+func BenchmarkPatchSplitMax(b *testing.B) {
+	s1, _ := speedtestTexts()
+
+	// Deleting every other character yields one big patch with many small diffs that must be split.
+	var diffs []Diff
+	for i := 0; i+1 < len(s1); i += 2 {
+		diffs = append(diffs, Diff{DiffEqual, s1[i : i+1]}, Diff{DiffDelete, s1[i+1 : i+2]})
+	}
+
+	dmp := New()
+	patches := dmp.PatchMake(s1, diffs)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		p := dmp.PatchDeepCopy(patches)
+		b.StartTimer()
+		dmp.PatchSplitMax(p)
+	}
+}

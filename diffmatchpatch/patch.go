@@ -450,13 +450,8 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 			precontext = dmp.DiffText2(patch.diffs)
 			precontext = precontext[max(0, len(precontext)-dmp.PatchMargin):]
 
-			postcontext := ""
 			// Append the end context for this patch.
-			if len(dmp.DiffText1(bigpatch.diffs)) > dmp.PatchMargin {
-				postcontext = dmp.DiffText1(bigpatch.diffs)[:dmp.PatchMargin]
-			} else {
-				postcontext = dmp.DiffText1(bigpatch.diffs)
-			}
+			postcontext := diffText1Prefix(bigpatch.diffs, dmp.PatchMargin)
 
 			if len(postcontext) != 0 {
 				patch.Length1 += len(postcontext)
@@ -476,6 +471,25 @@ func (dmp *DiffMatchPatch) PatchSplitMax(patches []Patch) []Patch {
 	return patches
 }
 
+// diffText1Prefix returns the first n bytes of DiffText1(diffs) without building the whole text.
+func diffText1Prefix(diffs []Diff, n int) string {
+	var text strings.Builder
+	for _, aDiff := range diffs {
+		if aDiff.Type == DiffInsert {
+			continue
+		}
+		remaining := n - text.Len()
+		if remaining <= 0 {
+			break
+		}
+		if text.Len() == 0 && len(aDiff.Text) >= n {
+			return aDiff.Text[:n]
+		}
+		_, _ = text.WriteString(aDiff.Text[:min(len(aDiff.Text), remaining)])
+	}
+	return text.String()
+}
+
 // PatchToText takes a list of patches and returns a textual representation.
 func (dmp *DiffMatchPatch) PatchToText(patches []Patch) string {
 	var text bytes.Buffer
@@ -485,6 +499,8 @@ func (dmp *DiffMatchPatch) PatchToText(patches []Patch) string {
 	return text.String()
 }
 
+var patchHeaderRegex = regexp.MustCompile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@$")
+
 // PatchFromText parses a textual representation of patches and returns a List of Patch objects.
 func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	patches := []Patch{}
@@ -493,19 +509,17 @@ func (dmp *DiffMatchPatch) PatchFromText(textline string) ([]Patch, error) {
 	}
 	text := strings.Split(textline, "\n")
 	textPointer := 0
-	patchHeader := regexp.MustCompile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@$")
 
 	var patch Patch
 	var sign uint8
 	var line string
 	for textPointer < len(text) {
-
-		if !patchHeader.MatchString(text[textPointer]) {
+		m := patchHeaderRegex.FindStringSubmatch(text[textPointer])
+		if m == nil {
 			return patches, errors.New("Invalid patch string: " + text[textPointer])
 		}
 
 		patch = Patch{}
-		m := patchHeader.FindStringSubmatch(text[textPointer])
 
 		// Coordinates are parsed as 32-bit integers, like the reference Java
 		// and C# implementations. Out-of-range values are invalid rather

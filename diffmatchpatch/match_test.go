@@ -172,3 +172,17 @@ func TestMatchMain(t *testing.T) {
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))
 	}
 }
+
+func BenchmarkMatchBitap(b *testing.B) {
+	s1, _ := speedtestTexts()
+	// A pattern near MatchMaxBits with a few typos, searched far from its real location.
+	pattern := "Twas brilig, and the slithy tove"
+
+	dmp := New()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		dmp.MatchBitap(s1, pattern, len(s1)/2)
+	}
+}

@@ -28,11 +28,11 @@ type Operation int8
 //go:generate stringer -type=Operation -trimprefix=Diff
 
 const (
-	// DiffDelete item represents a delete diff.
+	// DiffDelete marks a diff whose text is present in the first text only; it has to be deleted to transform the first text into the second.
 	DiffDelete Operation = -1
-	// DiffInsert item represents an insert diff.
+	// DiffInsert marks a diff whose text is present in the second text only; it has to be inserted to transform the first text into the second.
 	DiffInsert Operation = 1
-	// DiffEqual item represents an equal diff.
+	// DiffEqual marks a diff whose text is present in both texts.
 	DiffEqual Operation = 0
 )
 
@@ -80,12 +80,14 @@ func splice(slice []Diff, index int, amount int, elements ...Diff) []Diff {
 }
 
 // DiffMain finds the differences between two texts.
+// The checklines flag is a speedup: if false, don't run a line-level diff first to identify the changed areas; if true, run a faster, slightly less optimal diff.
 // If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 func (dmp *DiffMatchPatch) DiffMain(text1, text2 string, checklines bool) []Diff {
 	return dmp.DiffMainRunes([]rune(text1), []rune(text2), checklines)
 }
 
 // DiffMainRunes finds the differences between two rune sequences.
+// The checklines flag is a speedup: if false, don't run a line-level diff first to identify the changed areas; if true, run a faster, slightly less optimal diff.
 // If an invalid UTF-8 sequence is encountered, it will be replaced by the Unicode replacement character.
 func (dmp *DiffMatchPatch) DiffMainRunes(text1, text2 []rune, checklines bool) []Diff {
 	var deadline time.Time

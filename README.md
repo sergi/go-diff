@@ -1,4 +1,4 @@
-# go-diff [![GoDoc](https://godoc.org/github.com/sergi/go-diff?status.png)](https://godoc.org/github.com/sergi/go-diff/diffmatchpatch) [![Build Status](https://travis-ci.org/sergi/go-diff.svg?branch=master)](https://travis-ci.org/sergi/go-diff) [![Coverage Status](https://coveralls.io/repos/sergi/go-diff/badge.png?branch=master)](https://coveralls.io/r/sergi/go-diff?branch=master)
+# go-diff [![Build Status](https://github.com/sergi/go-diff/actions/workflows/test.yml/badge.svg)](https://github.com/sergi/go-diff/actions/workflows/test.yml)
 
 go-diff offers algorithms to perform operations required for synchronizing plain text:
 
@@ -9,7 +9,7 @@ go-diff offers algorithms to perform operations required for synchronizing plain
 ## Installation
 
 ```bash
-go get -u github.com/sergi/go-diff/...
+go get github.com/sergi/go-diff/diffmatchpatch
 ```
 
 ## Usage
@@ -39,6 +39,10 @@ func main() {
 }
 ```
 
+## Status
+
+go-diff is in maintenance mode: bug fixes are made and released, and new features are not planned.
+
 ## Found a bug or are you missing a feature in go-diff?
 
 Please make sure to have the latest version of go-diff. If the problem still persists go through the [open issues](https://github.com/sergi/go-diff/issues) in the tracker first. If you cannot find your request just open up a [new issue](https://github.com/sergi/go-diff/issues/new).
@@ -58,7 +62,7 @@ After your contribution passes these commands, [create a PR](https://help.github
 
 ## Origins
 
-go-diff is a Go language port of Neil Fraser's google-diff-match-patch code. His original code is available at [http://code.google.com/p/google-diff-match-patch/](http://code.google.com/p/google-diff-match-patch/).
+go-diff is a Go language port of Neil Fraser's google-diff-match-patch code. His original code is available at [https://github.com/google/diff-match-patch](https://github.com/google/diff-match-patch).
 
 ## Copyright and License
 

@@ -748,7 +748,7 @@ func diffCleanupSemanticScore(one, two string) int {
 	lineBreak1 := whitespace1 && linebreakRegex.MatchString(char1)
 	lineBreak2 := whitespace2 && linebreakRegex.MatchString(char2)
 	blankLine1 := lineBreak1 && blanklineEndRegex.MatchString(one)
-	blankLine2 := lineBreak2 && blanklineEndRegex.MatchString(two)
+	blankLine2 := lineBreak2 && blanklineStartRegex.MatchString(two)
 
 	if blankLine1 || blankLine2 {
 		// Five points for blank lines.

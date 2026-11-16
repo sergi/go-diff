@@ -475,6 +475,18 @@ func TestDiffCleanupMerge(t *testing.T) {
 	}
 }
 
+func TestDiffCleanupSemanticScore(t *testing.T) {
+	assert.Equal(t, 6, diffCleanupSemanticScore("", "AAA"))
+	assert.Equal(t, 5, diffCleanupSemanticScore("AAA\n\n", "BBB"))
+	assert.Equal(t, 5, diffCleanupSemanticScore("AAA", "\n\nBBB"))
+	assert.Equal(t, 5, diffCleanupSemanticScore("AAA", "\r\n\r\nBBB"))
+	assert.Equal(t, 4, diffCleanupSemanticScore("AAA\n", "BBB"))
+	assert.Equal(t, 3, diffCleanupSemanticScore("AAA.", " BBB"))
+	assert.Equal(t, 2, diffCleanupSemanticScore("AAA", " BBB"))
+	assert.Equal(t, 1, diffCleanupSemanticScore("AAA", "-BBB"))
+	assert.Equal(t, 0, diffCleanupSemanticScore("AAA", "BBB"))
+}
+
 func TestDiffCleanupSemanticLossless(t *testing.T) {
 	type TestCase struct {
 		Name string

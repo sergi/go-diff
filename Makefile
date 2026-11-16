@@ -1,8 +1,6 @@
-.PHONY: all clean clean-coverage install install-dependencies install-tools lint test test-verbose test-with-coverage
+.PHONY: all lint test test-verbose clean
 
 export ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
-export PKG := github.com/sergi/go-diff
-export ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 $(eval $(ARGS):;@:) # turn arguments into do-nothing targets
 export ARGS
@@ -10,35 +8,21 @@ export ARGS
 ifdef ARGS
 	PKG_TEST := $(ARGS)
 else
-	PKG_TEST := $(PKG)/...
+	PKG_TEST := github.com/sergi/go-diff/...
 endif
 
-all: install-tools install-dependencies install lint test
+all: lint test
 
-clean:
-	go clean -i $(PKG)/...
-	go clean -i -race $(PKG)/...
-clean-coverage:
-	find $(ROOT_DIR) | grep .coverprofile | xargs rm
-install:
-	go install -v $(PKG)/...
-install-dependencies:
-	go get -t -v $(PKG)/...
-	go build -v $(PKG)/...
-install-tools:
-	# Install linting tools
-	go get -u -v golang.org/x/lint/...
-	go get -u -v github.com/kisielk/errcheck/...
-
-	# Install code coverage tools
-	go get -u -v github.com/onsi/ginkgo/ginkgo/...
-	go get -u -v github.com/modocache/gover/...
-	go get -u -v github.com/mattn/goveralls/...
 lint:
-	$(ROOT_DIR)/scripts/lint.sh
+	@out=$$(gofmt -l .); if [ -n "$$out" ]; then echo "$$out"; exit 1; fi
+	go vet ./...
+
 test:
 	go test -race -test.timeout 120s $(PKG_TEST)
+
 test-verbose:
 	go test -race -test.timeout 120s -v $(PKG_TEST)
-test-with-coverage:
-	ginkgo -r -cover -race -skipPackage="testdata"
+
+clean:
+	go clean ./...
+	go clean -testcache

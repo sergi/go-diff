@@ -3,6 +3,8 @@ package diffmatchpatch
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // alignRuneStart should back any byte index inside a multi-byte UTF-8
@@ -32,6 +34,89 @@ func TestAlignRuneStart(t *testing.T) {
 			t.Errorf("alignRuneStart(%q, %d) = %d, want %d  (%s)", s, c.in, got, c.want, c.desc)
 		}
 	}
+}
+
+// alignRuneEnd should move any byte index inside a multi-byte UTF-8
+// character forward to the start of the next character.
+func TestAlignRuneEnd(t *testing.T) {
+	s := "abc中文def"
+	cases := []struct {
+		in, want int
+		desc     string
+	}{
+		{0, 0, "0 unchanged"},
+		{3, 3, "start of 中 aligned"},
+		{4, 6, "middle of 中 moves to start of 文"},
+		{5, 6, "end-middle of 中 moves to start of 文"},
+		{7, 9, "middle of 文 moves to start of d"},
+		{12, 12, "end-of-string"},
+		{-1, -1, "negative unchanged"},
+		{999, 999, "past end unchanged"},
+	}
+	for _, c := range cases {
+		got := alignRuneEnd(s, c.in)
+		if got != c.want {
+			t.Errorf("alignRuneEnd(%q, %d) = %d, want %d  (%s)", s, c.in, got, c.want, c.desc)
+		}
+	}
+}
+
+// A replaced text over 32 bytes takes the long-delete path even when it is
+// only 20 characters. text2 must keep its last rune there, or the trailing
+// 日 is not deleted while the patch still reports success.
+func TestPatchApplyMultibyteMonsterDelete(t *testing.T) {
+	a := "a日aaaaéaaaabaééaé日a日"
+	b := "a日aaabaaa日aaaaaaaaéaaaé"
+	dmp := New()
+	got, applied := dmp.PatchApply(dmp.PatchMake(a, b), a)
+	assert.Equal(t, []bool{true}, applied)
+	assert.Equal(t, b, got)
+}
+
+// The end context added by PatchMake must keep a whole rune when the margin
+// ends inside one. A shortened context made PatchApply pad the patch as if it
+// touched the end of the text, so the insertion landed one rune early.
+func TestPatchMakeApplyContextEndsInsideRune(t *testing.T) {
+	a := " aba— 🚀"
+	b := " a aba—a 🚀"
+	dmp := New()
+	got, applied := dmp.PatchApply(dmp.PatchMake(a, b), a)
+	assert.Equal(t, []bool{true}, applied)
+	assert.Equal(t, b, got)
+}
+
+// An insertion that lands in the padding must not leave part of a rune behind
+// when the padding is stripped.
+func TestPatchApplyStripPaddingKeepsValidUTF8(t *testing.T) {
+	dmp := New()
+	patches := dmp.PatchMake("日bxa a", "b xa —")
+	got, _ := dmp.PatchApply(patches, "日bxa")
+	assert.True(t, isValidUTF8(got), "got %q", got)
+}
+
+// When a patch is applied to a text that has changed, earlier edits can leave
+// the text shorter than the indices computed for later ones. PatchApply must
+// clamp those indices instead of panicking.
+func TestPatchApplyChangedTextNoPanic(t *testing.T) {
+	dmp := New()
+	for _, c := range []struct{ a, b, target string }{
+		{" a—ab中文—中文中文", "", " a—ab中文—"},
+		{"日日 日ééa中文", "a中文 x", "日日a日é"},
+	} {
+		assert.NotPanics(t, func() {
+			got, _ := dmp.PatchApply(dmp.PatchMake(c.a, c.b), c.target)
+			assert.True(t, isValidUTF8(got), "got %q", got)
+		}, "a=%q b=%q target=%q", c.a, c.b, c.target)
+	}
+}
+
+// The end context of a split patch must not end inside a multi-byte rune.
+func TestDiffText1PrefixRuneAligned(t *testing.T) {
+	diffs := []Diff{{DiffEqual, "ab"}, {DiffInsert, "xyz"}, {DiffDelete, "中文"}, {DiffEqual, "cd"}}
+	for n, want := range map[int]string{0: "", 2: "ab", 3: "ab", 4: "ab", 5: "ab中", 7: "ab中", 8: "ab中文", 9: "ab中文c", 20: "ab中文cd"} {
+		assert.Equal(t, want, diffText1Prefix(diffs, n), "n=%d", n)
+	}
+	assert.Equal(t, "", diffText1Prefix([]Diff{{DiffEqual, "中"}}, 2))
 }
 
 // Issue #132 minimal repro: applying a patch containing a multi-byte

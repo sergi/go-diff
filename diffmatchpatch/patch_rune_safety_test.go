@@ -3,6 +3,7 @@ package diffmatchpatch
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -91,7 +92,7 @@ func TestPatchApplyStripPaddingKeepsValidUTF8(t *testing.T) {
 	dmp := New()
 	patches := dmp.PatchMake("日bxa a", "b xa —")
 	got, _ := dmp.PatchApply(patches, "日bxa")
-	assert.True(t, isValidUTF8(got), "got %q", got)
+	assert.True(t, utf8.ValidString(got), "got %q", got)
 }
 
 // When a patch is applied to a text that has changed, earlier edits can leave
@@ -105,7 +106,7 @@ func TestPatchApplyChangedTextNoPanic(t *testing.T) {
 	} {
 		assert.NotPanics(t, func() {
 			got, _ := dmp.PatchApply(dmp.PatchMake(c.a, c.b), c.target)
-			assert.True(t, isValidUTF8(got), "got %q", got)
+			assert.True(t, utf8.ValidString(got), "got %q", got)
 		}, "a=%q b=%q target=%q", c.a, c.b, c.target)
 	}
 }
@@ -150,13 +151,13 @@ func TestPatchSplitMax_NoInvalidUTF8(t *testing.T) {
 	newText := "中文段落一" + strings.Repeat("汉字", 30) + "结尾"
 	patches := dmp.PatchMake(old, dmp.DiffMain(old, newText, false))
 	if len(patches) == 0 {
-		t.Skip("no patches generated")
+		t.Fatal("PatchMake produced no patches; the test would assert nothing")
 	}
 	// PatchMake itself must produce valid-UTF-8 diff text (PatchAddContext's
 	// prefix/suffix slice now aligns to rune boundaries).
 	for i, p := range patches {
 		for j, d := range p.diffs {
-			if !isValidUTF8(d.Text) {
+			if !utf8.ValidString(d.Text) {
 				t.Errorf("PatchMake patch %d diff %d invalid UTF-8: %q", i, j, d.Text)
 			}
 		}
@@ -170,50 +171,9 @@ func TestPatchSplitMax_NoInvalidUTF8(t *testing.T) {
 	// diffText cut points all rune-aligned).
 	for i, p := range dmp.PatchSplitMax(patches) {
 		for j, d := range p.diffs {
-			if !isValidUTF8(d.Text) {
+			if !utf8.ValidString(d.Text) {
 				t.Errorf("PatchSplitMax patch %d diff %d invalid UTF-8: %q  type=%d", i, j, d.Text, d.Type)
 			}
 		}
-	}
-}
-
-// minimal UTF-8 validity check inlined to avoid adding a stdlib import vs.
-// the existing import block in patch.go (utf8 is already there for the fix).
-func isValidUTF8(s string) bool {
-	for i := 0; i < len(s); {
-		r, sz := utf8DecodeFirst(s[i:])
-		if r == 0xFFFD && sz == 1 {
-			return false
-		}
-		i += sz
-	}
-	return true
-}
-
-func utf8DecodeFirst(s string) (rune, int) {
-	if len(s) == 0 {
-		return 0, 0
-	}
-	b := s[0]
-	switch {
-	case b < 0x80:
-		return rune(b), 1
-	case b < 0xc0:
-		return 0xFFFD, 1
-	case b < 0xe0:
-		if len(s) < 2 {
-			return 0xFFFD, 1
-		}
-		return rune(b&0x1f)<<6 | rune(s[1]&0x3f), 2
-	case b < 0xf0:
-		if len(s) < 3 {
-			return 0xFFFD, 1
-		}
-		return rune(b&0x0f)<<12 | rune(s[1]&0x3f)<<6 | rune(s[2]&0x3f), 3
-	default:
-		if len(s) < 4 {
-			return 0xFFFD, 1
-		}
-		return rune(b&0x07)<<18 | rune(s[1]&0x3f)<<12 | rune(s[2]&0x3f)<<6 | rune(s[3]&0x3f), 4
 	}
 }
